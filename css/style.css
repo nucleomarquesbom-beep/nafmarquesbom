@@ -1,347 +1,173 @@
-/* ==========================================
-   NÚCLEO DE ÁRBITROS DE FUTEBOL MARQUES BOM
-   VERSÃO 2.0
-========================================== */
+<!DOCTYPE html>
+<html lang="pt">
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-body{
-    font-family:'Poppins',Arial,sans-serif;
-    background:#f5f5f5;
-    color:#222;
-}
+    <title>Núcleo de Árbitros de Futebol Marques Bom</title>
 
-/* ===========================
-   CABEÇALHO
-=========================== */
+    <link rel="stylesheet" href="css/style.css">
 
-header{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    z-index:1000;
-    background:rgba(0,0,0,0.75);
-    backdrop-filter:blur(8px);
-}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-.topo{
-    width:90%;
-    max-width:1400px;
-    margin:auto;
+</head>
 
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
+<body>
 
-    padding:15px 0;
-}
+<header>
 
-.logo{
-    height:70px;
-}
+    <div class="container">
 
-nav{
-    display:flex;
-    gap:30px;
-}
+        <div class="logo">
 
-nav a{
-    color:white;
-    text-decoration:none;
-    font-weight:600;
-    transition:.3s;
-}
+            <img src="imagens/logo.png" alt="Logo">
 
-nav a:hover{
-    color:#C9A227;
-}
+        </div>
 
-/* ===========================
-   HERO
-=========================== */
+        <nav>
 
-.hero{
+            <ul>
 
-    width:100%;
-    height:100vh;
+                <li><a href="index.html">Início</a></li>
 
-    background-image:url("../imagens/cabecalho.png");
+                <li><a href="historia.html">História</a></li>
 
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
+                <li><a href="corpos-sociais.html">Corpos Sociais</a></li>
 
-    display:flex;
-    justify-content:center;
-    align-items:flex-end;
+                <li><a href="plano-atividades.html">Plano de Atividades</a></li>
 
-}
+                <li><a href="documentos.html">Documentos</a></li>
 
-.overlay{
+                <li><a href="contactos.html">Contactos</a></li>
 
-    width:100%;
-    display:flex;
-    justify-content:center;
+            </ul>
 
-    padding-bottom:60px;
+        </nav>
 
-}
+    </div>
 
-.botoes{
+</header>
 
-    display:flex;
-    gap:20px;
+<section class="hero">
 
-}
+    <img src="imagens/cabecalho.png" class="hero-image" alt="Cabeçalho">
 
-.botoes a{
+</section>
 
-    background:#C9A227;
-    color:#111;
+<section class="apresentacao">
 
-    text-decoration:none;
+    <div class="container">
 
-    padding:16px 34px;
+        <h2>Bem-vindo</h2>
 
-    border-radius:40px;
+        <p>
 
-    font-weight:bold;
+            O Núcleo de Árbitros de Futebol Marques Bom é uma associação dedicada
+            à valorização da arbitragem, promovendo formação, apoio aos árbitros
+            e desenvolvimento do futebol no distrito de Coimbra.
 
-    transition:.3s;
+        </p>
 
-    box-shadow:0 10px 20px rgba(0,0,0,.25);
+    </div>
 
-}
+</section>
 
-.botoes a:hover{
+<section class="cards">
 
-    background:white;
+    <div class="container">
 
-    transform:translateY(-5px);
+        <a class="card" href="historia.html">
 
-}
+            <h3>História</h3>
 
-/* ===========================
-   QUEM SOMOS
-=========================== */
+            <p>Conheça a história do Núcleo.</p>
 
-.quem{
+        </a>
 
-    width:90%;
-    max-width:1100px;
+        <a class="card" href="corpos-sociais.html">
 
-    margin:80px auto;
+            <h3>Corpos Sociais</h3>
 
-    text-align:center;
+            <p>Direção, Assembleia Geral e Conselho Fiscal.</p>
 
-}
+        </a>
 
-.quem h2{
+        <a class="card" href="plano-atividades.html">
 
-    color:#5A2A6A;
+            <h3>Plano de Atividades</h3>
 
-    font-size:42px;
+            <p>Consulte todas as atividades do Núcleo.</p>
 
-    margin-bottom:20px;
+        </a>
 
-}
+        <a class="card" href="documentos.html">
 
-.quem p{
+            <h3>Documentos</h3>
 
-    font-size:20px;
+            <p>Estatutos, relatórios e documentação.</p>
 
-    line-height:34px;
+        </a>
 
-}
+    </div>
 
-/* ===========================
-   CARTÕES
-=========================== */
+</section>
 
-.cards{
+<section class="numeros">
 
-    width:90%;
-    max-width:1300px;
+    <div class="container">
 
-    margin:60px auto;
+        <div class="numero">
 
-    display:grid;
+            <h2>1987</h2>
 
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+            <span>Fundação</span>
 
-    gap:30px;
+        </div>
 
-}
+        <div class="numero">
 
-.card{
+            <h2>Coimbra</h2>
 
-    background:white;
+            <span>Distrito</span>
 
-    border-top:6px solid #C9A227;
+        </div>
 
-    border-radius:18px;
+        <div class="numero">
 
-    padding:40px;
+            <h2>FPF</h2>
 
-    text-align:center;
+            <span>Arbitragem</span>
 
-    transition:.4s;
+        </div>
 
-    box-shadow:0 8px 25px rgba(0,0,0,.10);
+        <div class="numero">
 
-}
+            <h2>2026/27</h2>
 
-.card:hover{
+            <span>Época</span>
 
-    transform:translateY(-10px);
+        </div>
 
-    box-shadow:0 20px 40px rgba(0,0,0,.20);
+    </div>
 
-}
+</section>
 
-.card h3{
+<footer>
 
-    color:#5A2A6A;
+    <div class="container">
 
-    margin-bottom:20px;
+        <p>
 
-    font-size:28px;
+            © 2026 Núcleo de Árbitros de Futebol Marques Bom
 
-}
+        </p>
 
-.card p{
+    </div>
 
-    line-height:28px;
+</footer>
 
-}
+</body>
 
-/* ===========================
-   NÚMEROS
-=========================== */
-
-.numeros{
-
-    margin-top:80px;
-
-    background:#181818;
-
-    color:white;
-
-    display:grid;
-
-    grid-template-columns:repeat(4,1fr);
-
-    text-align:center;
-
-    padding:70px 20px;
-
-}
-
-.numeros h2{
-
-    color:#C9A227;
-
-    font-size:60px;
-
-    margin-bottom:10px;
-
-}
-
-.numeros p{
-
-    font-size:18px;
-
-}
-
-/* ===========================
-   RODAPÉ
-=========================== */
-
-footer{
-
-    background:#5A2A6A;
-
-    color:white;
-
-    text-align:center;
-
-    padding:35px;
-
-    margin-top:80px;
-
-}
-
-/* ===========================
-   RESPONSIVO
-=========================== */
-
-@media(max-width:900px){
-
-.topo{
-
-flex-direction:column;
-
-gap:20px;
-
-}
-
-nav{
-
-flex-wrap:wrap;
-
-justify-content:center;
-
-gap:15px;
-
-}
-
-.logo{
-
-height:60px;
-
-}
-
-.botoes{
-
-flex-direction:column;
-
-align-items:center;
-
-}
-
-.numeros{
-
-grid-template-columns:repeat(2,1fr);
-
-gap:40px;
-
-}
-
-}
-
-@media(max-width:600px){
-
-.quem h2{
-
-font-size:30px;
-
-}
-
-.quem p{
-
-font-size:18px;
-
-}
-
-.numeros{
-
-grid-template-columns:1fr;
-
-}
-
-}
+</html>
