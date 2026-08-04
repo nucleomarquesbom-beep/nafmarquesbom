@@ -512,12 +512,13 @@ font-size:32px;
 
     display:flex;
 
-    align-items:center;
-
     justify-content:center;
 
-    background:rgba(0,0,0,.35);
+    align-items:flex-start;
 
+    padding-top:120px;
+
+    background:rgba(0,0,0,.35);
 }
 
 .page-title h1{
