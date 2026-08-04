@@ -480,3 +480,54 @@ font-size:32px;
     }
 
 }
+/* ===========================================
+   HERO DAS PÁGINAS INTERNAS
+=========================================== */
+
+.page-hero{
+
+    position:relative;
+
+    margin-top:112px;
+
+}
+
+.page-hero img{
+
+    width:100%;
+
+    height:350px;
+
+    object-fit:cover;
+
+    display:block;
+
+}
+
+.page-title{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    background:rgba(0,0,0,.35);
+
+}
+
+.page-title h1{
+
+    color:white;
+
+    font-size:56px;
+
+    text-shadow:0 3px 12px rgba(0,0,0,.6);
+
+    letter-spacing:2px;
+
+}
