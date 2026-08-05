@@ -504,7 +504,7 @@ font-size:32px;
 
 }
 
-/*.page-title{
+.page-title{
 
     position:absolute;
 
@@ -528,7 +528,7 @@ font-size:32px;
 
     position:relative;
 
-    top:250px;
+    top:300px;
 
     font-size:64px;
 
@@ -540,7 +540,7 @@ font-size:32px;
 
     margin:0;
 
-}*/
+}
 /* =======================================================
    CORPOS SOCIAIS PREMIUM
 =======================================================*/
