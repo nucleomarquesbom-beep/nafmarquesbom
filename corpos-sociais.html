@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt">
+<script type="module">
+    import {
+        FilesetResolver,
+        PoseLandmarker
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
 
+    window.MediaPipeVision = {
+        FilesetResolver,
+        PoseLandmarker
+    };
+</script>
 <head>
 
 <meta charset="UTF-8">
