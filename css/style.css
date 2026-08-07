@@ -645,74 +645,49 @@ font-size:32px;
 
 /* =========================================================
    FOTOGRAFIAS DOS CORPOS SOCIAIS
-   ENQUADRAMENTO AUTOMÁTICO PELOS OMBROS
+   O administrador coloca a fotografia original; o site
+   calcula automaticamente o enquadramento.
    ========================================================= */
 
-.membro img{
-
+.membro .foto-container{
     width:190px;
-
     height:190px;
-
-    object-fit:cover;
-
-    object-position:center center;
-
     margin:35px auto 20px;
-
     border-radius:50%;
-
+    overflow:hidden;
     border:7px solid var(--dourado);
-
     background:#58B947;
+    position:relative;
+    box-shadow:0 8px 20px rgba(0,0,0,.10);
+}
 
+.membro .foto-container img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:50% 35%;
     display:block;
-
-    transition:
-        transform .4s ease,
-        object-position .35s ease;
-
+    margin:0;
+    border:0;
+    border-radius:0;
+    background:#58B947;
+    transform:scale(var(--foto-zoom,1));
+    transform-origin:center center;
+    transition:transform .4s ease,object-position .35s ease,opacity .25s ease;
 }
 
-
-/* Pequeno aumento ao passar o rato */
-
-.membro:hover img{
-
-    transform:scale(1.08);
-
+.membro:hover .foto-container img{
+    transform:scale(calc(var(--foto-zoom,1) * 1.08));
 }
 
-
-/* =========================================================
-   ESTADO ENQUANTO A IMAGEM ESTÁ A SER ANALISADA
-   ========================================================= */
-
-.membro img.a-processar{
-
-    opacity:.75;
-
+.membro .foto-container img.foto-analisando{
+    opacity:.65;
 }
 
-
-/* =========================================================
-   IMAGEM SEM DETEÇÃO
-   Mantém um enquadramento normal.
-   ========================================================= */
-
-.membro img.sem-deteccao{
-
-    object-position:center center;
-
+.membro .foto-container img.foto-sem-deteccao{
+    object-position:50% 35%;
+    --foto-zoom:1;
 }
-
-
-.membro:hover img{
-
-    transform:scale(1.08);
-
-}
-
 
 /* CARGO */
 
@@ -805,7 +780,7 @@ font-size:34px;
 
 }
 
-.membro img{
+.membro .foto-container{
 
 width:160px;
 
@@ -1225,85 +1200,4 @@ height:160px;
 
     }
 
-}
-
-
-/* =========================================================
-   CORREÇÕES GERAIS DA VERSÃO CONSOLIDADA
-   ========================================================= */
-
-nav a.ativo{
-    background:var(--roxo);
-    color:#fff;
-}
-
-.page-hero{
-    margin-top:112px;
-}
-
-.page-title h1{
-    top:200px;
-}
-
-.conteudo-interno{
-    padding:90px 0;
-    background:#fff;
-}
-
-.conteudo-interno .container{
-    max-width:900px;
-}
-
-.conteudo-interno h2{
-    margin-bottom:25px;
-}
-
-.conteudo-interno p{
-    font-size:19px;
-    line-height:1.9;
-    margin-bottom:20px;
-}
-
-.documentos-aviso{
-    margin-top:35px;
-    padding:30px;
-    border-left:6px solid var(--dourado);
-    background:#fafafa;
-    border-radius:0 16px 16px 0;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-
-.contactos-pagina{
-    padding-top:80px;
-}
-
-/* Fotografias dos corpos sociais */
-.membro img{
-    width:190px;
-    height:190px;
-    object-fit:cover;
-    object-position:50% 50%;
-    margin:35px auto 20px;
-    border-radius:50%;
-    border:7px solid var(--dourado);
-    background:#58B947;
-    display:block;
-    transition:transform .4s ease, object-position .35s ease, opacity .25s ease;
-}
-
-.membro img.foto-analisando{opacity:.65;}
-.membro img.foto-sem-deteccao{opacity:1;}
-
-/* Evita duplicação visual no hover */
-.membro:hover img{transform:scale(1.08);}
-
-@media(max-width:900px){
-    nav{gap:10px;}
-    nav a{padding:8px 10px;}
-}
-
-@media(max-width:700px){
-    .page-title h1{font-size:44px; top:120px;}
 }
