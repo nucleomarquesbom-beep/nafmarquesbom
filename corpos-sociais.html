@@ -719,7 +719,411 @@ Relator
 </div>
 
 </footer>
+<!-- =====================================================
+     ENQUADRAMENTO AUTOMÁTICO DAS FOTOGRAFIAS
+     ===================================================== -->
 
+<script type="module">
+
+import {
+    FilesetResolver,
+    PoseLandmarker
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
+
+
+async function iniciarDetecao(){
+
+    console.log("A iniciar deteção dos retratos...");
+
+
+    /* -----------------------------------------------------
+       CARREGAR MOTOR DE VISÃO
+       ----------------------------------------------------- */
+
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+    );
+
+
+    /* -----------------------------------------------------
+       CARREGAR MODELO DE POSE
+       ----------------------------------------------------- */
+
+    const detector = await PoseLandmarker.createFromOptions(
+        vision,
+        {
+            baseOptions:{
+                modelAssetPath:
+                "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
+            },
+
+            runningMode:"IMAGE",
+
+            numPoses:1,
+
+            minPoseDetectionConfidence:0.3,
+
+            minPosePresenceConfidence:0.3,
+
+            minTrackingConfidence:0.3
+        }
+    );
+
+
+    console.log("Modelo carregado.");
+
+
+    /* -----------------------------------------------------
+       PROCURAR FOTOGRAFIAS
+       ----------------------------------------------------- */
+
+    const imagens =
+        document.querySelectorAll(".membro img");
+
+
+    console.log(
+        "Fotografias encontradas:",
+        imagens.length
+    );
+
+
+    /* -----------------------------------------------------
+       ANALISAR CADA FOTOGRAFIA
+       ----------------------------------------------------- */
+
+    for(const imagem of imagens){
+
+        await processarImagem(
+            imagem,
+            detector
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PROCESSAR UMA FOTOGRAFIA
+   ========================================================= */
+
+async function processarImagem(
+    imagem,
+    detector
+){
+
+    try{
+
+        /*
+         * Esperar que a fotografia esteja carregada.
+         */
+
+        if(!imagem.complete){
+
+            await new Promise(
+                function(resolve){
+
+                    imagem.addEventListener(
+                        "load",
+                        resolve,
+                        {once:true}
+                    );
+
+                    imagem.addEventListener(
+                        "error",
+                        resolve,
+                        {once:true}
+                    );
+
+                }
+            );
+
+        }
+
+
+        /*
+         * Se a imagem não carregou,
+         * não fazemos nada.
+         */
+
+        if(
+            !imagem.naturalWidth ||
+            !imagem.naturalHeight
+        ){
+
+            console.warn(
+                "Imagem não carregada:",
+                imagem.src
+            );
+
+            return;
+
+        }
+
+
+        /*
+         * Pequeno estado visual enquanto analisa.
+         */
+
+        imagem.classList.add(
+            "foto-analisando"
+        );
+
+
+        /* -------------------------------------------------
+           DETETAR CORPO
+           ------------------------------------------------- */
+
+        const resultado =
+            detector.detect(imagem);
+
+
+        /*
+         * Verificar se encontrou alguém.
+         */
+
+        if(
+            !resultado.landmarks ||
+            resultado.landmarks.length === 0
+        ){
+
+            console.warn(
+                "Pessoa não detetada:",
+                imagem.src
+            );
+
+            imagem.classList.add(
+                "foto-sem-deteccao"
+            );
+
+            imagem.classList.remove(
+                "foto-analisando"
+            );
+
+            return;
+
+        }
+
+
+        /*
+         * Primeira pessoa encontrada.
+         */
+
+        const pontos =
+            resultado.landmarks[0];
+
+
+        /*
+         * MediaPipe:
+         *
+         * 0  = nariz
+         * 11 = ombro esquerdo
+         * 12 = ombro direito
+         */
+
+        const nariz =
+            pontos[0];
+
+        const ombroEsquerdo =
+            pontos[11];
+
+        const ombroDireito =
+            pontos[12];
+
+
+        /*
+         * Precisamos pelo menos dos dois ombros.
+         */
+
+        if(
+            !ombroEsquerdo ||
+            !ombroDireito
+        ){
+
+            console.warn(
+                "Ombros não encontrados:",
+                imagem.src
+            );
+
+            imagem.classList.remove(
+                "foto-analisando"
+            );
+
+            return;
+
+        }
+
+
+        /* -------------------------------------------------
+           CALCULAR CENTRO DOS OMBROS
+           ------------------------------------------------- */
+
+        const centroX =
+            (
+                ombroEsquerdo.x +
+                ombroDireito.x
+            ) / 2;
+
+
+        const centroY =
+            (
+                ombroEsquerdo.y +
+                ombroDireito.y
+            ) / 2;
+
+
+        /* -------------------------------------------------
+           CALCULAR DISTÂNCIA ENTRE OMBROS
+           ------------------------------------------------- */
+
+        const larguraOmbros =
+            Math.abs(
+                ombroDireito.x -
+                ombroEsquerdo.x
+            );
+
+
+        /*
+         * Se o nariz existir, calculamos a distância
+         * entre o nariz e os ombros.
+         */
+
+        let distanciaCabeca =
+            larguraOmbros * 0.8;
+
+
+        if(nariz){
+
+            distanciaCabeca =
+                Math.abs(
+                    centroY -
+                    nariz.y
+                );
+
+        }
+
+
+        /* -------------------------------------------------
+           POSIÇÃO VERTICAL
+           -------------------------------------------------
+           
+           Queremos colocar a cabeça ligeiramente acima
+           do centro e manter os ombros visíveis.
+        */
+
+        let posY =
+            centroY -
+            distanciaCabeca * 0.35;
+
+
+        /*
+         * Converter para percentagem.
+         */
+
+        let posXPercent =
+            centroX * 100;
+
+
+        let posYPercent =
+            posY * 100;
+
+
+        /*
+         * Limites.
+         */
+
+        posXPercent =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    posXPercent
+                )
+            );
+
+
+        posYPercent =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    posYPercent
+                )
+            );
+
+
+        /* -------------------------------------------------
+           APLICAR ENQUADRAMENTO
+           ------------------------------------------------- */
+
+        imagem.style.objectPosition =
+            `${posXPercent}% ${posYPercent}%`;
+
+
+        /*
+         * Guardar informação para debug.
+         */
+
+        imagem.dataset.poseX =
+            posXPercent;
+
+        imagem.dataset.poseY =
+            posYPercent;
+
+
+        imagem.classList.remove(
+            "foto-analisando"
+        );
+
+
+        imagem.classList.add(
+            "foto-enquadrada"
+        );
+
+
+        console.log(
+            "Fotografia enquadrada:",
+            imagem.alt,
+            posXPercent,
+            posYPercent
+        );
+
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao analisar fotografia:",
+            imagem.src,
+            erro
+        );
+
+        imagem.classList.remove(
+            "foto-analisando"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   INICIAR
+   ========================================================= */
+
+iniciarDetecao().catch(
+
+    function(erro){
+
+        console.error(
+            "Erro ao iniciar o sistema de deteção:",
+            erro
+        );
+
+    }
+
+);
+
+</script>
 </body>
 
 </html>
