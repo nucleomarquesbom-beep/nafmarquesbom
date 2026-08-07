@@ -775,21 +775,22 @@ height:160px;
 }
 /* ===========================================================
    PÁGINA - PLANO DE ATIVIDADES
-=========================================================== */
+   =========================================================== */
 
 .timeline-section{
 
     padding:100px 0;
 
-    background:
-    linear-gradient(rgba(255,255,255,.90),
-    rgba(255,255,255,.90)),
-    url("../imagens/cabecalho.png");
+    background:#ffffff;
 
-    background-size:cover;
-    background-position:center;
+    overflow:hidden;
 
 }
+
+
+/* ===========================================================
+   TÍTULO
+   =========================================================== */
 
 .timeline-titulo{
 
@@ -801,7 +802,10 @@ height:160px;
 
     margin-bottom:10px;
 
+    font-weight:700;
+
 }
+
 
 .timeline-subtitulo{
 
@@ -815,7 +819,10 @@ height:160px;
 
 }
 
-/* TIMELINE */
+
+/* ===========================================================
+   TIMELINE
+   =========================================================== */
 
 .timeline{
 
@@ -823,19 +830,24 @@ height:160px;
 
     display:flex;
 
+    flex-wrap:nowrap;
+
     justify-content:space-between;
 
     align-items:flex-start;
 
-    flex-wrap:wrap;
+    width:100%;
 
-    gap:20px;
+    padding:60px 25px 260px;
 
-    padding-top:60px;
+    gap:0;
 
 }
 
-/* LINHA DOURADA */
+
+/* ===========================================================
+   LINHA DOURADA
+   =========================================================== */
 
 .timeline .linha{
 
@@ -843,9 +855,11 @@ height:160px;
 
     top:108px;
 
-    left:4%;
+    left:25px;
 
-    width:92%;
+    right:25px;
+
+    width:auto;
 
     height:6px;
 
@@ -857,13 +871,20 @@ height:160px;
 
 }
 
-/* CADA MÊS */
+
+/* ===========================================================
+   CADA MÊS
+   =========================================================== */
 
 .mes{
 
     position:relative;
 
-    width:95px;
+    flex:1 1 0;
+
+    min-width:95px;
+
+    max-width:120px;
 
     text-align:center;
 
@@ -871,13 +892,18 @@ height:160px;
 
 }
 
-/* CÍRCULOS */
+
+/* ===========================================================
+   CÍRCULOS
+   =========================================================== */
 
 .circulo{
 
     width:95px;
 
     height:95px;
+
+    margin:auto;
 
     border-radius:50%;
 
@@ -903,13 +929,18 @@ height:160px;
 
     box-shadow:0 10px 25px rgba(0,0,0,.18);
 
+    position:relative;
+
+    z-index:3;
+
 }
+
 
 .circulo:hover{
 
     background:var(--dourado);
 
-    color:black;
+    color:#000;
 
     transform:scale(1.18);
 
@@ -917,7 +948,27 @@ height:160px;
 
 }
 
-/* CARTÃO */
+
+/* ===========================================================
+   MÊS ATIVO
+   =========================================================== */
+
+.mes.active .circulo{
+
+    background:var(--dourado);
+
+    color:#000;
+
+    transform:scale(1.12);
+
+    box-shadow:0 15px 40px rgba(201,162,39,.55);
+
+}
+
+
+/* ===========================================================
+   CARTÃO DE ATIVIDADES
+   =========================================================== */
 
 .card-evento{
 
@@ -947,7 +998,12 @@ height:160px;
 
     transition:.35s;
 
+    z-index:10;
+
 }
+
+
+/* ABRIR AO PASSAR O RATO */
 
 .mes:hover .card-evento{
 
@@ -959,7 +1015,23 @@ height:160px;
 
 }
 
-/* TÍTULOS */
+
+/* MANTER ABERTO O MÊS ATIVO */
+
+.mes.active .card-evento{
+
+    opacity:1;
+
+    visibility:visible;
+
+    top:115px;
+
+}
+
+
+/* ===========================================================
+   TÍTULO DO CARTÃO
+   =========================================================== */
 
 .card-evento h3{
 
@@ -971,13 +1043,21 @@ height:160px;
 
 }
 
+
+/* ===========================================================
+   LISTA
+   =========================================================== */
+
 .card-evento ul{
 
     list-style:none;
 
     padding:0;
 
+    margin:0;
+
 }
+
 
 .card-evento li{
 
@@ -989,72 +1069,119 @@ height:160px;
 
 }
 
+
 .card-evento li:last-child{
 
     border:none;
 
 }
 
-/* RESPONSIVO */
+
+/* ===========================================================
+   RESPONSIVO
+   =========================================================== */
 
 @media(max-width:1200px){
 
-.timeline{
+    .timeline{
 
-    justify-content:center;
+        overflow-x:auto;
 
-    gap:40px;
+        justify-content:flex-start;
+
+        gap:20px;
+
+        padding-left:30px;
+
+        padding-right:30px;
+
+    }
+
+    .mes{
+
+        flex:0 0 110px;
+
+    }
+
+    .timeline .linha{
+
+        left:75px;
+
+        width:calc(11 * 110px + 10 * 20px - 20px);
+
+    }
 
 }
 
-.timeline .linha{
 
-    display:none;
-
-}
-
-.mes{
-
-    width:120px;
-
-}
-
-}
+/* ===========================================================
+   TABLET / TELEMÓVEL
+   =========================================================== */
 
 @media(max-width:768px){
 
-.timeline{
+    .timeline-section{
 
-    flex-direction:column;
+        padding:70px 0;
 
-    align-items:center;
+    }
 
-}
+    .timeline-titulo{
 
-.card-evento{
+        font-size:34px;
 
-    position:relative;
+    }
 
-    opacity:1;
+    .timeline-subtitulo{
 
-    visibility:visible;
+        font-size:16px;
 
-    top:20px;
+        padding:0 20px;
 
-    left:auto;
+    }
 
-    transform:none;
+    .timeline{
 
-    margin-bottom:35px;
+        overflow-x:auto;
 
-    width:320px;
+        justify-content:flex-start;
 
-}
+        padding:50px 30px 300px;
 
-.circulo{
+        gap:25px;
 
-    margin:auto;
+    }
 
-}
+    .mes{
+
+        flex:0 0 100px;
+
+    }
+
+    .circulo{
+
+        width:85px;
+
+        height:85px;
+
+        font-size:18px;
+
+    }
+
+    .timeline .linha{
+
+        top:98px;
+
+        left:72px;
+
+        width:calc(11 * 100px + 10 * 25px - 25px);
+
+    }
+
+    .card-evento{
+
+        width:280px;
+
+    }
 
 }
