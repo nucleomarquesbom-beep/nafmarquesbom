@@ -503,18 +503,26 @@ async function ajustarFotografias() {
             const larguraOmbros = Math.abs(ombroD.x - ombroE.x);
             const distanciaCabeca = Math.max(0.08, Math.abs(centroY - nariz.y));
 
-            // Enquadramento alvo: cabeça + ombros, sem mostrar o tronco inteiro.
-            const alvoY = centroY - distanciaCabeca * 0.42;
+            // Enquadramento alvo: cabeça + ombros, cortando o tronco.
+            // Damos prioridade à distância nariz→ombros, porque é a medida
+            // que melhor representa a zona que queremos mostrar.
+            const alvoY = centroY - distanciaCabeca * 0.28;
 
-            // A largura dos ombros deve ocupar aproximadamente 72% do círculo.
-            const zoomOmbros = 0.72 / Math.max(larguraOmbros, 0.18);
-            // A distância nariz→ombros também determina o zoom mínimo necessário.
-            const zoomAltura = 0.48 / Math.max(distanciaCabeca * 2.0, 0.22);
-            const zoom = limitar(Math.max(0.95, zoomOmbros, zoomAltura), 0.95, 2.60);
+            // Fazemos os ombros ocupar cerca de 82% da largura do círculo.
+            // O fator vertical força um enquadramento mais fechado quando
+            // a fotografia mostra muito tronco.
+            const zoomOmbros = 0.82 / Math.max(larguraOmbros, 0.16);
+            const zoomCabecaOmbros = 0.78 / Math.max(distanciaCabeca * 2.05, 0.20);
+
+            const zoom = limitar(
+                Math.max(1.15, zoomOmbros, zoomCabecaOmbros),
+                1.15,
+                3.80
+            );
 
             // object-position é aplicado individualmente a cada fotografia.
-            const posX = limitar(centroX * 100, 15, 85);
-            const posY = limitar(alvoY * 100, 12, 72);
+            const posX = limitar(centroX * 100, 20, 80);
+            const posY = limitar(alvoY * 100, 18, 68);
 
             img.style.objectPosition = `${posX}% ${posY}%`;
             img.style.setProperty("--foto-zoom", zoom.toFixed(3));
