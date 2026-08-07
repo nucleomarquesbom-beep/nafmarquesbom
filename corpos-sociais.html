@@ -435,16 +435,16 @@ import {
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
-async function esperarImagem(img) {
-    if (img.complete && img.naturalWidth > 0) return true;
+function esperarImagem(img) {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve(true);
     return new Promise(resolve => {
-        const ok = () => { cleanup(); resolve(img.naturalWidth > 0); };
-        const cleanup = () => {
-            img.removeEventListener("load", ok);
-            img.removeEventListener("error", ok);
+        const done = () => {
+            img.removeEventListener("load", done);
+            img.removeEventListener("error", done);
+            resolve(img.naturalWidth > 0);
         };
-        img.addEventListener("load", ok, { once: true });
-        img.addEventListener("error", ok, { once: true });
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
     });
 }
 
@@ -454,14 +454,16 @@ function limitar(v, min, max) {
 
 async function ajustarFotografias() {
     const imagens = [...document.querySelectorAll(".foto-container img")];
-    if (!imagens.length) return;
+    const fotografias = imagens.filter(img =>
+        img.naturalWidth && !img.src.toLowerCase().includes("sem-foto")
+    );
 
-    await Promise.all(imagens.map(esperarImagem));
+    if (!fotografias.length) return;
+    await Promise.all(fotografias.map(esperarImagem));
 
-    let vision;
     let detector;
     try {
-        vision = await FilesetResolver.forVisionTasks(WASM_URL);
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
         detector = await PoseLandmarker.createFromOptions(vision, {
             baseOptions: { modelAssetPath: MODEL_URL },
             runningMode: "IMAGE",
@@ -471,27 +473,18 @@ async function ajustarFotografias() {
             minTrackingConfidence: 0.20
         });
     } catch (erro) {
-        console.error("Enquadramento automático: não foi possível carregar o modelo.", erro);
+        console.error("Não foi possível carregar o sistema de enquadramento.", erro);
         return;
     }
 
-    for (const img of imagens) {
-        if (!img.naturalWidth || !img.naturalHeight) continue;
-        if (img.src.toLowerCase().includes("sem-foto")) continue;
-
+    for (const img of fotografias) {
         img.classList.add("foto-analisando");
 
         try {
-            const resultado = detector.detect(img);
-            const pessoa = resultado?.landmarks?.[0];
-            if (!pessoa) {
-                img.classList.add("foto-sem-deteccao");
-                continue;
-            }
-
-            const nariz = pessoa[0];
-            const ombroE = pessoa[11];
-            const ombroD = pessoa[12];
+            const pessoa = detector.detect(img)?.landmarks?.[0];
+            const nariz = pessoa?.[0];
+            const ombroE = pessoa?.[11];
+            const ombroD = pessoa?.[12];
 
             if (!nariz || !ombroE || !ombroD) {
                 img.classList.add("foto-sem-deteccao");
@@ -501,35 +494,42 @@ async function ajustarFotografias() {
             const centroX = (ombroE.x + ombroD.x) / 2;
             const centroY = (ombroE.y + ombroD.y) / 2;
             const larguraOmbros = Math.abs(ombroD.x - ombroE.x);
-            const distanciaCabeca = Math.max(0.08, Math.abs(centroY - nariz.y));
+            const distanciaCabeca = Math.max(0.055, Math.abs(centroY - nariz.y));
 
-            // Enquadramento alvo: cabeça + ombros, cortando o tronco.
-            // Damos prioridade à distância nariz→ombros, porque é a medida
-            // que melhor representa a zona que queremos mostrar.
-            const alvoY = centroY - distanciaCabeca * 0.28;
+            /*
+             * Caixa alvo = cabeça + ombros + uma pequena margem.
+             * Não usamos a altura total da pessoa, por isso o tronco
+             * deixa de determinar o enquadramento.
+             */
+            const topo = limitar(nariz.y - distanciaCabeca * 1.05, 0, 1);
+            const fundo = limitar(centroY + distanciaCabeca * 0.22, 0, 1);
+            const alturaAlvo = Math.max(0.16, fundo - topo);
+            const larguraAlvo = Math.max(0.22, larguraOmbros * 1.48);
 
-            // Fazemos os ombros ocupar cerca de 82% da largura do círculo.
-            // O fator vertical força um enquadramento mais fechado quando
-            // a fotografia mostra muito tronco.
-            const zoomOmbros = 0.82 / Math.max(larguraOmbros, 0.16);
-            const zoomCabecaOmbros = 0.78 / Math.max(distanciaCabeca * 2.05, 0.20);
+            /*
+             * object-fit: cover cria um recorte quadrado. Calculamos o
+             * zoom a partir do tamanho real da fotografia para garantir
+             * que a caixa cabeça+ombros ocupa o círculo.
+             */
+            const proporcao = img.naturalWidth / img.naturalHeight;
+            const visivelBaseX = proporcao >= 1 ? 1 / proporcao : 1;
+            const visivelBaseY = proporcao >= 1 ? 1 : proporcao;
 
-            const zoom = limitar(
-                Math.max(1.15, zoomOmbros, zoomCabecaOmbros),
-                1.15,
-                3.80
-            );
+            const zoomX = visivelBaseX / larguraAlvo;
+            const zoomY = visivelBaseY / alturaAlvo;
+            const zoom = limitar(Math.max(1.15, zoomX, zoomY) * 1.06, 1.15, 4.2);
 
-            // object-position é aplicado individualmente a cada fotografia.
-            const posX = limitar(centroX * 100, 20, 80);
-            const posY = limitar(alvoY * 100, 18, 68);
+            /*
+             * O rosto fica ligeiramente acima do centro e os ombros
+             * ficam dentro do círculo, sem mostrar a cintura.
+             */
+            const alvoX = (ombroE.x + ombroD.x) / 2;
+            const alvoY = topo + alturaAlvo * 0.48;
 
-            img.style.objectPosition = `${posX}% ${posY}%`;
+            img.style.objectPosition = `${limitar(alvoX * 100, 15, 85)}% ${limitar(alvoY * 100, 12, 78)}%`;
             img.style.setProperty("--foto-zoom", zoom.toFixed(3));
-            img.dataset.enquadramento = "automatico";
             img.classList.add("foto-enquadrada");
 
-            console.log(`Foto ajustada: ${img.alt} | posição ${posX.toFixed(1)}% ${posY.toFixed(1)}% | zoom ${zoom.toFixed(2)}`);
         } catch (erro) {
             img.classList.add("foto-sem-deteccao");
             console.warn("Não foi possível enquadrar", img.alt, erro);

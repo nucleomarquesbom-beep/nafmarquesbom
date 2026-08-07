@@ -389,6 +389,34 @@
 
         </div>
 
+        <!-- AGOSTO -->
+
+        <div class="mes">
+
+            <div class="circulo">
+
+                AGO
+
+            </div>
+
+            <div class="card-evento">
+
+                <h3>Agosto</h3>
+
+                <ul>
+
+                    <li>📅 Preparação da Nova Época</li>
+
+                    <li>🎓 Planeamento da Formação</li>
+
+                    <li>⚽ Regresso à Atividade</li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
@@ -418,6 +446,40 @@
     </div>
 
 </footer>
+
+
+<script>
+(function () {
+    const timeline = document.querySelector('.timeline');
+    const meses = Array.from(document.querySelectorAll('.timeline .mes'));
+
+    if (!timeline || !meses.length) return;
+
+    // Setembro é o primeiro mês da época; Agosto é o último.
+    // O mês do calendário atual fica aberto por defeito.
+    const mesAtual = new Date().getMonth() + 1;
+    const indiceAtual = mesAtual >= 9 ? mesAtual - 9 : mesAtual + 3;
+
+    const abrirMes = (mes) => {
+        meses.forEach(item => item.classList.remove('active'));
+        mes.classList.add('active');
+    };
+
+    const mesInicial = meses[indiceAtual] || meses[0];
+    abrirMes(mesInicial);
+
+    meses.forEach(mes => {
+        mes.addEventListener('mouseenter', () => {
+            abrirMes(mes);
+        });
+    });
+
+    // Quando o cursor sai da timeline, volta a ficar aberto o mês atual.
+    timeline.addEventListener('mouseleave', () => {
+        abrirMes(mesInicial);
+    });
+})();
+</script>
 
 </body>
 
