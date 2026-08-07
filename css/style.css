@@ -643,6 +643,11 @@ font-size:32px;
 
 /* FOTO */
 
+/* =========================================================
+   FOTOGRAFIAS DOS CORPOS SOCIAIS
+   ENQUADRAMENTO AUTOMÁTICO PELOS OMBROS
+   ========================================================= */
+
 .membro img{
 
     width:190px;
@@ -650,6 +655,8 @@ font-size:32px;
     height:190px;
 
     object-fit:cover;
+
+    object-position:center center;
 
     margin:35px auto 20px;
 
@@ -661,7 +668,41 @@ font-size:32px;
 
     display:block;
 
-    transition:.4s;
+    transition:
+        transform .4s ease,
+        object-position .35s ease;
+
+}
+
+
+/* Pequeno aumento ao passar o rato */
+
+.membro:hover img{
+
+    transform:scale(1.08);
+
+}
+
+
+/* =========================================================
+   ESTADO ENQUANTO A IMAGEM ESTÁ A SER ANALISADA
+   ========================================================= */
+
+.membro img.a-processar{
+
+    opacity:.75;
+
+}
+
+
+/* =========================================================
+   IMAGEM SEM DETEÇÃO
+   Mantém um enquadramento normal.
+   ========================================================= */
+
+.membro img.sem-deteccao{
+
+    object-position:center center;
 
 }
 
