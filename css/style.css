@@ -1201,3 +1201,108 @@ height:160px;
     }
 
 }
+
+/* ==========================================================
+   HISTÓRIA - PÁGINA EM CONSTRUÇÃO
+   ========================================================== */
+.construcao{
+    max-width:900px;
+    margin:0 auto;
+    padding:70px 40px;
+    text-align:center;
+    background:#fff;
+    border-radius:25px;
+    box-shadow:0 15px 40px rgba(0,0,0,.08);
+    border-top:6px solid var(--dourado);
+}
+.construcao h2{
+    margin-bottom:20px;
+}
+.construcao p{
+    font-size:20px;
+    line-height:1.8;
+    color:#666;
+    margin:8px 0;
+}
+
+/* ==========================================================
+   DOCUMENTOS
+   ========================================================== */
+.documentos-section{
+    padding:100px 0;
+    background:#fff;
+    min-height:500px;
+}
+.documentos-section h2{
+    text-align:center;
+    color:var(--roxo);
+    font-size:44px;
+    margin-bottom:15px;
+}
+.lista-documentos{
+    max-width:950px;
+    margin:50px auto 0;
+    display:grid;
+    gap:18px;
+}
+.documento-item{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    background:#fff;
+    padding:22px 25px;
+    border-radius:18px;
+    border-left:6px solid var(--dourado);
+    box-shadow:0 10px 28px rgba(0,0,0,.08);
+    transition:.3s ease;
+}
+.documento-item:hover{
+    transform:translateX(8px);
+    box-shadow:0 15px 35px rgba(0,0,0,.14);
+}
+.documento-icone{
+    flex:0 0 58px;
+    height:58px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--roxo);
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
+}
+.documento-info h3{
+    margin:0 0 5px;
+    color:var(--roxo);
+    font-size:20px;
+}
+.documento-info p{
+    margin:0;
+    color:#777;
+    font-size:15px;
+}
+@media(max-width:700px){
+    .construcao{
+        padding:50px 25px;
+    }
+    .construcao p{
+        font-size:18px;
+    }
+    .documentos-section h2{
+        font-size:34px;
+    }
+    .documento-item{
+        padding:18px;
+        gap:15px;
+    }
+    .documento-info h3{
+        font-size:17px;
+    }
+}
+
+nav a.ativo{
+    background:var(--roxo);
+    color:#fff;
+    border-radius:30px;
+}
