@@ -1368,3 +1368,73 @@ height:160px;
         padding: 22px;
     }
 }
+
+/* =========================================================
+   ÁREA DE SÓCIO - LAYOUT CONSISTENTE COM AS RESTANTES PÁGINAS
+========================================================= */
+.socio-area{
+    padding:75px 0 90px;
+    background:#fff;
+}
+.socio-login-note{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    max-width:1050px;
+    margin:0 auto 28px;
+    padding:18px 24px;
+    background:#f7f3f9;
+    border-left:5px solid var(--dourado);
+    border-radius:16px;
+    color:#555;
+}
+.socio-login-note span{font-size:26px}.socio-login-note p{margin:3px 0 0;font-size:14px}
+.socio-perfil-card{
+    max-width:1050px;margin:0 auto 35px;padding:32px;
+    display:grid;grid-template-columns:150px 1fr 180px;gap:30px;align-items:center;
+    background:#fff;border-radius:25px;border-top:6px solid var(--dourado);
+    box-shadow:0 15px 40px rgba(0,0,0,.10);
+}
+.socio-foto-wrap{display:flex;justify-content:center}.socio-foto{
+    width:125px;height:125px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:#f2f2f2;border:6px solid var(--dourado);font-size:48px;overflow:hidden;
+}
+.socio-etiqueta{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--dourado)}
+.socio-identidade h2{margin:6px 0 5px;text-align:left;font-size:30px;color:var(--roxo)}
+.numero-socio{margin:0;color:#555;font-size:18px}.numero-socio strong{color:var(--roxo)}
+.socio-estado{margin:8px 0 0;color:#4b8b42;font-size:14px;font-weight:600}
+.funlearn-resumo{text-align:center;background:var(--roxo);color:#fff;border-radius:20px;padding:20px}.funlearn-resumo span{display:block;font-size:12px;letter-spacing:1.5px}.funlearn-resumo strong{display:block;font-size:42px;line-height:1.1;color:var(--dourado)}.funlearn-resumo small{font-size:14px}
+.socio-tabs{max-width:1050px;margin:0 auto 25px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:2px solid #eee;padding-bottom:10px}
+.socio-tab{border:0;background:#f5f5f5;color:var(--roxo);padding:12px 18px;border-radius:25px;font-family:inherit;font-weight:600;cursor:pointer;transition:.25s}.socio-tab:hover,.socio-tab.active{background:var(--roxo);color:#fff}
+.socio-tab-content{max-width:1050px;margin:0 auto;padding:32px;background:#fafafa;border-radius:22px;border-top:5px solid var(--dourado);display:none}.socio-tab-content.active{display:block}.socio-tab-content h2{font-size:30px;margin-bottom:25px}
+.socio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.socio-grid>div{background:#fff;border-radius:15px;padding:18px 20px;box-shadow:0 7px 20px rgba(0,0,0,.05)}.socio-grid .wide{grid-column:1/-1}.socio-grid span{display:block;font-size:13px;color:#777;margin-bottom:5px}.socio-grid strong{font-size:17px;color:#333}
+.quota-status{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:15px;padding:20px 24px;box-shadow:0 7px 20px rgba(0,0,0,.05)}.quota-status strong{color:var(--roxo)}.socio-info{color:#666;margin-top:18px;text-align:center}
+.tab-heading-row{display:flex;justify-content:space-between;align-items:center;gap:20px}.tab-heading-row h2{margin-bottom:5px}.tab-heading-row p{color:#777;margin:0}.contador-docs{background:var(--roxo);color:#fff;border-radius:30px;padding:10px 18px;font-weight:700}.documentos-socio-vazio,.funlearn-vazio{text-align:center;padding:45px 20px;background:#fff;border-radius:18px;color:#777}.documentos-socio-vazio span{font-size:38px}.documentos-socio-vazio h3{color:var(--roxo);margin:12px 0 6px}
+.funlearn-box{max-width:300px;margin:0 auto 35px;text-align:center;background:linear-gradient(135deg,var(--roxo),#7e3fa3);color:#fff;border-radius:25px;padding:28px}.funlearn-label{display:block;font-size:13px;letter-spacing:2px}.funlearn-box strong{display:block;font-size:58px;color:var(--dourado);line-height:1.1}.funlearn-box p{margin:4px 0 0}.funlearn-vazio{border:1px dashed #ddd}
+@media(max-width:850px){.socio-perfil-card{grid-template-columns:120px 1fr}.funlearn-resumo{grid-column:1/-1}.socio-foto{width:105px;height:105px}.socio-grid{grid-template-columns:1fr}.socio-grid .wide{grid-column:auto}}
+@media(max-width:600px){.socio-area{padding:50px 0 70px}.socio-perfil-card{grid-template-columns:1fr;text-align:center;padding:25px}.socio-identidade h2{text-align:center;font-size:25px}.socio-tabs{justify-content:center}.socio-tab{font-size:13px;padding:10px 13px}.socio-tab-content{padding:24px 18px}.tab-heading-row{align-items:flex-start;flex-direction:column}}
+
+/* =========================================================
+   ÁREA DE SÓCIO / SUPABASE
+========================================================= */
+.socio-area{padding:70px 0 100px;background:#f8f7fa;min-height:620px}.login-card,.socio-tab-content,.admin-panel{background:#fff;border-radius:24px;box-shadow:0 15px 40px rgba(0,0,0,.08)}.login-card{max-width:520px;margin:0 auto;padding:45px;text-align:center;border-top:6px solid var(--dourado)}.login-icon{font-size:42px}.login-card h2{font-size:34px;margin:15px 0 10px}.login-card p{color:#666;margin-bottom:28px}.login-form{display:grid;gap:18px;text-align:left}.login-form label,.admin-form label{font-weight:600;color:#444}.login-form input,.admin-form input{display:block;width:100%;margin-top:7px;padding:14px 16px;border:1px solid #ddd;border-radius:12px;font:inherit}.login-form .botao{border:0;cursor:pointer}.socio-message{padding:16px 20px;border-radius:14px;margin:0 auto 20px;max-width:1000px}.socio-message.erro{background:#ffe8e8;color:#9b1c1c}.socio-message.sucesso{background:#e7f8ee;color:#176c3a}.socio-message.info{background:#eee8f5;color:var(--roxo)}.socio-dashboard-head{display:flex;align-items:flex-end;gap:18px;margin-bottom:25px}.socio-perfil-card{flex:1;background:#fff;border-radius:25px;padding:25px;display:grid;grid-template-columns:150px 1fr 150px;align-items:center;gap:25px;box-shadow:0 15px 40px rgba(0,0,0,.08);border-top:6px solid var(--dourado)}.socio-foto-wrap{position:relative;text-align:center}.socio-photo-img,.socio-foto-placeholder{width:125px;height:125px;border-radius:50%;object-fit:cover;display:block;margin:auto;border:6px solid var(--dourado);background:#eee}.socio-foto-placeholder{display:flex;align-items:center;justify-content:center;font-size:45px}.photo-upload{display:inline-block;margin-top:8px;font-size:11px;color:var(--roxo);cursor:pointer}.photo-upload input{display:none}.socio-etiqueta{font-size:13px;font-weight:800;letter-spacing:2px;color:var(--dourado)}.socio-identidade h2{font-size:28px;text-align:left;margin:7px 0;color:var(--roxo)}.numero-socio{margin:0;color:#555}.socio-estado{color:#1f8d51;font-weight:600}.funlearn-resumo{background:var(--roxo);color:#fff;border-radius:18px;padding:20px;text-align:center}.funlearn-resumo span{display:block;font-size:12px;letter-spacing:1.5px}.funlearn-resumo strong{font-size:42px;display:block;color:#fff}.funlearn-resumo small{opacity:.9}.botao-secundario{padding:12px 18px;border:1px solid var(--roxo);background:#fff;color:var(--roxo);border-radius:30px;font-weight:700;cursor:pointer}.socio-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:25px 0}.socio-tab{border:0;background:#eee6f2;color:var(--roxo);padding:13px 20px;border-radius:30px;font:inherit;font-weight:700;cursor:pointer}.socio-tab.active{background:var(--roxo);color:#fff}.socio-tab-content{display:none;padding:35px;margin-bottom:25px}.socio-tab-content.active{display:block}.socio-tab-content h2{font-size:30px;text-align:left;margin-bottom:25px}.socio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.socio-grid>div{padding:20px;border-radius:15px;background:#fafafa;border-left:4px solid var(--dourado)}.socio-grid .wide{grid-column:1/-1}.socio-grid span{display:block;color:#777;font-size:13px;margin-bottom:5px}.socio-grid strong{font-size:17px}.tab-heading-row{display:flex;justify-content:space-between;align-items:center}.tab-heading-row h2{margin-bottom:4px}.contador-docs{background:var(--dourado);padding:8px 14px;border-radius:30px;font-weight:800}.upload-box{display:inline-block;margin:15px 0 20px;padding:14px 20px;border:2px dashed var(--dourado);border-radius:14px;color:var(--roxo);font-weight:700;cursor:pointer}.upload-box input{display:none}.docs-list{display:grid;gap:10px}.documento-socio-item,.fun-row,.quota-row{display:flex;align-items:center;gap:15px;background:#fafafa;padding:15px 18px;border-radius:14px}.documento-socio-item>span{font-size:25px}.documento-socio-item div,.fun-row div{flex:1}.documento-socio-item small,.fun-row small{display:block;color:#777;margin-top:3px}.botao-mini{background:var(--roxo);color:#fff;text-decoration:none;padding:7px 13px;border-radius:20px;font-size:13px}.quota-list,.funlearn-history{display:grid;gap:10px}.quota-row span{flex:1;color:#666}.quota-row b{color:var(--roxo)}.funlearn-box{background:linear-gradient(135deg,var(--roxo),#7e3fa3);color:#fff;border-radius:20px;padding:30px;text-align:center;margin-bottom:30px}.funlearn-label{display:block;letter-spacing:2px;font-weight:700}.funlearn-box strong{display:block;font-size:64px}.funlearn-box p{margin:0}.fun-row b{color:var(--roxo);font-size:22px}.vazio{padding:22px;text-align:center;color:#777;background:#fafafa;border-radius:14px}.admin-panel{padding:35px;border-top:6px solid var(--dourado);margin-top:25px}.admin-panel h2{text-align:left;font-size:30px;margin-bottom:10px}.admin-form{display:grid;grid-template-columns:1.5fr .7fr 1fr auto;gap:15px;align-items:end;margin-top:25px}.admin-form .botao{border:0;cursor:pointer;margin:0}.admin-nota{font-size:13px;color:#666;margin-top:18px}.pagina-construcao{padding-top:70px}.construcao-card{background:#fff;border-radius:24px;box-shadow:0 15px 40px rgba(0,0,0,.08);padding:70px 30px;text-align:center;border-top:6px solid var(--dourado)}.construcao-card h2{font-size:38px}.documentos-page,.contactos-page{padding:70px 0 100px}.documentos-lista{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.documento-card{display:flex;gap:18px;align-items:center;background:#fff;border-radius:18px;padding:24px;border-top:5px solid var(--dourado);box-shadow:0 10px 25px rgba(0,0,0,.07)}.documento-card h3{color:var(--roxo);margin-bottom:4px}.documento-icone{font-size:34px}.contactos-page .contactos{grid-template-columns:repeat(4,1fr)}.contacto-card{min-height:210px;display:flex;flex-direction:column;justify-content:center}.mapa-sede{margin-top:55px}.mapa-titulo{text-align:center;margin-bottom:20px}.mapa-titulo h2{font-size:34px;margin-bottom:5px}.mapa-wrapper{height:420px;border-radius:22px;overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,.12)}.mapa-wrapper iframe{width:100%;height:100%;border:0}
+
+/* Correção do enquadramento: o círculo mostra cabeça + ombros. */
+.membro .foto-container img.foto-enquadrada{object-fit:cover;object-position:var(--foto-x,50%) var(--foto-y,35%);transform:scale(var(--foto-zoom,1));}
+.membro:hover .foto-container img.foto-enquadrada{transform:scale(calc(var(--foto-zoom,1) * 1.04));}
+
+@media(max-width:1000px){.socio-perfil-card{grid-template-columns:120px 1fr}.funlearn-resumo{grid-column:1/-1}.contactos-page .contactos{grid-template-columns:repeat(2,1fr)}.admin-form{grid-template-columns:1fr 1fr}.admin-form .botao{grid-column:1/-1}.documentos-lista{grid-template-columns:1fr}}
+@media(max-width:700px){.socio-dashboard-head{display:block}.botao-secundario{margin-top:12px}.socio-perfil-card{grid-template-columns:1fr;text-align:center}.socio-identidade h2{text-align:center}.socio-grid{grid-template-columns:1fr}.socio-grid .wide{grid-column:auto}.contactos-page .contactos{grid-template-columns:1fr}.contacto-card{min-height:170px}.admin-form{grid-template-columns:1fr}.page-title h1{font-size:40px}.timeline{overflow-x:auto;justify-content:flex-start}.timeline .mes{flex:0 0 105px}}
+
+/* Login / recuperação de palavra-passe */
+.link-password{
+    border:0;
+    background:transparent;
+    color:var(--roxo);
+    font:inherit;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:-6px;
+}
+.link-password:hover{text-decoration:underline;color:#7E3FA3;}
