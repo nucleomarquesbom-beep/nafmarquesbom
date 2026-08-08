@@ -526,7 +526,8 @@ async function ajustarFotografias() {
             const alvoX = (ombroE.x + ombroD.x) / 2;
             const alvoY = topo + alturaAlvo * 0.48;
 
-            img.style.objectPosition = `${limitar(alvoX * 100, 15, 85)}% ${limitar(alvoY * 100, 12, 78)}%`;
+            img.style.setProperty("--foto-x", `${limitar(alvoX * 100, 20, 80).toFixed(1)}%`);
+            img.style.setProperty("--foto-y", `${limitar(alvoY * 100, 15, 70).toFixed(1)}%`);
             img.style.setProperty("--foto-zoom", zoom.toFixed(3));
             img.classList.add("foto-enquadrada");
 
