@@ -1,0 +1,12 @@
+# Nunca guardar chaves secretas do Supabase
+service_role
+.env
+.env.*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
