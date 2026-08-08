@@ -62,6 +62,7 @@ function renderProfile() {
   $('#socio-name').textContent = s.nome || 'Sócio';
   $('#socio-number').textContent = s.numero_socio ?? '—';
   $('#dados-nome').textContent = s.nome || '—';
+  $('#dados-numero').textContent = s.numero_socio ?? '—';
   $('#dados-nascimento').textContent = s.data_nascimento
     ? new Date(`${s.data_nascimento}T00:00:00`).toLocaleDateString('pt-PT')
     : '—';
@@ -78,6 +79,8 @@ function renderProfile() {
   loadQuotas();
   loadDocuments();
   loadFunlearn();
+  loadAdminSocios();
+  fillEditForms();
 }
 
 async function loadPhoto() {
@@ -359,6 +362,117 @@ async function processFunlearnPdf(file, pontos, atividade, descricao) {
   }
 }
 
+
+function fillEditForms() {
+  const s = state.socio;
+  if (!s) return;
+  $('#edit-nome').value = s.nome || '';
+  $('#edit-numero').value = s.numero_socio ?? '';
+  $('#edit-nascimento').value = s.data_nascimento || '';
+  $('#edit-email').value = s.email || state.user?.email || '';
+  $('#edit-morada').value = s.morada || '';
+  $('#edit-telemovel').value = s.telemovel || '';
+  $('#edit-arbitro').value = s.numero_arbitro || '';
+  $('#edit-af').value = s.associacao_futebol || '';
+  $('#edit-modalidade').value = s.modalidade || '';
+}
+
+function closeEditForms() {
+  if ($('#dados-edit-form')) $('#dados-edit-form').hidden = true;
+  if ($('#dados-view')) $('#dados-view').hidden = false;
+  if ($('#editar-dados-btn')) $('#editar-dados-btn').hidden = false;
+  if ($('#arbitragem-edit-form')) $('#arbitragem-edit-form').hidden = true;
+  if ($('#arbitragem-view')) $('#arbitragem-view').hidden = false;
+  if ($('#editar-arbitragem-btn')) $('#editar-arbitragem-btn').hidden = false;
+}
+
+async function saveProfileFields(fields) {
+  const { data, error } = await supabase.rpc('atualizar_perfil_socio', fields);
+  if (error) throw error;
+  state.socio = data;
+  renderProfile();
+  closeEditForms();
+}
+
+async function savePersonalData() {
+  const email = $('#edit-email').value.trim();
+  if (!email || !email.includes('@')) throw new Error('Indica um email válido.');
+
+  const oldEmail = (state.user?.email || '').toLowerCase();
+  if (email.toLowerCase() !== oldEmail) {
+    const { error: authError } = await supabase.auth.updateUser({ email });
+    if (authError) throw authError;
+  }
+
+  await saveProfileFields({
+    p_data_nascimento: $('#edit-nascimento').value || null,
+    p_morada: $('#edit-morada').value,
+    p_email: email,
+    p_telemovel: $('#edit-telemovel').value,
+    p_numero_arbitro: state.socio.numero_arbitro,
+    p_associacao_futebol: state.socio.associacao_futebol,
+    p_modalidade: state.socio.modalidade
+  });
+}
+
+async function saveArbitragemData() {
+  await saveProfileFields({
+    p_data_nascimento: state.socio.data_nascimento,
+    p_morada: state.socio.morada,
+    p_email: state.socio.email || state.user.email,
+    p_telemovel: state.socio.telemovel,
+    p_numero_arbitro: $('#edit-arbitro').value,
+    p_associacao_futebol: $('#edit-af').value,
+    p_modalidade: $('#edit-modalidade').value
+  });
+}
+
+async function createSocioFromAdmin() {
+  const body = {
+    nome: $('#novo-socio-nome').value.trim(),
+    numero_socio: Number($('#novo-socio-numero').value),
+    email: $('#novo-socio-email').value.trim(),
+    telemovel: $('#novo-socio-telemovel').value.trim()
+  };
+
+  const { data, error } = await supabase.functions.invoke('criar-socio', { body });
+  if (error) {
+    let message = error.message || 'Não foi possível criar o sócio.';
+    if (error.context) {
+      try {
+        const payload = await error.context.json();
+        message = payload?.error || message;
+      } catch (_) {}
+    }
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data?.socio;
+}
+
+async function loadAdminSocios() {
+  if (!state.admin || !$('#admin-socios-lista')) return;
+  const { data, error } = await supabase
+    .from('socios')
+    .select('numero_socio,nome,email,telemovel,ativo,user_id')
+    .order('numero_socio', { ascending: true });
+
+  if (error) {
+    $('#admin-socios-lista').innerHTML = `<div class="vazio">${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  $('#admin-socios-lista').innerHTML = data?.length
+    ? data.map(s => `
+      <div class="admin-socio-row">
+        <div class="admin-socio-numero">${escapeHtml(s.numero_socio)}</div>
+        <div class="admin-socio-main"><strong>${escapeHtml(s.nome)}</strong><small>${escapeHtml(s.email || 'Sem email')} · ${escapeHtml(s.telemovel || 'Sem telemóvel')}</small></div>
+        <span class="admin-socio-status ${s.ativo ? 'ativo' : 'inativo'}">${s.ativo ? 'Ativo' : 'Inativo'}</span>
+      </div>
+    `).join('')
+    : '<div class="vazio">Ainda não existem sócios.</div>';
+}
+
 function setupTabs() {
   $$('.socio-tab').forEach(btn => btn.addEventListener('click', () => {
     $$('.socio-tab').forEach(b => b.classList.remove('active'));
@@ -421,6 +535,71 @@ async function init() {
       showMessage(err.message, 'erro');
     }
     e.target.value = '';
+  });
+
+
+  $('#editar-dados-btn')?.addEventListener('click', () => {
+    fillEditForms();
+    $('#dados-view').hidden = true;
+    $('#dados-edit-form').hidden = false;
+    $('#editar-dados-btn').hidden = true;
+  });
+
+  $('#cancelar-dados-btn')?.addEventListener('click', closeEditForms);
+
+  $('#dados-edit-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      $('#guardar-dados-btn').disabled = true;
+      await savePersonalData();
+      showMessage('Dados pessoais atualizados.', 'sucesso');
+    } catch (err) {
+      showMessage(err.message || 'Não foi possível guardar os dados.', 'erro');
+    } finally {
+      $('#guardar-dados-btn').disabled = false;
+    }
+  });
+
+  $('#editar-arbitragem-btn')?.addEventListener('click', () => {
+    fillEditForms();
+    $('#arbitragem-view').hidden = true;
+    $('#arbitragem-edit-form').hidden = false;
+    $('#editar-arbitragem-btn').hidden = true;
+  });
+
+  $('#cancelar-arbitragem-btn')?.addEventListener('click', closeEditForms);
+
+  $('#arbitragem-edit-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const button = e.currentTarget.querySelector('button[type="submit"]');
+    try {
+      button.disabled = true;
+      await saveArbitragemData();
+      showMessage('Dados de arbitragem atualizados.', 'sucesso');
+    } catch (err) {
+      showMessage(err.message || 'Não foi possível guardar os dados.', 'erro');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('#novo-socio-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      $('#novo-socio-submit').disabled = true;
+      const socio = await createSocioFromAdmin();
+      $('#novo-socio-form').reset();
+      $('#novo-socio-resultado').hidden = false;
+      $('#novo-socio-resultado').textContent = `Sócio ${socio.numero_socio} — ${socio.nome} criado. Foi enviado um convite para ${socio.email}.`;
+      await loadAdminSocios();
+      showMessage('Sócio criado e convite enviado por email.', 'sucesso');
+    } catch (err) {
+      $('#novo-socio-resultado').hidden = false;
+      $('#novo-socio-resultado').textContent = err.message || 'Não foi possível criar o sócio.';
+      showMessage(err.message || 'Não foi possível criar o sócio.', 'erro');
+    } finally {
+      $('#novo-socio-submit').disabled = false;
+    }
   });
 
   $('#funlearn-form')?.addEventListener('submit', async e => {
