@@ -17,13 +17,13 @@ UTILITÁRIOS
 ============================================================ */
 
 function escapeHtml(value = '') {
-return String(value).replace(/[&<>'"]/g, (character) => ({
-'&': '&',
-'<': '<',
-'>': '>',
-"'": ''',
-'"': '"'
-}[character]));
+    return String(value).replace(/[&<>'"]/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[character]));
 }
 
 function showMessage(text, type = 'info') {
