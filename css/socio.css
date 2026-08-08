@@ -1,0 +1,29 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f4f6;color:#222}
+.site-header{background:#111;color:#fff;padding:28px 5%}
+.site-header h1{margin:0 0 5px}
+.site-header p{margin:0;opacity:.8}
+.container{max-width:1100px;margin:30px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:24px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+h2,h3{margin-top:0}
+label{display:flex;flex-direction:column;gap:7px;font-weight:600}
+input{width:100%;padding:11px 12px;border:1px solid #ccc;border-radius:8px;font:inherit;font-weight:400}
+input:disabled{background:#eee;color:#666}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.full{grid-column:1/-1}
+button,.file-button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:11px 16px;background:#4b2354;color:#fff;font-weight:700;cursor:pointer;text-decoration:none}
+button.secondary{background:#666}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.message{margin-top:15px;padding:12px;border-radius:8px;background:#eee}
+.message.erro{background:#ffe2e2;color:#8b0000}
+.message.sucesso{background:#e2f7e8;color:#176b2d}
+.profile-head{display:flex;justify-content:space-between;gap:20px;align-items:center}
+.photo-row{display:flex;gap:20px;align-items:center}
+.photo-frame{width:150px;height:180px;border-radius:12px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center;text-align:center}
+.photo-frame img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.points{font-size:30px;margin-bottom:15px}
+.fun-row,.documento-socio-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee}
+.fun-row small,.documento-socio-item small{display:block;color:#666;margin-top:4px}
+.vazio{color:#777;padding:12px 0}
+.admin{border:2px solid #4b2354}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.profile-head{align-items:flex-start;flex-direction:column}.photo-row{align-items:flex-start;flex-direction:column}}
