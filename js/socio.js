@@ -1248,7 +1248,58 @@ async function processFunlearnPdf(
 /* ============================================================
    ABAS
 ============================================================ */
+async function createSocioFromAdmin() {
+  const body = {
+    nome: $('#novo-socio-nome').value.trim(),
+    numero_socio: Number($('#novo-socio-numero').value),
+    email: $('#novo-socio-email').value.trim(),
+    telemovel: $('#novo-socio-telemovel').value.trim()
+  };
 
+  if (!body.nome) {
+    throw new Error('Indica o nome do sócio.');
+  }
+
+  if (!body.numero_socio) {
+    throw new Error('Indica o número de sócio.');
+  }
+
+  if (!body.email) {
+    throw new Error('Indica o email do sócio.');
+  }
+
+  const { data, error } = await supabase.functions.invoke(
+    'criar-socio',
+    {
+      body
+    }
+  );
+
+  if (error) {
+    console.error('Erro Edge Function:', error);
+
+    let message = error.message || 'Não foi possível criar o sócio.';
+
+    if (error.context) {
+      try {
+        const response = await error.context.json();
+        if (response?.error) {
+          message = response.error;
+        }
+      } catch (_) {
+        // Mantém a mensagem original
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data?.socio;
+}
 function setupTabs() {
     $$('.socio-tab').forEach(button => {
         button.addEventListener(
