@@ -1,134 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-PT">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Área de Sócio | Núcleo de Árbitros de Futebol Marques Bom</title>
-<link rel="stylesheet" href="css/style.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Área de Sócios — NAF Marques Bom</title>
+  <link rel="stylesheet" href="css/socio.css">
+  <script type="module" src="js/socio.js"></script>
 </head>
 <body>
-<header>
-  <div class="container">
-    <a href="index.html" class="logo"><img src="imagens/logo.png" alt="Núcleo de Árbitros de Futebol Marques Bom"></a>
-    <nav>
-      <a href="index.html">Início</a><a href="historia.html">História</a><a href="corpos-sociais.html">Corpos Sociais</a>
-      <a href="plano-atividades.html">Plano de Atividades</a><a href="documentos.html">Documentos</a><a href="contactos.html">Contactos</a><a href="socio.html" class="ativo">Sócio</a>
-    </nav>
-  </div>
-</header>
-<section class="page-hero"><img src="imagens/cabecalho.png" alt="Área de Sócio"><div class="page-title"><h1>Área de Sócio</h1></div></section>
+  <header class="site-header">
+    <div>
+      <h1>Área de Sócios</h1>
+      <p>Núcleo de Árbitros de Futebol Marques Bom</p>
+    </div>
+  </header>
 
-<main class="socio-area">
-<div class="container">
-  <div id="socio-message" class="socio-message" hidden></div>
-
-  <section id="login-panel" class="login-card">
-    <span class="login-icon">🔐</span>
-    <h2>Acesso dos Sócios</h2>
-    <p>Entre com o seu email e palavra-passe.</p>
-    <form id="login-form" class="login-form">
-      <label>Email<input id="login-email" type="email" autocomplete="email" required></label>
-      <label>Palavra-passe<input id="login-password" type="password" autocomplete="current-password" minlength="8" required></label>
-      <button class="botao" type="submit">Entrar</button><button id="reset-password" class="link-password" type="button">Esqueci-me da palavra-passe</button>
-    </form>
-    <small>Se ainda não recebeu os dados de acesso, contacte o Núcleo.</small>
-  </section>
-
-  <section id="dashboard" hidden>
-    <div class="socio-dashboard-head">
-      <div class="socio-perfil-card">
-        <div class="socio-foto-wrap">
-          <img id="socio-photo" class="socio-photo-img" alt="Fotografia do sócio" hidden>
-          <div id="socio-photo-placeholder" class="socio-foto-placeholder">👤</div>
-          <label class="photo-upload">Alterar fotografia<input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp"></label>
+  <main class="container">
+    <section id="login-panel" class="card">
+      <h2>Entrar</h2>
+      <form id="login-form">
+        <label>Email
+          <input id="login-email" type="email" required autocomplete="email">
+        </label>
+        <label>Palavra-passe
+          <input id="login-password" type="password" required autocomplete="current-password">
+        </label>
+        <div class="actions">
+          <button type="submit">Entrar</button>
+          <button id="reset-password" type="button" class="secondary">Esqueci-me da palavra-passe</button>
         </div>
-        <div class="socio-identidade"><span class="socio-etiqueta">SÓCIO</span><h2 id="socio-name">—</h2><p class="numero-socio">N.º de Sócio <strong id="socio-number">—</strong></p><p class="socio-estado">● Conta ativa</p></div>
-        <div class="funlearn-resumo"><span>FUN&amp;LEARN</span><strong id="funlearn-total-top">0</strong><small>pontos</small></div>
-      </div>
-      <button id="logout-btn" class="botao-secundario">Terminar sessão</button>
-    </div>
+      </form>
+      <div id="socio-message" class="message" hidden></div>
+    </section>
 
-    <div class="socio-tabs" role="tablist">
-      <button class="socio-tab active" data-tab="dados">Dados pessoais</button><button class="socio-tab" data-tab="arbitragem">Arbitragem</button>
-      <button class="socio-tab" data-tab="quotas">Quotas</button><button class="socio-tab" data-tab="documentos">Documentos</button><button class="socio-tab" data-tab="funlearn">Fun&amp;Learn</button>
-    </div>
-
-    <section class="socio-tab-content active" id="dados">
-      <div class="tab-heading-row"><div><h2>Dados pessoais</h2><p>O nome e o número de sócio são definidos pelo Núcleo e não podem ser alterados.</p></div><button id="editar-dados-btn" class="botao" type="button">Editar os meus dados</button></div>
-
-      <div id="dados-view" class="socio-grid">
-        <div><span>Nome</span><strong id="dados-nome">—</strong></div><div><span>N.º de sócio</span><strong id="dados-numero">—</strong></div>
-        <div><span>Data de nascimento</span><strong id="dados-nascimento">—</strong></div><div><span>Email</span><strong id="dados-email">—</strong></div>
-        <div class="wide"><span>Morada</span><strong id="dados-morada">—</strong></div><div><span>Telemóvel</span><strong id="dados-telemovel">—</strong></div>
+    <section id="dashboard" hidden>
+      <div class="profile-head card">
+        <div>
+          <h2 id="socio-name">Sócio</h2>
+          <p>N.º de sócio: <strong id="socio-number">—</strong></p>
+        </div>
+        <button id="logout-btn" class="secondary">Sair</button>
       </div>
 
-      <form id="dados-edit-form" class="socio-edit-form" hidden>
-        <div class="socio-edit-locked"><label>Nome<input id="edit-nome" type="text" readonly></label><label>N.º de sócio<input id="edit-numero" type="text" readonly></label></div>
-        <div class="socio-edit-grid">
-          <label>Data de nascimento<input id="edit-nascimento" type="date"></label>
-          <label>Email<input id="edit-email" type="email" autocomplete="email"></label>
-          <label class="wide">Morada<input id="edit-morada" type="text" autocomplete="street-address"></label>
-          <label>Telemóvel<input id="edit-telemovel" type="tel" autocomplete="tel"></label>
-        </div>
-        <div class="socio-edit-actions"><button id="guardar-dados-btn" class="botao" type="submit">Guardar alterações</button><button id="cancelar-dados-btn" class="botao-secundario" type="button">Cancelar</button></div>
-        <small class="socio-edit-note">O email da área de sócio é atualizado no perfil. Se o Supabase pedir confirmação de um novo email, segue o link recebido.</small>
-      </form>
-    </section>
-
-    <section class="socio-tab-content" id="arbitragem">
-      <div class="tab-heading-row"><div><h2>Dados de arbitragem</h2><p>Estes dados podem ser completados ou atualizados pelo próprio sócio.</p></div><button id="editar-arbitragem-btn" class="botao" type="button">Editar</button></div>
-      <div id="arbitragem-view" class="socio-grid"><div><span>N.º árbitro</span><strong id="dados-arbitro">—</strong></div><div><span>Associação de Futebol</span><strong id="dados-af">—</strong></div><div><span>Modalidade</span><strong id="dados-modalidade">—</strong></div></div>
-      <form id="arbitragem-edit-form" class="socio-edit-form" hidden>
-        <div class="socio-edit-grid"><label>N.º árbitro<input id="edit-arbitro" type="text"></label><label>Associação de Futebol<input id="edit-af" type="text"></label><label>Modalidade<input id="edit-modalidade" type="text"></label></div>
-        <div class="socio-edit-actions"><button class="botao" type="submit">Guardar alterações</button><button id="cancelar-arbitragem-btn" class="botao-secundario" type="button">Cancelar</button></div>
-      </form>
-    </section>
-
-    <section class="socio-tab-content" id="quotas"><h2>Quotas</h2><div id="quotas-list" class="quota-list"><div class="vazio">A carregar…</div></div></section>
-
-    <section class="socio-tab-content" id="documentos"><div class="tab-heading-row"><div><h2>Os meus documentos</h2><p>Até 12 documentos PDF.</p></div><span id="docs-count" class="contador-docs">0 / 12</span></div>
-      <label class="upload-box">📄 Carregar PDF<input id="doc-input" type="file" accept="application/pdf"></label><div id="docs-list" class="docs-list"><div class="vazio">A carregar…</div></div>
-    </section>
-
-    <section class="socio-tab-content" id="funlearn"><div class="funlearn-box"><span class="funlearn-label">FUN&amp;LEARN</span><strong id="funlearn-total">0</strong><p>Pontos acumulados</p></div><h2>Histórico de pontos</h2><div id="funlearn-history" class="funlearn-history"><div class="vazio">A carregar…</div></div></section>
-
-    <section id="admin-panel" class="admin-panel" hidden>
-      <h2>Área do Administrador</h2><p>Administrador: Sócio <strong>9999 — Núcleo Marques Bom</strong></p>
-
-      <div class="admin-subpanel">
-        <div class="tab-heading-row"><div><h3>Novo sócio</h3><p>Preenche apenas os dados essenciais. O sócio recebe um convite por email e completa o restante do perfil.</p></div></div>
-        <form id="novo-socio-form" class="admin-new-socio-form">
-          <label>Nome *<input id="novo-socio-nome" type="text" required></label>
-          <label>N.º de sócio *<input id="novo-socio-numero" type="number" min="1" step="1" required></label>
-          <label>Email *<input id="novo-socio-email" type="email" required></label>
-          <label>Telemóvel<input id="novo-socio-telemovel" type="tel"></label>
-          <button id="novo-socio-submit" class="botao" type="submit">Criar sócio e enviar convite</button>
+      <section class="card">
+        <h3>Os meus dados</h3>
+        <form id="profile-form" class="grid">
+          <label>Nome <input id="profile-nome" disabled></label>
+          <label>N.º de sócio <input id="profile-numero" disabled></label>
+          <label>Email <input id="profile-email" type="email" required></label>
+          <label>Telemóvel <input id="profile-telemovel"></label>
+          <label>Data de nascimento <input id="profile-nascimento" type="date"></label>
+          <label>Morada <input id="profile-morada"></label>
+          <label>N.º de árbitro <input id="profile-arbitro"></label>
+          <label>Associação de futebol <input id="profile-af"></label>
+          <label>Modalidade <input id="profile-modalidade"></label>
+          <label>Quotas <input id="profile-quotas" disabled></label>
+          <div class="full"><button type="submit">Guardar alterações</button></div>
         </form>
-        <div id="novo-socio-resultado" class="admin-result" hidden></div>
-      </div>
+      </section>
 
-      <div class="admin-subpanel">
-        <h3>Sócios registados</h3>
-        <div id="admin-socios-lista" class="admin-socios-lista"><div class="vazio">A carregar…</div></div>
-      </div>
+      <section class="card">
+        <h3>Fotografia</h3>
+        <div class="photo-row">
+          <div class="photo-frame">
+            <img id="socio-photo" alt="Fotografia do sócio" hidden>
+            <div id="socio-photo-placeholder">Sem fotografia</div>
+          </div>
+          <label class="file-button">Alterar fotografia
+            <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          </label>
+        </div>
+      </section>
 
-      <div class="admin-subpanel"><h3>Fun&amp;Learn</h3><form id="funlearn-form" class="admin-form">
-      <label>PDF do Fun&amp;Learn<input id="funlearn-file" type="file" accept="application/pdf" required></label>
-      <label>Pontos a atribuir<input id="funlearn-pontos" type="number" min="1" step="1" required></label>
-      <label>Atividade<input id="funlearn-atividade" type="text" placeholder="Ex.: Formação de Leis de Jogo" required></label><label>Descrição<input id="funlearn-descricao" type="text" placeholder="Ex.: Presença na formação" required></label>
-      <button id="funlearn-submit" class="botao" type="submit">Carregar e atribuir pontos automaticamente</button>
-    </form><p class="admin-nota">O sistema lê o texto do PDF, procura os nomes dos sócios ativos e atribui os pontos aos nomes encontrados.</p></div></section>
-  </section>
-</div>
-</main>
-<footer><div class="container"><h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Desde 1987</p><p>Formação • Ética • Desenvolvimento da Arbitragem</p><p>© 2026 Núcleo de Árbitros de Futebol Marques Bom</p></div></footer>
+      <section class="card">
+        <h3>Documentos</h3>
+        <p>Máximo de 12 ficheiros PDF. <strong id="docs-count">0 / 12</strong></p>
+        <label class="file-button">Carregar PDF
+          <input id="doc-input" type="file" accept="application/pdf" hidden>
+        </label>
+        <div id="docs-list"></div>
+      </section>
 
-<script type="module">
-  import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
-  window.pdfjsLib = pdfjsLib;
-  import './js/socio.js';
-</script>
+      <section class="card">
+        <h3>Fun&amp;Learn</h3>
+        <div class="points"><strong id="funlearn-total">0</strong> pontos</div>
+        <div id="funlearn-history"></div>
+      </section>
+
+      <section id="admin-panel" class="card admin" hidden>
+        <h3>Administração — Novo sócio</h3>
+        <p>Preenche apenas os dados iniciais. O sócio receberá um convite por email para definir a palavra-passe.</p>
+        <form id="new-member-form" class="grid">
+          <label>Nome *
+            <input id="new-nome" required>
+          </label>
+          <label>N.º de sócio *
+            <input id="new-numero" type="number" min="1" required>
+          </label>
+          <label>Email *
+            <input id="new-email" type="email" required>
+          </label>
+          <label>Telemóvel
+            <input id="new-telemovel">
+          </label>
+          <div class="full"><button id="new-member-submit" type="submit">Criar sócio e enviar convite</button></div>
+        </form>
+        <div id="admin-message" class="message" hidden></div>
+      </section>
+    </section>
+  </main>
 </body>
 </html>
