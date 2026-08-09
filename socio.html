@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Área de Sócios | Núcleo de Árbitros de Futebol Marques Bom</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/socio.css">
+<link rel="stylesheet" href="css/socio.css?v=20260808-final">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -25,12 +25,12 @@
 <div class="socio-actions"><button type="submit" class="botao">Entrar</button><button id="reset-password" type="button" class="link-password">Esqueci-me da palavra-passe</button></div>
 </form><div id="socio-message" class="socio-message" hidden></div>
 </section>
+
 <section id="dashboard" class="socio-dashboard" hidden>
 <article class="socio-perfil-card">
 <div class="socio-foto-wrap">
 <div class="socio-foto-3d">
 <img id="socio-photo" class="socio-photo-img" src="" alt="Fotografia do sócio" hidden>
-<div id="socio-photo-placeholder" class="socio-foto-placeholder" hidden>Sem fotografia</div>
 </div>
 <button type="button" id="photo-trigger" class="photo-upload">Alterar fotografia</button>
 <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Escolher fotografia do sócio">
@@ -38,14 +38,21 @@
 <div class="socio-identidade"><span class="socio-etiqueta">SÓCIO</span><h2 id="socio-name">—</h2><p class="numero-socio">N.º de Sócio: <strong id="socio-number">—</strong></p><p class="socio-estado">● Conta ativa</p><button id="logout-btn" class="botao botao-secundario" type="button">Sair</button></div>
 <div class="funlearn-resumo"><span>FUN&amp;LEARN</span><strong id="funlearn-total-top">0</strong><small>pontos</small></div>
 </article>
+
 <div class="socio-tabs"><button class="socio-tab active" data-tab="dados" type="button">Os meus dados</button><button class="socio-tab" data-tab="quotas" type="button">Quotas</button><button class="socio-tab" data-tab="documentos" type="button">Documentos</button><button class="socio-tab" data-tab="funlearn" type="button">Fun&amp;Learn</button></div>
+
 <section id="tab-dados" class="socio-tab-content active"><div class="tab-heading-row"><div><h2>Os meus dados</h2><p>Consulta e atualiza os teus dados pessoais.</p></div></div>
 <form id="profile-form" class="socio-edit-grid"><label>Nome<input id="profile-nome" disabled></label><label>N.º de sócio<input id="profile-numero" disabled></label><label>Email<input id="profile-email" type="email" required></label><label>Telemóvel<input id="profile-telemovel"></label><label>Data de nascimento<input id="profile-nascimento" type="date"></label><label>Morada<input id="profile-morada"></label><label>N.º de árbitro<input id="profile-arbitro"></label><label>Associação de futebol<input id="profile-af"></label><label>Modalidade<input id="profile-modalidade"></label><label>Quotas<input id="profile-quotas" disabled></label><div class="wide"><button type="submit" class="botao">Guardar alterações</button></div></form></section>
+
 <section id="tab-quotas" class="socio-tab-content"><div class="tab-heading-row"><div><h2>Quotas</h2><p>Consulta o estado das tuas quotas.</p></div></div><div id="quotas-list" class="quota-list"></div></section>
+
 <section id="tab-documentos" class="socio-tab-content"><div class="tab-heading-row"><div><h2>Os meus documentos</h2><p>Podes guardar até 12 documentos PDF na tua área de sócio. <strong id="docs-count" class="contador-docs">0 / 12</strong></p></div></div><label class="upload-box">Carregar PDF<input id="doc-input" type="file" accept="application/pdf"></label><div id="docs-list" class="docs-list"></div></section>
+
 <section id="tab-funlearn" class="socio-tab-content"><div class="tab-heading-row"><div><h2>Fun&amp;Learn</h2><p>Consulta o teu histórico de pontos.</p></div></div><div class="funlearn-box"><span class="funlearn-label">TOTAL</span><strong id="funlearn-total">0</strong><small>pontos</small></div><div id="funlearn-history" class="funlearn-history"></div></section>
+
 <section id="admin-panel" class="admin-panel" hidden><h2>Administração</h2><p>Criação de novos sócios e gestão administrativa.</p><div class="admin-subpanel"><h3>Novo sócio</h3><form id="new-member-form" class="admin-form-grid"><label>Nome *<input id="new-nome" required></label><label>N.º de sócio *<input id="new-numero" type="number" min="1" required></label><label>Email *<input id="new-email" type="email" required></label><label>Telemóvel<input id="new-telemovel"></label><div class="wide"><button id="new-member-submit" type="submit" class="botao">Criar sócio e enviar convite</button></div></form><div id="admin-message" class="socio-message" hidden></div></div></section>
 </section></div></main>
+
 <footer><div class="container"><h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Portugal</p><p>Email: nucleomarquesbom@gmail.com</p><p>© 2026 Todos os direitos reservados.</p></div></footer>
-<script type="module" src="js/socio.js"></script>
+<script type="module" src="js/socio.js?v=20260808-final"></script>
 </body></html>
