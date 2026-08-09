@@ -1,56 +1,80 @@
-import { serve } from "https://deno.land/std@0.224.0/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, json } from '../_shared/cors.ts';
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
+async function requireAdmin(req: Request) {
+  const authorization = req.headers.get('Authorization');
+  if (!authorization) throw new Error('Sessão não autenticada.');
+
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authorization } }
   });
+  const { data: { user }, error } = await authClient.auth.getUser();
+  if (error || !user) throw new Error('Sessão inválida.');
+
+  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data: admin, error: adminError } = await adminClient
+    .from('socios')
+    .select('id,numero_socio,is_admin,ativo')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (adminError) throw adminError;
+  if (!admin || Number(admin.numero_socio) !== 9999 || admin.is_admin !== true || admin.ativo !== true) {
+    throw new Error('Acesso reservado ao administrador.');
+  }
+
+  return adminClient;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const auth = req.headers.get("Authorization");
-    if (!auth) throw new Error("Sessão não autenticada.");
-
+    const adminClient = await requireAdmin(req);
     const form = await req.formData();
-    const file = form.get("pdf");
+    const file = form.get('pdf');
 
-    if (!(file instanceof File) || file.type !== "application/pdf") {
-      return json({ error: "PDF inválido ou em falta." }, 400);
+    if (!(file instanceof File) || file.type !== 'application/pdf') {
+      return json({ error: 'PDF inválido ou em falta.' }, 400);
     }
 
-    // Segurança: a autorização administrativa real deve ser verificada
-    // pelo Supabase/Edge Function antes da escrita.
-    //
-    // A extração PDF pode ser ligada aqui a um parser escolhido para o
-    // formato real dos PDFs do Núcleo Marques Bom.
-    //
-    // Devolvemos o ficheiro como base64 para permitir uma integração
-    // posterior sem obrigar a colocar uma biblioteca pesada no browser.
+    if (file.size > 10 * 1024 * 1024) {
+      return json({ error: 'O PDF não pode ultrapassar 10 MB.' }, 400);
+    }
+
+    // O parsing principal é feito no browser com PDF.js porque o site já
+    // carrega essa biblioteca e isso evita dependências pesadas no Edge Runtime.
+    // Esta função serve como endpoint autenticado para receber o PDF caso
+    // seja necessário evoluir o processamento para o backend.
+    const storagePath = `admin-imports/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]+/g, '_')}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+
+    const { error: uploadError } = await adminClient.storage
+      .from('funlearn')
+      .upload(storagePath, bytes, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      return json({
+        ok: true,
+        stored: false,
+        warning: `PDF recebido mas não foi guardado no bucket funlearn: ${uploadError.message}`
+      });
     }
 
     return json({
       ok: true,
-      filename: file.name,
-      size: file.size,
-      content_type: file.type,
-      message: "PDF recebido. A etapa seguinte deve mapear os campos extraídos para socios.",
-      pdf_base64: btoa(binary),
+      stored: true,
+      storage_path: storagePath,
+      message: 'PDF recebido. O site pode continuar o processamento dos registos no browser.'
     });
-  } catch (e) {
-    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
