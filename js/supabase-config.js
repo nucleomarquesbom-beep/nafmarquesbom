@@ -1,4 +1,5 @@
-// CONFIGURAÇÃO LOCAL — NÃO colocar service_role key aqui.
-// Antes de publicar, substitui o valor abaixo pela tua chave ANON/PUBLISHABLE.
+// Configuração pública do Supabase.
+// NÃO colocar aqui service_role/secret keys.
+// A chave abaixo é uma publishable/anon key própria para frontend.
 export const SUPABASE_URL = 'https://pvaupgdhtrmbumaxvvrj.supabase.co';
-export const SUPABASE_ANON_KEY = 'COLOCA_AQUI_A_TUA_CHAVE_ANON_OU_PUBLISHABLE';
+export const SUPABASE_ANON_KEY = 'sb_publishable_8pqZLxvQA5kMbYYLD95WPg_0uFK5WRi';
