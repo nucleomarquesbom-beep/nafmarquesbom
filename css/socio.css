@@ -229,6 +229,10 @@
     color: #777;
     font-size: 44px;
 }
+.socio-foto-placeholder[hidden] {
+    display: none !important;
+}
+
 
 .socio-foto-placeholder span {
     filter: grayscale(.2);
