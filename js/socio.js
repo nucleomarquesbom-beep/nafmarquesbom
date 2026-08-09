@@ -3003,3 +3003,163 @@ supabase.auth.onAuthStateChange(
 
 
 init();
+/* =========================================================
+   COMPROVATIVO DE QUOTAS
+========================================================= */
+
+const quotaComprovativo =
+    document.getElementById("quota-comprovativo");
+
+const quotaUploadStatus =
+    document.getElementById("quota-upload-status");
+
+if (quotaComprovativo) {
+
+    quotaComprovativo.addEventListener(
+        "change",
+        async function () {
+
+            const file = this.files?.[0];
+
+            if (!file) {
+                return;
+            }
+
+            if (file.type !== "application/pdf") {
+
+                mostrarQuotaStatus(
+                    "erro",
+                    "Selecione um ficheiro PDF válido."
+                );
+
+                this.value = "";
+
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+
+                mostrarQuotaStatus(
+                    "erro",
+                    "O PDF não pode ultrapassar 10 MB."
+                );
+
+                this.value = "";
+
+                return;
+            }
+
+            await processarComprovativoQuota(file);
+        }
+    );
+}
+
+
+function mostrarQuotaStatus(tipo, mensagem) {
+
+    if (!quotaUploadStatus) {
+        return;
+    }
+
+    quotaUploadStatus.hidden = false;
+
+    quotaUploadStatus.className =
+        "admin-result quota-payment-result " + tipo;
+
+    quotaUploadStatus.textContent = mensagem;
+}
+
+
+async function processarComprovativoQuota(file) {
+
+    try {
+
+        mostrarQuotaStatus(
+            "info",
+            "A analisar o comprovativo. Aguarde..."
+        );
+
+
+        const {
+            data: {
+                session
+            }
+        } = await supabase.auth.getSession();
+
+
+        if (!session) {
+
+            mostrarQuotaStatus(
+                "erro",
+                "A sua sessão terminou. Entre novamente."
+            );
+
+            return;
+        }
+
+
+        const formData = new FormData();
+
+        formData.append(
+            "comprovativo",
+            file
+        );
+
+
+        const response = await fetch(
+            `${SUPABASE_URL}/functions/v1/processar-comprovativo`,
+            {
+                method: "POST",
+
+                headers: {
+                    Authorization:
+                        `Bearer ${session.access_token}`
+                },
+
+                body: formData
+            }
+        );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.error ||
+                "Não foi possível processar o comprovativo."
+            );
+        }
+
+
+        mostrarQuotaStatus(
+            "sucesso",
+            result.message
+        );
+
+
+        quotaComprovativo.value = "";
+
+
+        await carregarQuotas();
+
+        await carregarRecibos();
+
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao processar comprovativo:",
+            error
+        );
+
+
+        mostrarQuotaStatus(
+            "erro",
+            error.message ||
+            "Erro ao processar o comprovativo."
+        );
+    }
+}
