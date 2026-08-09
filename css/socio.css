@@ -1,8 +1,8 @@
 /* =========================================================
    ÁREA DE SÓCIO
    CSS isolado da página de sócios.
-   Não altera o CSS global do site.
-   ========================================================= */
+   Mantém o layout original do site.
+========================================================= */
 
 .socio-area {
     padding: 70px 0 90px;
@@ -16,8 +16,26 @@
     border-radius: 12px;
     background: #eee;
 }
-.socio-message.erro { background:#ffe5e5; color:#8c1717; }
-.socio-message.sucesso { background:#e5f7eb; color:#176b38; }
+
+.socio-message.erro {
+    background: #ffe5e5;
+    color: #8c1717;
+}
+
+.socio-message.sucesso {
+    background: #e5f7eb;
+    color: #176b38;
+}
+
+.socio-message.info {
+    background: #eee9f1;
+    color: var(--roxo);
+}
+
+
+/* =========================================================
+   CARTÕES
+========================================================= */
 
 .login-card,
 .socio-perfil-card,
@@ -37,499 +55,917 @@
     text-align: center;
 }
 
-.login-icon { font-size: 38px; display:block; margin-bottom:10px; }
-.login-card h2 { margin-bottom:10px; }
-.login-card p { color:#666; margin-bottom:28px; }
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+.login-icon {
+    font-size: 38px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.login-card h2 {
+    margin-bottom: 10px;
+}
+
+.login-card p {
+    color: #666;
+    margin-bottom: 28px;
+}
 
 .login-form {
-    display:grid;
-    gap:16px;
-    text-align:left;
+    display: grid;
+    gap: 16px;
+    text-align: left;
 }
 
 .login-form label,
 .admin-form-grid label {
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-    font-weight:600;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-weight: 600;
 }
 
 .login-form input,
 .admin-form-grid input,
-.admin-inline-form input,
+.admin-form-grid textarea,
 .admin-form-grid select,
 .socio-edit-grid input,
 .socio-edit-locked input {
-    width:100%;
-    padding:12px 14px;
-    border:1px solid #ddd;
-    border-radius:10px;
-    font:inherit;
-    background:#fff;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font: inherit;
+    background: #fff;
 }
 
 .login-form input:focus,
 .admin-form-grid input:focus,
-.admin-inline-form input:focus,
+.admin-form-grid textarea:focus,
 .admin-form-grid select:focus,
 .socio-edit-grid input:focus {
-    outline:none;
-    border-color:var(--roxo);
-    box-shadow:0 0 0 3px rgba(91,42,114,.10);
-}
-
-.link-password {
-    border:0;
-    background:none;
-    color:var(--roxo);
-    font:inherit;
-    font-weight:600;
-    cursor:pointer;
-}
-
-.socio-dashboard-head {
-    display:flex;
-    gap:20px;
-    align-items:center;
-    margin-bottom:25px;
-}
-
-.socio-perfil-card {
-    flex:1;
-    padding:28px;
-    display:grid;
-    grid-template-columns:170px minmax(0,1fr) 150px;
-    gap:25px;
-    align-items:center;
-}
-
-.socio-foto-wrap {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:10px;
-}
-
-.socio-foto-3d {
-    width:150px;
-    height:150px;
-    padding:6px;
-    border-radius:50%;
-    background:linear-gradient(145deg,#fff,var(--dourado),#987719);
-    box-shadow:0 12px 25px rgba(0,0,0,.18), inset 0 2px 4px rgba(255,255,255,.8);
-    perspective:800px;
-    transition:transform .25s ease, box-shadow .25s ease;
-}
-
-.socio-foto-3d:hover {
-    transform:perspective(800px) rotateY(-4deg) rotateX(3deg) translateY(-3px);
-    box-shadow:0 18px 32px rgba(0,0,0,.22), inset 0 2px 5px rgba(255,255,255,.85);
-}
-
-.socio-foto-3d img,
-.socio-foto-placeholder {
-    width:100%;
-    height:100%;
-    border-radius:50%;
-}
-
-.socio-photo-img {
-    display:block;
-    object-fit:cover;
-    object-position:center top;
-    transform:translateZ(8px);
-}
-
-.socio-foto-placeholder {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#eee;
-    color:#777;
-    font-size:38px;
-}
-
-.photo-upload {
-    color:var(--roxo);
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-}
-.photo-upload input {
-    position:absolute;
-    width:1px;
-    height:1px;
-    opacity:0;
-    pointer-events:none;
-}
-
-.socio-etiqueta {
-    color:var(--dourado);
-    font-size:13px;
-    font-weight:700;
-    letter-spacing:3px;
-}
-.socio-identidade h2 {
-    text-align:left;
-    color:var(--roxo);
-    font-size:clamp(28px,4vw,40px);
-    line-height:1.15;
-    margin:8px 0 14px;
-}
-.numero-socio { color:#444; font-size:18px; margin-bottom:10px; }
-.numero-socio strong { color:var(--roxo); }
-.socio-estado { color:#21854b; font-weight:600; }
-
-.funlearn-resumo {
-    text-align:center;
-    color:var(--roxo);
-}
-.funlearn-resumo span,
-.funlearn-label {
-    display:block;
-    color:var(--dourado);
-    font-size:12px;
-    font-weight:800;
-    letter-spacing:2px;
-}
-.funlearn-resumo strong { display:block; font-size:44px; line-height:1.1; }
-.funlearn-resumo small { color:#666; }
-
-.botao-secundario {
-    border:0;
-    border-radius:40px;
-    padding:12px 22px;
-    background:#777;
-    color:#fff;
-    font-weight:700;
-    cursor:pointer;
-}
-.botao-secundario:hover { background:#666; }
-
-.socio-tabs {
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-bottom:18px;
-    border-bottom:1px solid #ddd;
-}
-
-.socio-tab {
-    border:0;
-    background:transparent;
-    color:var(--roxo);
-    padding:12px 16px;
-    border-radius:12px 12px 0 0;
-    font:inherit;
-    font-weight:700;
-    cursor:pointer;
-}
-.socio-tab.active {
-    background:var(--roxo);
-    color:#fff;
-}
-
-.socio-tab-content {
-    display:none;
-    padding:35px;
-    margin-bottom:25px;
-}
-.socio-tab-content.active { display:block; }
-.socio-tab-content h2 { text-align:left; font-size:30px; margin-bottom:8px; }
-.socio-tab-content > p,
-.tab-heading-row p { color:#666; }
-
-.tab-heading-row {
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:20px;
-    margin-bottom:25px;
-}
-
-.socio-grid {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:18px;
-}
-.socio-grid > div {
-    padding:16px;
-    border:1px solid #eee;
-    border-radius:12px;
-    background:#fafafa;
-}
-.socio-grid .wide,
-.socio-edit-grid .wide { grid-column:1/-1; }
-.socio-grid span {
-    display:block;
-    color:#777;
-    font-size:13px;
-    margin-bottom:5px;
-}
-.socio-grid strong { color:#333; }
-
-.socio-edit-form { margin-top:20px; }
-.socio-edit-locked,
-.socio-edit-grid,
-.admin-form-grid {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:16px;
-}
-.socio-edit-actions,
-.admin-actions-row {
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:18px;
-}
-
-.quota-list,
-.docs-list,
-.funlearn-history { margin-top:18px; }
-
-.documento-socio-item,
-.fun-row,
-.admin-socio-row {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:14px 0;
-    border-bottom:1px solid #eee;
-}
-.documento-socio-item strong,
-.fun-row strong { color:var(--roxo); }
-.documento-socio-item small,
-.fun-row small,
-.admin-socio-main small {
-    display:block;
-    color:#777;
-    margin-top:4px;
-}
-
-.upload-box {
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:13px 18px;
-    border-radius:30px;
-    background:var(--dourado);
-    color:#111;
-    font-weight:700;
-    cursor:pointer;
-}
-.upload-box input { display:none; }
-
-.contador-docs { color:var(--roxo); font-weight:800; }
-.vazio { color:#777; padding:12px 0; }
-
-.funlearn-box {
-    max-width:260px;
-    padding:22px;
-    margin-bottom:25px;
-    border-radius:16px;
-    background:linear-gradient(135deg,rgba(91,42,114,.06),rgba(201,162,39,.12));
-    text-align:center;
-}
-.funlearn-box strong {
-    display:block;
-    color:var(--roxo);
-    font-size:50px;
-    line-height:1;
-    margin:8px 0;
-}
-
-.admin-panel {
-    padding:35px;
-    margin-top:25px;
-    border:2px solid var(--roxo);
-}
-.admin-panel > h2 { text-align:left; margin-bottom:8px; }
-.admin-subpanel {
-    padding:25px;
-    margin-top:20px;
-}
-.admin-subpanel h3 { color:var(--roxo); margin-bottom:8px; }
-
-.admin-form-grid button,
-.admin-form-grid .wide { grid-column:1/-1; }
-
-.admin-inline-form {
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-    align-items:center;
-}
-.admin-inline-form input[type=file] { flex:1; min-width:240px; }
-
-.admin-result {
-    margin-top:14px;
-    padding:12px 14px;
-    border-radius:10px;
-    background:#f3f3f3;
-}
-.admin-socio-numero {
-    min-width:60px;
-    color:var(--roxo);
-    font-weight:800;
-}
-.admin-socio-main { flex:1; }
-.admin-socio-status { font-weight:800; }
-.admin-socio-status.ativo { color:#21854b; }
-.admin-socio-status.inativo { color:#a33; }
-
-.admin-socio-select {
-    width:22px;
-    height:22px;
-    accent-color:var(--roxo);
-}
-
-@media(max-width:900px) {
-    .socio-dashboard-head { flex-direction:column; align-items:stretch; }
-    .socio-perfil-card { grid-template-columns:150px 1fr; }
-    .funlearn-resumo { grid-column:1/-1; }
-}
-
-@media(max-width:700px) {
-    .socio-area { padding:45px 0 65px; }
-    .login-card,
-    .socio-tab-content,
-    .admin-panel { padding:24px 18px; }
-    .socio-perfil-card { grid-template-columns:1fr; text-align:center; }
-    .socio-identidade h2 { text-align:center; }
-    .socio-grid,
-    .socio-edit-locked,
-    .socio-edit-grid,
-    .admin-form-grid { grid-template-columns:1fr; }
-    .socio-grid .wide,
-    .socio-edit-grid .wide,
-    .admin-form-grid button,
-    .admin-form-grid .wide { grid-column:auto; }
-    .tab-heading-row { flex-direction:column; }
-    .socio-tabs { overflow-x:auto; flex-wrap:nowrap; }
-    .socio-tab { white-space:nowrap; }
-}
-/* =========================================================
-   ALTERAÇÕES DA ÁREA DE SÓCIO
-   Mantém o layout existente.
-   ========================================================= */
-
-/* Botão discreto da fotografia */
-
-.photo-change-button {
-    border: 0;
-    background: transparent;
-    color: #777;
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 3px 6px;
-    cursor: pointer;
-    opacity: .72;
-    transition:
-        color .2s ease,
-        opacity .2s ease;
-}
-
-.photo-change-button:hover {
-    color: var(--roxo);
-    opacity: 1;
-}
-
-
-/* Barra de seleção dos sócios */
-
-.admin-selection-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    background: #fafafa;
-    border: 1px solid #eee;
-    border-radius: 12px;
-}
-
-.admin-select-all {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-    font-weight: 700;
-    color: var(--roxo);
-}
-
-.admin-select-all input {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--roxo);
-    cursor: pointer;
-}
-
-#admin-selected-count {
-    color: #777;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-
-/* Caixa de mensagem do email */
-
-#admin-documento-mensagem {
-    width: 100%;
-    min-height: 150px;
-    resize: vertical;
-    padding: 13px 14px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    font: inherit;
-    line-height: 1.55;
-    background: #fff;
-}
-
-#admin-documento-mensagem:focus {
     outline: none;
     border-color: var(--roxo);
     box-shadow: 0 0 0 3px rgba(91,42,114,.10);
 }
 
-
-/* Melhoria ligeira da lista de sócios */
-
-.admin-socio-row {
-    padding: 14px 4px;
+.admin-form-grid textarea {
+    min-height: 140px;
+    resize: vertical;
 }
 
-.admin-socio-row:hover {
+.socio-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.link-password {
+    border: 0;
+    background: none;
+    color: var(--roxo);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   CABEÇALHO DO SÓCIO
+========================================================= */
+
+.socio-dashboard-head {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.socio-perfil-card {
+    flex: 1;
+    padding: 28px;
+    display: grid;
+    grid-template-columns: 170px minmax(0,1fr) 150px;
+    gap: 25px;
+    align-items: center;
+}
+
+
+/* =========================================================
+   FOTOGRAFIA
+========================================================= */
+
+.socio-foto-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+}
+
+.socio-foto-3d {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    padding: 6px;
+    border-radius: 50%;
+    background:
+        linear-gradient(
+            145deg,
+            #fff,
+            var(--dourado),
+            #987719
+        );
+    box-shadow:
+        0 12px 25px rgba(0,0,0,.18),
+        inset 0 2px 4px rgba(255,255,255,.8);
+    perspective: 800px;
+    transition:
+        transform .25s ease,
+        box-shadow .25s ease;
+}
+
+.socio-foto-3d:hover {
+    transform:
+        perspective(800px)
+        rotateY(-4deg)
+        rotateX(3deg)
+        translateY(-3px);
+
+    box-shadow:
+        0 18px 32px rgba(0,0,0,.22),
+        inset 0 2px 5px rgba(255,255,255,.85);
+}
+
+.socio-foto-3d img,
+.socio-foto-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.socio-photo-img {
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+    transform: translateZ(8px);
+}
+
+.socio-foto-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(
+            circle at 50% 35%,
+            #fff,
+            #ececec 65%,
+            #ddd
+        );
+    color: #777;
+    font-size: 44px;
+}
+
+.socio-foto-placeholder span {
+    filter: grayscale(.2);
+}
+
+
+/* Botão discreto para alterar fotografia */
+
+.photo-change-button {
+    position: absolute;
+    right: 3px;
+    bottom: 6px;
+
+    width: 32px;
+    height: 32px;
+
+    border: 2px solid #fff;
+    border-radius: 50%;
+
+    background: rgba(91,42,114,.92);
+    color: #fff;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    font-size: 15px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-shadow: 0 3px 8px rgba(0,0,0,.25);
+
+    opacity: .88;
+
+    transition:
+        transform .2s ease,
+        opacity .2s ease;
+}
+
+.photo-change-button:hover {
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+.photo-help {
+    color: #999;
+    font-size: 10px;
+    opacity: .75;
+}
+
+
+/* =========================================================
+   IDENTIDADE
+========================================================= */
+
+.socio-etiqueta {
+    color: var(--dourado);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+}
+
+.socio-identidade h2 {
+    text-align: left;
+    color: var(--roxo);
+    font-size: clamp(28px,4vw,40px);
+    line-height: 1.15;
+    margin: 8px 0 14px;
+}
+
+.numero-socio {
+    color: #444;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.numero-socio strong {
+    color: var(--roxo);
+}
+
+.socio-estado {
+    color: #21854b;
+    font-weight: 600;
+}
+
+.funlearn-resumo {
+    text-align: center;
+    color: var(--roxo);
+}
+
+.funlearn-resumo span,
+.funlearn-label {
+    display: block;
+    color: var(--dourado);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.funlearn-resumo strong {
+    display: block;
+    font-size: 44px;
+    line-height: 1.1;
+}
+
+.funlearn-resumo small {
+    color: #666;
+}
+
+
+/* =========================================================
+   BOTÕES
+========================================================= */
+
+.botao-secundario {
+    border: 0;
+    border-radius: 40px;
+    padding: 12px 22px;
+    background: #777;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.botao-secundario:hover {
+    background: #666;
+}
+
+.botao-secundario:disabled,
+.botao:disabled,
+.admin-small-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   TABS
+========================================================= */
+
+.socio-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #ddd;
+}
+
+.socio-tab {
+    border: 0;
+    background: transparent;
+    color: var(--roxo);
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.socio-tab.active {
+    background: var(--roxo);
+    color: #fff;
+}
+
+.socio-tab-content {
+    display: none;
+    padding: 35px;
+    margin-bottom: 25px;
+}
+
+.socio-tab-content.active {
+    display: block;
+}
+
+.socio-tab-content h2 {
+    text-align: left;
+    font-size: 30px;
+    margin-bottom: 8px;
+}
+
+.socio-tab-content > p,
+.tab-heading-row p {
+    color: #666;
+}
+
+
+/* =========================================================
+   CABEÇALHOS
+========================================================= */
+
+.tab-heading-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+
+/* =========================================================
+   DADOS
+========================================================= */
+
+.socio-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2,minmax(0,1fr));
+    gap: 18px;
+}
+
+.socio-grid > div {
+    padding: 16px;
+    border: 1px solid #eee;
+    border-radius: 12px;
     background: #fafafa;
 }
 
-.admin-socio-select {
-    flex-shrink: 0;
+.socio-grid .wide,
+.socio-edit-grid .wide {
+    grid-column: 1/-1;
+}
+
+.socio-grid span {
+    display: block;
+    color: #777;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.socio-grid strong {
+    color: #333;
+}
+
+.socio-edit-form {
+    margin-top: 20px;
+}
+
+.socio-edit-locked,
+.socio-edit-grid,
+.admin-form-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2,minmax(0,1fr));
+    gap: 16px;
+}
+
+.socio-edit-actions,
+.admin-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
 }
 
 
-/* Avatar */
+/* =========================================================
+   QUOTAS
+========================================================= */
 
-.socio-foto-placeholder {
-    user-select: none;
+.quota-list,
+.docs-list,
+.funlearn-history {
+    margin-top: 18px;
+}
+
+.quota-status-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid #eee;
+}
+
+.quota-status-card.regular {
+    background: #f0faf4;
+    color: #176b38;
+}
+
+.quota-status-card.atrasada {
+    background: #fff5f5;
+    color: #8c1717;
+}
+
+.quota-status-icon {
+    font-size: 28px;
+}
+
+.quota-status-card strong {
+    display: block;
+    font-size: 18px;
+}
+
+.quota-status-card small {
+    display: block;
+    margin-top: 4px;
+    color: #777;
 }
 
 
-/* Mobile */
+/* =========================================================
+   DOCUMENTOS
+========================================================= */
 
-@media (max-width: 700px) {
+.documento-socio-item,
+.fun-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+}
 
-    .admin-selection-toolbar {
-        align-items: flex-start;
+.documento-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.documento-icon {
+    font-size: 24px;
+}
+
+.documento-socio-item strong,
+.fun-row strong {
+    color: var(--roxo);
+}
+
+.documento-socio-item small,
+.fun-row small {
+    display: block;
+    color: #777;
+    margin-top: 4px;
+}
+
+.fun-row b {
+    color: #21854b;
+}
+
+.fun-row b.negativo {
+    color: #a33;
+}
+
+.upload-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 18px;
+    border-radius: 30px;
+    background: var(--dourado);
+    color: #111;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.upload-box input {
+    display: none;
+}
+
+.botao-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    border-radius: 20px;
+    background: var(--roxo);
+    color: #fff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.contador-docs {
+    color: var(--roxo);
+    font-weight: 800;
+}
+
+.vazio {
+    color: #777;
+    padding: 12px 0;
+}
+
+
+/* =========================================================
+   FUN & LEARN
+========================================================= */
+
+.funlearn-box {
+    max-width: 260px;
+    padding: 22px;
+    margin-bottom: 25px;
+    border-radius: 16px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(91,42,114,.06),
+            rgba(201,162,39,.12)
+        );
+    text-align: center;
+}
+
+.funlearn-box strong {
+    display: block;
+    color: var(--roxo);
+    font-size: 50px;
+    line-height: 1;
+    margin: 8px 0;
+}
+
+
+/* =========================================================
+   ADMIN
+========================================================= */
+
+.admin-panel {
+    padding: 35px;
+    margin-top: 25px;
+    border: 2px solid var(--roxo);
+}
+
+.admin-panel > h2 {
+    text-align: left;
+    margin-bottom: 8px;
+}
+
+.admin-subpanel {
+    padding: 25px;
+    margin-top: 20px;
+}
+
+.admin-subpanel h3 {
+    color: var(--roxo);
+    margin-bottom: 8px;
+}
+
+.admin-form-grid button {
+    grid-column: 1/-1;
+}
+
+.admin-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-inline-form input[type=file] {
+    flex: 1;
+    min-width: 240px;
+}
+
+.admin-result {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f3f3f3;
+}
+
+.admin-result.sucesso {
+    background: #e5f7eb;
+    color: #176b38;
+}
+
+.admin-result.erro {
+    background: #ffe5e5;
+    color: #8c1717;
+}
+
+.admin-selection-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.admin-small-btn {
+    border: 0;
+    border-radius: 30px;
+    padding: 9px 14px;
+    background: #eee;
+    color: var(--roxo);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-small-btn:hover {
+    background: #e3e3e3;
+}
+
+.admin-selected-count {
+    margin-left: auto;
+    color: var(--roxo);
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   LISTA ADMIN
+========================================================= */
+
+.admin-socios-lista {
+    border: 1px solid #eee;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.admin-socio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.admin-socio-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-socio-row:hover {
+    background: #faf8fb;
+}
+
+.admin-socio-select,
+.admin-overdue-select {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--roxo);
+    flex: 0 0 auto;
+}
+
+.admin-socio-numero {
+    min-width: 60px;
+    color: var(--roxo);
+    font-weight: 800;
+}
+
+.admin-socio-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-socio-main strong {
+    display: block;
+}
+
+.admin-socio-main small {
+    display: block;
+    color: #777;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+}
+
+.admin-socio-status {
+    font-weight: 800;
+}
+
+.admin-socio-status.ativo {
+    color: #21854b;
+}
+
+.admin-socio-status.inativo {
+    color: #a33;
+}
+
+
+/* =========================================================
+   QUOTAS ADMIN
+========================================================= */
+
+.admin-overdue-list {
+    border: 1px solid #eee;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.admin-overdue-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.admin-overdue-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-overdue-row:hover {
+    background: #fff9f9;
+}
+
+.admin-overdue-numero {
+    min-width: 60px;
+    color: var(--roxo);
+    font-weight: 800;
+}
+
+.admin-overdue-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-overdue-main strong {
+    display: block;
+}
+
+.admin-overdue-main small {
+    display: block;
+    color: #777;
+    margin-top: 3px;
+}
+
+.admin-overdue-status {
+    color: #a33;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+
+@media(max-width:900px) {
+
+    .socio-dashboard-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .socio-perfil-card {
+        grid-template-columns:
+            150px 1fr;
+    }
+
+    .funlearn-resumo {
+        grid-column: 1/-1;
+    }
+
+}
+
+
+@media(max-width:700px) {
+
+    .socio-area {
+        padding: 45px 0 65px;
+    }
+
+    .login-card,
+    .socio-tab-content,
+    .admin-panel {
+        padding: 24px 18px;
+    }
+
+    .socio-perfil-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .socio-identidade h2 {
+        text-align: center;
+    }
+
+    .socio-grid,
+    .socio-edit-locked,
+    .socio-edit-grid,
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .socio-grid .wide,
+    .socio-edit-grid .wide {
+        grid-column: auto;
+    }
+
+    .tab-heading-row {
         flex-direction: column;
     }
 
+    .admin-selected-count {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .admin-socio-row,
+    .admin-overdue-row {
+        align-items: flex-start;
+    }
+
+    .admin-socio-status,
+    .admin-overdue-status {
+        display: none;
+    }
+
+    .socio-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .socio-actions .botao {
+        width: 100%;
+    }
+
     .photo-change-button {
-        font-size: 12px;
+        right: 1px;
+        bottom: 4px;
+    }
+
+}
+
+
+@media(max-width:480px) {
+
+    .socio-foto-3d {
+        width: 135px;
+        height: 135px;
+    }
+
+    .socio-perfil-card {
+        padding: 20px 15px;
+    }
+
+    .socio-tab {
+        flex: 1 1 auto;
+        font-size: 13px;
+        padding: 10px 11px;
+    }
+
+    .admin-subpanel {
+        padding: 18px 15px;
     }
 
 }
