@@ -1,6 +1,0 @@
-// Copia este ficheiro para: js/supabase-config.js
-// e coloca aqui o URL e a chave ANON/PUBLISHABLE do teu projeto Supabase.
-// NÃO uses a service_role key no GitHub.
-
-export const SUPABASE_URL = 'https://pvaupgdhtrmbumaxvvrj.supabase.co';
-export const SUPABASE_ANON_KEY = 'COLOCA_AQUI_A_TUA_CHAVE_ANON_OU_PUBLISHABLE';
