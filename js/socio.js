@@ -1,40 +1,56 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
+import {
+    createClient
+} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import {
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+} from './supabase-config.js';
 
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const supabase = createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
+
 
 const state = {
     user: null,
     socio: null,
     admin: false,
-    adminSocios: [],
-    selectedSocios: new Set()
+    sociosAdmin: []
 };
 
 
-/* ============================================================
-   UTILITÁRIOS
-============================================================ */
-
-function escapeHtml(value = '') {
-    return String(value).replace(/[&<>'"]/g, (character) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        "'": '&#39;',
-        '"': '&quot;'
-    }[character]));
-}
+const $ = (selector) =>
+    document.querySelector(selector);
 
 
-function showMessage(text, type = 'info') {
-    const element = $('#socio-message');
+const $$ = (selector) =>
+    [...document.querySelectorAll(selector)];
+
+
+const esc = (value) =>
+    String(value ?? '').replace(
+        /[&<>'"]/g,
+        (character) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[character])
+    );
+
+
+function showMessage(
+    text,
+    type = 'info',
+    target = '#socio-message'
+) {
+    const element = $(target);
 
     if (!element) {
-        console.log(text);
         return;
     }
 
@@ -53,40 +69,26 @@ function hideMessage() {
 }
 
 
-function getErrorMessage(error) {
-    if (!error) {
-        return 'Ocorreu um erro inesperado.';
+function isQuotaOverdue(value) {
+    const status = String(value ?? '')
+        .trim()
+        .toLowerCase();
+
+    if (!status) {
+        return false;
     }
 
-    if (typeof error === 'string') {
-        return error;
-    }
-
-    return (
-        error.message ||
-        error.error_description ||
-        error.details ||
-        'Ocorreu um erro inesperado.'
-    );
-}
-
-
-async function readFunctionError(error) {
-    let message = getErrorMessage(error);
-
-    try {
-        if (error?.context) {
-            const payload = await error.context.json();
-
-            if (payload?.error) {
-                message = payload.error;
-            }
-        }
-    } catch (_) {
-        // Mantém a mensagem original.
-    }
-
-    return message;
+    return ![
+        'em dia',
+        'pago',
+        'pagas',
+        'paga',
+        'liquidado',
+        'liquidadas',
+        'regularizado',
+        'regularizada',
+        'regular'
+    ].includes(status);
 }
 
 
@@ -95,7 +97,10 @@ async function readFunctionError(error) {
 ============================================================ */
 
 async function login(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({
+
+    const {
+        error
+    } = await supabase.auth.signInWithPassword({
         email,
         password
     });
@@ -103,25 +108,54 @@ async function login(email, password) {
     if (error) {
         throw error;
     }
-}
 
+    /*
+     * IMPORTANTE:
+     * A versão atual do GitHub fazia o login mas não carregava
+     * o perfil depois do login.
+     */
 
-async function resetPassword(email) {
-    const { error } =
-        await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo:
-                `${window.location.origin}${window.location.pathname}`
-        });
+    const {
+        data: {
+            session
+        }
+    } = await supabase.auth.getSession();
 
-    if (error) {
-        throw error;
+    if (!session) {
+        throw new Error(
+            'O login foi efetuado, mas não foi criada uma sessão.'
+        );
     }
+
+    await loadProfile(session.user);
+
+    renderProfile();
 }
 
 
 async function logout() {
+
     await supabase.auth.signOut();
+
     window.location.reload();
+}
+
+
+async function resetPassword(email) {
+
+    const {
+        error
+    } = await supabase.auth.resetPasswordForEmail(
+        email,
+        {
+            redirectTo:
+                `${window.location.origin}${window.location.pathname}`
+        }
+    );
+
+    if (error) {
+        throw error;
+    }
 }
 
 
@@ -130,9 +164,6 @@ async function logout() {
 ============================================================ */
 
 async function loadProfile(user) {
-    if (!user?.id) {
-        throw new Error('Sessão inválida.');
-    }
 
     const {
         data,
@@ -143,150 +174,109 @@ async function loadProfile(user) {
         .eq('user_id', user.id)
         .maybeSingle();
 
+
     if (error) {
         throw error;
     }
 
+
     if (!data) {
+
         throw new Error(
-            'A conta autenticada não está associada a nenhum registo de sócio.'
+            'A conta autenticada ainda não está associada a um registo de sócio.'
         );
+
     }
 
-    if (data.ativo === false) {
-        throw new Error(
-            'A sua conta de sócio encontra-se inativa. Contacte o Núcleo.'
-        );
-    }
 
     state.user = user;
     state.socio = data;
+
 
     state.admin =
         Number(data.numero_socio) === 9999 &&
         data.is_admin === true &&
         data.ativo === true;
-
-    renderProfile();
 }
 
 
 function renderProfile() {
+
     const socio = state.socio;
 
     if (!socio) {
         return;
     }
 
-    const loginPanel = $('#login-panel');
-    const dashboard = $('#dashboard');
 
-    if (loginPanel) {
-        loginPanel.hidden = true;
-    }
-
-    if (dashboard) {
-        dashboard.hidden = false;
-    }
+    $('#login-panel').hidden = true;
+    $('#dashboard').hidden = false;
 
 
-    /* Cabeçalho */
+    $('#socio-name').textContent =
+        socio.nome || 'Sócio';
 
-    $('#socio-name')?.replaceChildren(
-        document.createTextNode(socio.nome || 'Sócio')
-    );
-
-    if ($('#socio-number')) {
-        $('#socio-number').textContent =
-            socio.numero_socio ?? '—';
-    }
+    $('#socio-number').textContent =
+        socio.numero_socio ?? '—';
 
 
-    /* Dados pessoais */
+    $('#dados-nome').textContent =
+        socio.nome || '—';
 
-    if ($('#dados-nome')) {
-        $('#dados-nome').textContent =
-            socio.nome || '—';
-    }
+    $('#dados-numero').textContent =
+        socio.numero_socio ?? '—';
 
-    if ($('#dados-numero')) {
-        $('#dados-numero').textContent =
-            socio.numero_socio ?? '—';
-    }
+    $('#dados-nascimento').textContent =
+        socio.data_nascimento
+            ? new Date(
+                `${socio.data_nascimento}T00:00:00`
+            ).toLocaleDateString('pt-PT')
+            : '—';
 
-    if ($('#dados-nascimento')) {
-        $('#dados-nascimento').textContent =
-            formatDate(socio.data_nascimento);
-    }
+    $('#dados-email').textContent =
+        socio.email ||
+        state.user?.email ||
+        '—';
 
-    if ($('#dados-email')) {
-        $('#dados-email').textContent =
-            socio.email ||
-            state.user?.email ||
-            '—';
-    }
+    $('#dados-morada').textContent =
+        socio.morada || '—';
 
-    if ($('#dados-morada')) {
-        $('#dados-morada').textContent =
-            socio.morada || '—';
-    }
-
-    if ($('#dados-telemovel')) {
-        $('#dados-telemovel').textContent =
-            socio.telemovel || '—';
-    }
+    $('#dados-telemovel').textContent =
+        socio.telemovel || '—';
 
 
-    /* Arbitragem */
+    $('#dados-arbitro').textContent =
+        socio.numero_arbitro || '—';
 
-    if ($('#dados-arbitro')) {
-        $('#dados-arbitro').textContent =
-            socio.numero_arbitro || '—';
-    }
+    $('#dados-af').textContent =
+        socio.associacao_futebol || '—';
 
-    if ($('#dados-af')) {
-        $('#dados-af').textContent =
-            socio.associacao_futebol || '—';
-    }
-
-    if ($('#dados-modalidade')) {
-        $('#dados-modalidade').textContent =
-            socio.modalidade || '—';
-    }
-
-
-    /* Administração */
-
-    if ($('#admin-panel')) {
-        $('#admin-panel').hidden = !state.admin;
-    }
+    $('#dados-modalidade').textContent =
+        socio.modalidade || '—';
 
 
     fillEditForms();
 
+
+    $('#admin-panel').hidden =
+        !state.admin;
+
+
     loadPhoto().catch(console.error);
-    loadQuotas();
+    loadQuotas().catch(console.error);
     loadDocuments().catch(console.error);
     loadFunlearn().catch(console.error);
 
+
     if (state.admin) {
-        loadAdminSocios().catch(console.error);
+        loadAdminSocios().catch((error) => {
+            showMessage(
+                error.message ||
+                'Não foi possível carregar a lista de sócios.',
+                'erro'
+            );
+        });
     }
-}
-
-
-function formatDate(value) {
-    if (!value) {
-        return '—';
-    }
-
-    const date = new Date(`${value}T00:00:00`);
-
-    if (Number.isNaN(date.getTime())) {
-        return '—';
-    }
-
-    return date.toLocaleDateString('pt-PT');
 }
 
 
@@ -295,39 +285,26 @@ function formatDate(value) {
 ============================================================ */
 
 async function loadPhoto() {
+
     const image = $('#socio-photo');
-    const avatar =
-        $('#socio-photo-placeholder') ||
-        $('#socio-avatar');
+    const avatar = $('#socio-photo-placeholder');
 
     if (!image || !avatar) {
         return;
     }
 
+
     const path =
         state.socio?.fotografia_path ||
-        state.socio?.fotografia_url ||
         null;
 
+
     if (!path) {
-        image.hidden = true;
+
         image.removeAttribute('src');
+        image.hidden = true;
 
         avatar.hidden = false;
-
-        return;
-    }
-
-
-    /* Compatibilidade com versões antigas */
-
-    if (
-        String(path).startsWith('http://') ||
-        String(path).startsWith('https://')
-    ) {
-        image.src = path;
-        image.hidden = false;
-        avatar.hidden = true;
 
         return;
     }
@@ -339,70 +316,71 @@ async function loadPhoto() {
     } = await supabase
         .storage
         .from('fotografias-socios')
-        .createSignedUrl(path, 3600);
-
-    if (error) {
-        console.error(
-            'Erro ao carregar fotografia:',
-            error
+        .createSignedUrl(
+            path,
+            3600
         );
 
-        image.hidden = true;
-        avatar.hidden = false;
 
-        return;
+    if (error) {
+        throw error;
     }
 
+
     if (data?.signedUrl) {
-        const separator =
-            data.signedUrl.includes('?')
-                ? '&'
-                : '?';
 
         image.src =
-            `${data.signedUrl}${separator}v=${encodeURIComponent(path)}`;
+            `${data.signedUrl}${
+                data.signedUrl.includes('?')
+                    ? '&'
+                    : '?'
+            }v=${encodeURIComponent(path)}`;
 
         image.hidden = false;
         avatar.hidden = true;
-    } else {
-        image.hidden = true;
-        avatar.hidden = false;
     }
 }
 
 
 async function uploadPhoto(file) {
+
     if (!file) {
         return;
     }
 
-    const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp'
-    ];
 
-    if (!allowedTypes.includes(file.type)) {
+    if (
+        ![
+            'image/jpeg',
+            'image/png',
+            'image/webp'
+        ].includes(file.type)
+    ) {
         throw new Error(
-            'A fotografia deve estar em JPG, PNG ou WEBP.'
+            'A fotografia deve ser JPG, PNG ou WEBP.'
         );
     }
 
+
     if (file.size > 6 * 1024 * 1024) {
+
         throw new Error(
             'A fotografia não pode ultrapassar 6 MB.'
         );
+
     }
+
 
     const extension =
         file.type === 'image/jpeg'
             ? 'jpg'
             : file.type.split('/')[1];
 
+
     const oldPath =
-        state.socio?.fotografia_path ||
-        state.socio?.fotografia_url ||
+        state.socio.fotografia_path ||
         null;
+
 
     const path =
         `${state.socio.id}/fotografia-${crypto.randomUUID()}.${extension}`;
@@ -423,114 +401,130 @@ async function uploadPhoto(file) {
             }
         );
 
+
     if (uploadError) {
         throw uploadError;
     }
 
 
-    /*
-       A versão atual utiliza fotografia_path.
-       Mantemos fotografia_url como fallback para
-       instalações antigas.
-    */
-
-    let dbError = null;
-
-    const result =
-        await supabase
-            .from('socios')
-            .update({
-                fotografia_path: path
-            })
-            .eq('id', state.socio.id)
-            .eq('user_id', state.user.id);
-
-    dbError = result.error;
+    const {
+        error: databaseError
+    } = await supabase
+        .from('socios')
+        .update({
+            fotografia_path: path
+        })
+        .eq(
+            'id',
+            state.socio.id
+        )
+        .eq(
+            'user_id',
+            state.user.id
+        );
 
 
-    /*
-       Se a instalação antiga ainda não tiver
-       fotografia_path, tentamos fotografia_url.
-    */
+    if (databaseError) {
 
-    if (dbError) {
-        const fallback =
-            await supabase
-                .from('socios')
-                .update({
-                    fotografia_url: path
-                })
-                .eq('id', state.socio.id)
-                .eq('user_id', state.user.id);
-
-        dbError = fallback.error;
-    }
-
-    if (dbError) {
         await supabase
             .storage
             .from('fotografias-socios')
             .remove([path]);
 
-        throw dbError;
+        throw databaseError;
     }
 
 
-    state.socio.fotografia_path = path;
-    state.socio.fotografia_url = path;
+    state.socio.fotografia_path =
+        path;
 
 
-    if (
-        oldPath &&
-        oldPath !== path &&
-        !String(oldPath).startsWith('http')
-    ) {
+    if (oldPath) {
+
         await supabase
             .storage
             .from('fotografias-socios')
-            .remove([oldPath])
-            .catch(console.error);
+            .remove([oldPath]);
+
     }
+
 
     await loadPhoto();
 }
 
 
 /* ============================================================
-   QUOTAS
+   QUOTAS DO SÓCIO
 ============================================================ */
 
 async function loadQuotas() {
-    const element = $('#quotas-list');
+
+    const element =
+        $('#quotas-list');
 
     if (!element) {
         return;
     }
 
+
     const quotas =
         state.socio?.quotas;
 
+
+    if (!quotas) {
+
+        element.innerHTML = `
+            <div class="vazio">
+                Estado de quotas não definido.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const overdue =
+        isQuotaOverdue(quotas);
+
+
     element.innerHTML = `
-        <div class="vazio">
-            ${escapeHtml(
-                quotas ||
-                'Estado de quotas não definido.'
-            )}
+        <div class="quota-status-card ${overdue ? 'atrasada' : 'regular'}">
+
+            <span class="quota-status-icon">
+                ${overdue ? '⚠️' : '✓'}
+            </span>
+
+            <div>
+                <strong>
+                    ${overdue
+                        ? 'Quotas em atraso'
+                        : 'Quotas regularizadas'}
+                </strong>
+
+                <small>
+                    Estado registado:
+                    ${esc(quotas)}
+                </small>
+            </div>
+
         </div>
     `;
 }
 
 
 /* ============================================================
-   DOCUMENTOS DO SÓCIO
+   DOCUMENTOS
 ============================================================ */
 
 async function loadDocuments() {
-    const list = $('#docs-list');
 
-    if (!list || !state.socio) {
+    const list =
+        $('#docs-list');
+
+    if (!list) {
         return;
     }
+
 
     const {
         data,
@@ -538,13 +532,20 @@ async function loadDocuments() {
     } = await supabase
         .from('documentos_socios')
         .select('*')
-        .eq('socio_id', state.socio.id)
+        .eq(
+            'socio_id',
+            state.socio.id
+        )
         .order(
             'created_at',
-            { ascending: false }
+            {
+                ascending: false
+            }
         );
 
+
     if (error) {
+
         console.error(error);
 
         list.innerHTML = `
@@ -556,15 +557,17 @@ async function loadDocuments() {
         return;
     }
 
-    const documents = data || [];
 
-    if ($('#docs-count')) {
-        $('#docs-count').textContent =
-            `${documents.length} / 12`;
-    }
+    const documents =
+        data || [];
+
+
+    $('#docs-count').textContent =
+        `${documents.length} / 12`;
 
 
     if (!documents.length) {
+
         list.innerHTML = `
             <div class="vazio">
                 Ainda não existem documentos.
@@ -577,61 +580,72 @@ async function loadDocuments() {
 
     list.innerHTML = '';
 
-    for (const record of documents) {
-        let path =
-            record.ficheiro_path ||
-            record.storage_path ||
-            null;
+
+    for (const documentRecord of documents) {
 
         let signedUrl = null;
 
-        if (path) {
-            const result =
-                await supabase
-                    .storage
-                    .from('documentos-socios')
-                    .createSignedUrl(
-                        path,
-                        3600
-                    );
 
-            if (!result.error) {
-                signedUrl =
-                    result.data?.signedUrl ||
-                    null;
-            }
+        const storagePath =
+            documentRecord.storage_path ||
+            documentRecord.ficheiro_path;
+
+
+        if (storagePath) {
+
+            const {
+                data: signedData
+            } = await supabase
+                .storage
+                .from('documentos-socios')
+                .createSignedUrl(
+                    storagePath,
+                    3600
+                );
+
+            signedUrl =
+                signedData?.signedUrl ||
+                null;
         }
 
 
         const item =
             document.createElement('div');
 
+
         item.className =
             'documento-socio-item';
 
 
-        const fileName =
-            record.nome_ficheiro ||
-            'Documento PDF';
-
-
         item.innerHTML = `
-            <span>📄</span>
 
-            <div>
-                <strong>
-                    ${escapeHtml(fileName)}
-                </strong>
+            <div class="documento-info">
 
-                <small>
-                    ${
-                        record.created_at
-                            ? new Date(
-                                record.created_at
-                            ).toLocaleDateString('pt-PT')
-                            : ''
-                    }
-                </small>
+                <span class="documento-icon">
+                    📄
+                </span>
+
+                <div>
+
+                    <strong>
+                        ${esc(
+                            documentRecord.nome_ficheiro ||
+                            'Documento PDF'
+                        )}
+                    </strong>
+
+                    <small>
+                        ${
+                            documentRecord.created_at
+                                ? new Date(
+                                    documentRecord.created_at
+                                ).toLocaleDateString('pt-PT')
+                                : ''
+                        }
+                    </small>
+
+                </div>
+
             </div>
 
             ${
@@ -648,7 +662,9 @@ async function loadDocuments() {
                     `
                     : ''
             }
+
         `;
+
 
         list.appendChild(item);
     }
@@ -656,11 +672,11 @@ async function loadDocuments() {
 
 
 async function uploadSocioPdf(file) {
-    if (!file) {
-        return;
-    }
 
-    if (file.type !== 'application/pdf') {
+    if (
+        !file ||
+        file.type !== 'application/pdf'
+    ) {
         throw new Error(
             'Só são permitidos ficheiros PDF.'
         );
@@ -672,23 +688,30 @@ async function uploadSocioPdf(file) {
         error: countError
     } = await supabase
         .from('documentos_socios')
-        .select('id', {
-            count: 'exact',
-            head: true
-        })
+        .select(
+            'id',
+            {
+                count: 'exact',
+                head: true
+            }
+        )
         .eq(
             'socio_id',
             state.socio.id
         );
 
+
     if (countError) {
         throw countError;
     }
 
+
     if ((count || 0) >= 12) {
+
         throw new Error(
             'Já atingiu o limite máximo de 12 documentos.'
         );
+
     }
 
 
@@ -697,6 +720,7 @@ async function uploadSocioPdf(file) {
             /[^a-zA-Z0-9._-]/g,
             '_'
         );
+
 
     const path =
         `${state.socio.id}/${crypto.randomUUID()}-${safeName}`;
@@ -711,52 +735,48 @@ async function uploadSocioPdf(file) {
             path,
             file,
             {
-                contentType: 'application/pdf',
+                contentType:
+                    'application/pdf',
                 upsert: false
             }
         );
+
 
     if (uploadError) {
         throw uploadError;
     }
 
 
-    /*
-       Estrutura atual do projeto:
-       ficheiro_path / mime_type
-       
-       Compatibilidade:
-       storage_path / tipo_mime
-    */
+    const {
+        error: databaseError
+    } = await supabase
+        .from('documentos_socios')
+        .insert({
+            socio_id:
+                state.socio.id,
 
-    const insertResult =
-        await supabase
-            .from('documentos_socios')
-            .insert({
-                socio_id:
-                    state.socio.id,
+            nome_ficheiro:
+                file.name,
 
-                nome_ficheiro:
-                    file.name,
+            storage_path:
+                path,
 
-                ficheiro_path:
-                    path,
+            tamanho_bytes:
+                file.size,
 
-                mime_type:
-                    'application/pdf',
-
-                tamanho_bytes:
-                    file.size
-            });
+            tipo_mime:
+                'application/pdf'
+        });
 
 
-    if (insertResult.error) {
+    if (databaseError) {
+
         await supabase
             .storage
             .from('documentos-socios')
             .remove([path]);
 
-        throw insertResult.error;
+        throw databaseError;
     }
 
 
@@ -765,14 +785,15 @@ async function uploadSocioPdf(file) {
 
 
 /* ============================================================
-   FUN&LEARN — SÓCIO
+   FUN & LEARN
 ============================================================ */
 
 async function loadFunlearn() {
+
     const history =
         $('#funlearn-history');
 
-    if (!history || !state.socio) {
+    if (!history) {
         return;
     }
 
@@ -789,11 +810,14 @@ async function loadFunlearn() {
         )
         .order(
             'created_at',
-            { ascending: false }
+            {
+                ascending: false
+            }
         );
 
 
     if (error) {
+
         console.error(error);
 
         history.innerHTML = `
@@ -806,30 +830,28 @@ async function loadFunlearn() {
     }
 
 
-    const rows = data || [];
+    const rows =
+        data || [];
+
 
     const total =
         rows.reduce(
             (sum, row) =>
-                sum + Number(
-                    row.pontos || 0
-                ),
+                sum +
+                Number(row.pontos || 0),
             0
         );
 
 
-    if ($('#funlearn-total')) {
-        $('#funlearn-total').textContent =
-            total;
-    }
+    $('#funlearn-total').textContent =
+        total;
 
-    if ($('#funlearn-total-top')) {
-        $('#funlearn-total-top').textContent =
-            total;
-    }
+    $('#funlearn-total-top').textContent =
+        total;
 
 
     if (!rows.length) {
+
         history.innerHTML = `
             <div class="vazio">
                 Ainda não existem movimentos de pontos.
@@ -841,185 +863,129 @@ async function loadFunlearn() {
 
 
     history.innerHTML =
-        rows.map((row) => {
+        rows.map(
+            (row) => {
 
-            const points =
-                Number(row.pontos || 0);
+                const points =
+                    Number(
+                        row.pontos || 0
+                    );
 
-            const activity =
-                row.atividade ||
-                'Fun&Learn';
+                return `
 
-            const description =
-                row.descricao || '';
+                    <div class="fun-row">
 
-            const date =
-                row.created_at
-                    ? new Date(
-                        row.created_at
-                    ).toLocaleDateString('pt-PT')
-                    : '';
+                        <div>
 
+                            <strong>
+                                ${esc(
+                                    row.atividade ||
+                                    'Fun&Learn'
+                                )}
+                            </strong>
 
-            return `
-                <div class="fun-row">
+                            <small>
+                                ${esc(
+                                    row.descricao ||
+                                    ''
+                                )}
 
-                    <div>
-                        <strong>
-                            ${escapeHtml(activity)}
-                        </strong>
+                                ${
+                                    row.created_at
+                                        ? ` • ${new Date(
+                                            row.created_at
+                                        ).toLocaleDateString('pt-PT')}`
+                                        : ''
+                                }
+                            </small>
 
-                        <small>
-                            ${escapeHtml(description)}
+                        </div>
 
-                            ${
-                                date
-                                    ? ` • ${date}`
-                                    : ''
-                            }
-                        </small>
+                        <b class="${points < 0 ? 'negativo' : ''}">
+                            ${points > 0 ? '+' : ''}
+                            ${points}
+                        </b>
+
                     </div>
 
-                    <b>
-                        ${points > 0 ? '+' : ''}
-                        ${points}
-                    </b>
-
-                </div>
-            `;
-        }).join('');
+                `;
+            }
+        ).join('');
 }
 
 
 /* ============================================================
-   FORMULÁRIOS DE DADOS
+   FORMULÁRIOS
 ============================================================ */
 
 function fillEditForms() {
-    const socio = state.socio;
+
+    const socio =
+        state.socio;
 
     if (!socio) {
         return;
     }
 
 
-    $('#edit-nome') &&
-        ($('#edit-nome').value =
-            socio.nome || '');
+    $('#edit-nome').value =
+        socio.nome || '';
 
-    $('#edit-numero') &&
-        ($('#edit-numero').value =
-            socio.numero_socio ?? '');
+    $('#edit-numero').value =
+        socio.numero_socio ?? '';
 
-    $('#edit-nascimento') &&
-        ($('#edit-nascimento').value =
-            socio.data_nascimento || '');
+    $('#edit-nascimento').value =
+        socio.data_nascimento || '';
 
-    $('#edit-email') &&
-        ($('#edit-email').value =
-            socio.email ||
-            state.user?.email ||
-            '');
+    $('#edit-email').value =
+        socio.email ||
+        state.user?.email ||
+        '';
 
-    $('#edit-morada') &&
-        ($('#edit-morada').value =
-            socio.morada || '');
+    $('#edit-morada').value =
+        socio.morada || '';
 
-    $('#edit-telemovel') &&
-        ($('#edit-telemovel').value =
-            socio.telemovel || '');
+    $('#edit-telemovel').value =
+        socio.telemovel || '';
 
-    $('#edit-arbitro') &&
-        ($('#edit-arbitro').value =
-            socio.numero_arbitro || '');
+    $('#edit-arbitro').value =
+        socio.numero_arbitro || '';
 
-    $('#edit-af') &&
-        ($('#edit-af').value =
-            socio.associacao_futebol || '');
+    $('#edit-af').value =
+        socio.associacao_futebol || '';
 
-    $('#edit-modalidade') &&
-        ($('#edit-modalidade').value =
-            socio.modalidade || '');
+    $('#edit-modalidade').value =
+        socio.modalidade || '';
 }
 
 
 function closeEditForms() {
-    const dadosView =
-        $('#dados-view');
 
-    const dadosForm =
-        $('#dados-edit-form');
+    $('#dados-edit-form').hidden =
+        true;
 
-    const arbitragemView =
-        $('#arbitragem-view');
+    $('#dados-view').hidden =
+        false;
 
-    const arbitragemForm =
-        $('#arbitragem-edit-form');
+    $('#editar-dados-btn').hidden =
+        false;
 
 
-    if (dadosView) {
-        dadosView.hidden = false;
-    }
+    $('#arbitragem-edit-form').hidden =
+        true;
 
-    if (dadosForm) {
-        dadosForm.hidden = true;
-    }
+    $('#arbitragem-view').hidden =
+        false;
 
-    if ($('#editar-dados-btn')) {
-        $('#editar-dados-btn').hidden =
-            false;
-    }
-
-
-    if (arbitragemView) {
-        arbitragemView.hidden = false;
-    }
-
-    if (arbitragemForm) {
-        arbitragemForm.hidden = true;
-    }
-
-    if ($('#editar-arbitragem-btn')) {
-        $('#editar-arbitragem-btn').hidden =
-            false;
-    }
-}
-
-
-async function saveProfileFields(fields) {
-    const {
-        data,
-        error
-    } = await supabase
-        .from('socios')
-        .update(fields)
-        .eq(
-            'id',
-            state.socio.id
-        )
-        .eq(
-            'user_id',
-            state.user.id
-        )
-        .select('*')
-        .single();
-
-    if (error) {
-        throw error;
-    }
-
-    state.socio = data;
-
-    renderProfile();
-    closeEditForms();
+    $('#editar-arbitragem-btn').hidden =
+        false;
 }
 
 
 async function savePersonalData() {
+
     const email =
-        $('#edit-email')
-            ?.value
-            .trim();
+        $('#edit-email').value.trim();
 
 
     if (
@@ -1032,100 +998,110 @@ async function savePersonalData() {
     }
 
 
-    const oldEmail =
-        (
-            state.user?.email ||
-            ''
-        ).toLowerCase();
+    const {
+        data,
+        error
+    } = await supabase
+        .from('socios')
+        .update({
+            data_nascimento:
+                $('#edit-nascimento').value ||
+                null,
+
+            email,
+
+            morada:
+                $('#edit-morada').value.trim() ||
+                null,
+
+            telemovel:
+                $('#edit-telemovel').value.trim() ||
+                null
+        })
+        .eq(
+            'id',
+            state.socio.id
+        )
+        .eq(
+            'user_id',
+            state.user.id
+        )
+        .select()
+        .single();
 
 
-    if (
-        email.toLowerCase() !==
-        oldEmail
-    ) {
-        const {
-            error
-        } = await supabase.auth.updateUser({
-            email
-        });
-
-        if (error) {
-            throw error;
-        }
+    if (error) {
+        throw error;
     }
 
 
-    await saveProfileFields({
-        data_nascimento:
-            $('#edit-nascimento')
-                ?.value || null,
+    state.socio =
+        data;
 
-        email,
+    renderProfile();
 
-        morada:
-            $('#edit-morada')
-                ?.value || null,
-
-        telemovel:
-            $('#edit-telemovel')
-                ?.value || null
-    });
+    closeEditForms();
 }
 
 
 async function saveArbitragemData() {
-    await saveProfileFields({
 
-        data_nascimento:
-            state.socio.data_nascimento,
+    const {
+        data,
+        error
+    } = await supabase
+        .from('socios')
+        .update({
+            numero_arbitro:
+                $('#edit-arbitro').value.trim() ||
+                null,
 
-        morada:
-            state.socio.morada,
+            associacao_futebol:
+                $('#edit-af').value.trim() ||
+                null,
 
-        email:
-            state.socio.email ||
-            state.user.email,
+            modalidade:
+                $('#edit-modalidade').value.trim() ||
+                null
+        })
+        .eq(
+            'id',
+            state.socio.id
+        )
+        .eq(
+            'user_id',
+            state.user.id
+        )
+        .select()
+        .single();
 
-        telemovel:
-            state.socio.telemovel,
 
-        numero_arbitro:
-            $('#edit-arbitro')
-                ?.value || null,
+    if (error) {
+        throw error;
+    }
 
-        associacao_futebol:
-            $('#edit-af')
-                ?.value || null,
 
-        modalidade:
-            $('#edit-modalidade')
-                ?.value || null
-    });
+    state.socio =
+        data;
+
+    renderProfile();
+
+    closeEditForms();
 }
 
 
 /* ============================================================
-   ADMIN — LISTA DE SÓCIOS
+   ADMIN — LISTA
 ============================================================ */
 
 async function loadAdminSocios() {
-    if (!state.admin) {
+
+    if (
+        !state.admin ||
+        !$('#admin-socios-lista')
+    ) {
         return;
     }
-
-    const list =
-        $('#admin-socios-lista');
-
-    if (!list) {
-        return;
-    }
-
-
-    list.innerHTML = `
-        <div class="vazio">
-            A carregar…
-        </div>
-    `;
 
 
     const {
@@ -1134,45 +1110,44 @@ async function loadAdminSocios() {
     } = await supabase
         .from('socios')
         .select(
-            'id,numero_socio,nome,email,telemovel,ativo,quotas,user_id'
+            'id,numero_socio,nome,email,telemovel,ativo,quotas'
         )
         .order(
             'numero_socio',
-            { ascending: true }
+            {
+                ascending: true
+            }
         );
 
 
     if (error) {
-        list.innerHTML = `
-            <div class="vazio">
-                ${escapeHtml(error.message)}
-            </div>
-        `;
-
-        return;
+        throw error;
     }
 
 
-    state.adminSocios =
+    state.sociosAdmin =
         data || [];
 
 
     renderAdminSocios();
-    populateAdminRemoveSocio();
+    renderAdminOverdue();
+    renderAdminSocioSelect();
 }
 
 
 function renderAdminSocios() {
-    const list =
+
+    const container =
         $('#admin-socios-lista');
 
-    if (!list) {
+    if (!container) {
         return;
     }
 
 
-    if (!state.adminSocios.length) {
-        list.innerHTML = `
+    if (!state.sociosAdmin.length) {
+
+        container.innerHTML = `
             <div class="vazio">
                 Ainda não existem sócios.
             </div>
@@ -1182,55 +1157,46 @@ function renderAdminSocios() {
     }
 
 
-    list.innerHTML =
-        state.adminSocios
-            .map((socio) => {
+    container.innerHTML =
+        state.sociosAdmin
+            .map(
+                (socio) => `
 
-                const selected =
-                    state.selectedSocios.has(
-                        String(socio.id)
-                    );
-
-
-                return `
                     <label class="admin-socio-row">
 
                         <input
+                            class="admin-socio-select"
                             type="checkbox"
-                            class="admin-socio-check"
-                            value="${escapeHtml(socio.id)}"
-                            ${selected ? 'checked' : ''}
+                            value="${esc(socio.id)}"
                         >
 
-                        <div class="admin-socio-numero">
-                            ${escapeHtml(
+                        <span class="admin-socio-numero">
+                            ${esc(
                                 socio.numero_socio
                             )}
-                        </div>
+                        </span>
 
-                        <div class="admin-socio-main">
+                        <span class="admin-socio-main">
 
                             <strong>
-                                ${escapeHtml(
+                                ${esc(
                                     socio.nome
                                 )}
                             </strong>
 
                             <small>
-                                ${escapeHtml(
+                                ${esc(
                                     socio.email ||
                                     'Sem email'
                                 )}
-
                                 ·
-
-                                ${escapeHtml(
+                                ${esc(
                                     socio.telemovel ||
                                     'Sem telemóvel'
                                 )}
                             </small>
 
-                        </div>
+                        </span>
 
                         <span
                             class="admin-socio-status ${
@@ -1247,186 +1213,277 @@ function renderAdminSocios() {
                         </span>
 
                     </label>
-                `;
-            })
+
+                `
+            )
             .join('');
 
 
-    updateSelectedSociosCount();
+    updateAdminSelectedCount();
 }
 
 
-function getSelectedSocioIds() {
-    return [
-        ...document.querySelectorAll(
-            '.admin-socio-check:checked'
-        )
-    ].map(
-        element => element.value
+function getSelectedAdminSocios() {
+
+    const ids =
+        $$('.admin-socio-select:checked')
+            .map(
+                (checkbox) =>
+                    checkbox.value
+            );
+
+
+    return state.sociosAdmin.filter(
+        (socio) =>
+            ids.includes(
+                String(socio.id)
+            )
     );
 }
 
 
-function updateSelectedSociosCount() {
-    const selected =
-        getSelectedSocioIds();
-
-    const button =
-        $('#admin-quotas-atraso');
-
-    if (!button) {
-        return;
-    }
+function updateAdminSelectedCount() {
 
     const count =
-        selected.length;
+        $$('.admin-socio-select:checked')
+            .length;
 
-    button.textContent =
-        count
-            ? `Enviar email de quotas em atraso aos selecionados (${count})`
-            : 'Enviar email de quotas em atraso aos selecionados';
+
+    $('#admin-selected-count')
+        .textContent =
+        `${count} selecionados`;
 }
 
 
 function selectAllAdminSocios() {
-    state.adminSocios.forEach(
-        socio => {
-            state.selectedSocios.add(
-                String(socio.id)
-            );
-        }
-    );
 
-    renderAdminSocios();
+    $$('.admin-socio-select')
+        .forEach(
+            (checkbox) => {
+                checkbox.checked = true;
+            }
+        );
+
+    updateAdminSelectedCount();
 }
 
 
-function clearAdminSociosSelection() {
-    state.selectedSocios.clear();
+function clearAdminSocios() {
 
-    renderAdminSocios();
-}
-
-
-/* ============================================================
-   ADMIN — CRIAR SÓCIO
-============================================================ */
-
-async function createSocioFromAdmin() {
-    if (!state.admin) {
-        throw new Error(
-            'Acesso reservado ao administrador.'
+    $$('.admin-socio-select')
+        .forEach(
+            (checkbox) => {
+                checkbox.checked = false;
+            }
         );
-    }
 
-
-    const body = {
-        nome:
-            $('#novo-socio-nome')
-                ?.value
-                .trim(),
-
-        numero_socio:
-            Number(
-                $('#novo-socio-numero')
-                    ?.value
-            ),
-
-        email:
-            $('#novo-socio-email')
-                ?.value
-                .trim(),
-
-        telemovel:
-            $('#novo-socio-telemovel')
-                ?.value
-                .trim()
-    };
-
-
-    const {
-        data,
-        error
-    } = await supabase.functions.invoke(
-        'criar-socio',
-        { body }
-    );
-
-
-    if (error) {
-        throw new Error(
-            await readFunctionError(error)
-        );
-    }
-
-    if (data?.error) {
-        throw new Error(
-            data.error
-        );
-    }
-
-    if (!data?.socio) {
-        throw new Error(
-            'O sócio foi criado, mas não foi devolvido nenhum registo.'
-        );
-    }
-
-    return data.socio;
+    updateAdminSelectedCount();
 }
 
 
 /* ============================================================
-   ADMIN — EMAIL DE QUOTAS EM ATRASO
+   ADMIN — QUOTAS EM ATRASO
 ============================================================ */
 
-async function sendOverdueQuotaEmails() {
-    if (!state.admin) {
-        throw new Error(
-            'Acesso reservado ao administrador.'
-        );
+function renderAdminOverdue() {
+
+    const container =
+        $('#admin-overdue-list');
+
+    if (!container) {
+        return;
     }
 
+
+    const overdue =
+        state.sociosAdmin.filter(
+            (socio) =>
+                socio.ativo &&
+                socio.email &&
+                isQuotaOverdue(
+                    socio.quotas
+                )
+        );
+
+
+    if (!overdue.length) {
+
+        container.innerHTML = `
+            <div class="vazio">
+                Não existem sócios ativos com quotas em atraso.
+            </div>
+        `;
+
+        $('#admin-overdue-count')
+            .textContent =
+            '0 selecionados';
+
+        return;
+    }
+
+
+    container.innerHTML =
+        overdue
+            .map(
+                (socio) => `
+
+                    <label class="admin-overdue-row">
+
+                        <input
+                            class="admin-overdue-select"
+                            type="checkbox"
+                            value="${esc(socio.id)}"
+                        >
+
+                        <span class="admin-overdue-numero">
+                            ${esc(
+                                socio.numero_socio
+                            )}
+                        </span>
+
+                        <span class="admin-overdue-main">
+
+                            <strong>
+                                ${esc(
+                                    socio.nome
+                                )}
+                            </strong>
+
+                            <small>
+                                ${esc(
+                                    socio.email
+                                )}
+                            </small>
+
+                        </span>
+
+                        <span class="admin-overdue-status">
+                            ${esc(
+                                socio.quotas
+                            )}
+                        </span>
+
+                    </label>
+
+                `
+            )
+            .join('');
+
+
+    updateAdminOverdueCount();
+}
+
+
+function updateAdminOverdueCount() {
+
+    const count =
+        $$('.admin-overdue-select:checked')
+            .length;
+
+
+    $('#admin-overdue-count')
+        .textContent =
+        `${count} selecionados`;
+}
+
+
+function selectAllOverdue() {
+
+    $$('.admin-overdue-select')
+        .forEach(
+            (checkbox) => {
+                checkbox.checked = true;
+            }
+        );
+
+    updateAdminOverdueCount();
+}
+
+
+function clearOverdue() {
+
+    $$('.admin-overdue-select')
+        .forEach(
+            (checkbox) => {
+                checkbox.checked = false;
+            }
+        );
+
+    updateAdminOverdueCount();
+}
+
+
+async function sendOverdueEmails() {
 
     const ids =
-        getSelectedSocioIds();
+        $$('.admin-overdue-select:checked')
+            .map(
+                (checkbox) =>
+                    checkbox.value
+            );
 
 
     if (!ids.length) {
+
         throw new Error(
             'Seleciona pelo menos um sócio.'
         );
+
     }
 
 
     const button =
         $('#admin-quotas-atraso');
 
-    if (button) {
-        button.disabled = true;
-    }
+
+    button.disabled = true;
 
 
     try {
+
         const {
             data,
             error
-        } = await supabase.functions.invoke(
-            'admin-mail',
-            {
-                body: {
-                    action:
-                        'quotas_em_atraso',
+        } = await supabase
+            .functions
+            .invoke(
+                'admin-mail',
+                {
+                    body: {
+                        action:
+                            'quotas_em_atraso',
 
-                    socio_ids:
-                        ids
+                        socio_ids:
+                            ids
+                    }
                 }
-            }
-        );
+            );
 
 
         if (error) {
+
+            let message =
+                error.message;
+
+            if (error.context) {
+
+                try {
+
+                    const payload =
+                        await error.context.json();
+
+                    message =
+                        payload?.error ||
+                        message;
+
+                } catch (_) {
+                    // mantém mensagem original
+                }
+            }
+
             throw new Error(
-                await readFunctionError(error)
+                message ||
+                'Não foi possível enviar os emails.'
             );
         }
 
@@ -1438,55 +1495,28 @@ async function sendOverdueQuotaEmails() {
         }
 
 
-        const enviados =
-            Number(
-                data?.enviados || 0
-            );
-
-        const erros =
-            Array.isArray(
-                data?.erros
-            )
-                ? data.erros
-                : [];
-
-
-        let message =
-            `Foram enviados ${enviados} email(s).`;
-
-
-        if (erros.length) {
-            message +=
-                ` ${erros.length} envio(s) falharam.`;
-        }
-
-
         showMessage(
-            message,
-            erros.length
-                ? 'info'
-                : 'sucesso'
+            `Avisos enviados para ${
+                data?.enviados ?? ids.length
+            } sócio(s).`,
+            'sucesso'
         );
 
-
     } finally {
-        if (button) {
-            button.disabled = false;
-        }
+
+        button.disabled = false;
+
     }
 }
 
 
 /* ============================================================
-   ADMIN — ENVIAR DOCUMENTO A TODOS
+   ADMIN — DOCUMENTO PARA TODOS
 ============================================================ */
 
-async function sendDocumentToAll() {
-    if (!state.admin) {
-        throw new Error(
-            'Acesso reservado ao administrador.'
-        );
-    }
+async function sendDocumentToAll(event) {
+
+    event.preventDefault();
 
 
     const file =
@@ -1494,197 +1524,24 @@ async function sendDocumentToAll() {
             ?.files?.[0];
 
 
-    if (!file) {
-        throw new Error(
-            'Seleciona primeiro o documento.'
-        );
-    }
-
-
-    if (
-        file.type !==
-        'application/pdf'
-    ) {
-        throw new Error(
-            'O documento deve ser um PDF.'
-        );
-    }
-
-
-    if (
-        file.size >
-        10 * 1024 * 1024
-    ) {
-        throw new Error(
-            'O PDF não pode ultrapassar 10 MB.'
-        );
-    }
-
-
     const subject =
         $('#admin-documento-assunto')
-            ?.value
-            ?.trim() ||
-        'Comunicação — Núcleo Marques Bom';
+            .value
+            .trim();
 
 
     const message =
         $('#admin-documento-mensagem')
-            ?.value
-            ?.trim();
-
-
-    /*
-       O HTML fornecido originalmente não tinha
-       estes dois campos.
-
-       Para manter compatibilidade, aceitamos também
-       #admin-documento-message / #admin-documento-texto.
-    */
-
-    const messageElement =
-        $('#admin-documento-mensagem') ||
-        $('#admin-documento-message') ||
-        $('#admin-documento-texto');
-
-
-    const finalMessage =
-        message ||
-        messageElement?.value?.trim() ||
-        '';
-
-
-    if (!finalMessage) {
-        throw new Error(
-            'Escreve o conteúdo do email antes de enviar.'
-        );
-    }
-
-
-    const formData =
-        new FormData();
-
-    formData.append(
-        'action',
-        'documento_todos'
-    );
-
-    formData.append(
-        'documento',
-        file,
-        file.name
-    );
-
-    formData.append(
-        'subject',
-        subject
-    );
-
-    formData.append(
-        'message',
-        finalMessage
-    );
-
-
-    const {
-        data: {
-            session
-        }
-    } =
-        await supabase.auth.getSession();
-
-
-    if (!session?.access_token) {
-        throw new Error(
-            'A sessão expirou. Volta a iniciar sessão.'
-        );
-    }
-
-
-    const response =
-        await fetch(
-            `${SUPABASE_URL}/functions/v1/admin-mail`,
-            {
-                method: 'POST',
-
-                headers: {
-                    Authorization:
-                        `Bearer ${session.access_token}`
-                },
-
-                body: formData
-            }
-        );
-
-
-    const data =
-        await response
-            .json()
-            .catch(
-                () => ({})
-            );
-
-
-    if (!response.ok || data?.error) {
-        throw new Error(
-            data?.error ||
-            'Não foi possível enviar o documento.'
-        );
-    }
-
-
-    const enviados =
-        Number(
-            data?.enviados || 0
-        );
-
-    const erros =
-        Array.isArray(
-            data?.erros
-        )
-            ? data.erros
-            : [];
-
-
-    showMessage(
-        `Documento enviado para ${enviados} sócio(s).` +
-        (
-            erros.length
-                ? ` ${erros.length} envio(s) falharam.`
-                : ''
-        ),
-        erros.length
-            ? 'info'
-            : 'sucesso'
-    );
-
-
-    $('#admin-documento-form')
-        ?.reset();
-}
-
-
-/* ============================================================
-   ADMIN — IMPORTAR PDF
-============================================================ */
-
-async function importAdminPdf() {
-    if (!state.admin) {
-        throw new Error(
-            'Acesso reservado ao administrador.'
-        );
-    }
-
-
-    const file =
-        $('#admin-import-file')
-            ?.files?.[0];
+            .value
+            .trim();
 
 
     if (!file) {
+
         throw new Error(
-            'Seleciona primeiro um PDF.'
+            'Seleciona primeiro o documento PDF.'
         );
+
     }
 
 
@@ -1692,9 +1549,29 @@ async function importAdminPdf() {
         file.type !==
         'application/pdf'
     ) {
+
         throw new Error(
-            'O ficheiro deve ser um PDF.'
+            'O documento deve ser um PDF.'
         );
+
+    }
+
+
+    if (!subject) {
+
+        throw new Error(
+            'Indica o assunto do email.'
+        );
+
+    }
+
+
+    if (!message) {
+
+        throw new Error(
+            'Escreve o conteúdo do email antes de enviar.'
+        );
+
     }
 
 
@@ -1702,138 +1579,505 @@ async function importAdminPdf() {
         file.size >
         10 * 1024 * 1024
     ) {
+
         throw new Error(
             'O PDF não pode ultrapassar 10 MB.'
         );
+
     }
 
 
-    /*
-       A função backend recebe o PDF, mas o processamento
-       dos nomes é feito no browser.
-    */
-
-    const formData =
-        new FormData();
-
-    formData.append(
-        'pdf',
-        file,
-        file.name
-    );
+    const button =
+        $('#admin-documento-submit');
 
 
-    const {
-        data: {
-            session
-        }
-    } =
-        await supabase.auth.getSession();
+    button.disabled = true;
 
 
-    if (!session?.access_token) {
-        throw new Error(
-            'A sessão expirou.'
+    try {
+
+        /*
+         * O backend admin-mail atual espera
+         * multipart/form-data.
+         */
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            'action',
+            'documento_todos'
         );
-    }
 
+        formData.append(
+            'subject',
+            subject
+        );
 
-    const response =
-        await fetch(
-            `${SUPABASE_URL}/functions/v1/admin-import-pdf`,
-            {
-                method: 'POST',
+        formData.append(
+            'message',
+            message
+        );
 
-                headers: {
-                    Authorization:
-                        `Bearer ${session.access_token}`
-                },
-
-                body: formData
-            }
+        formData.append(
+            'documento',
+            file,
+            file.name
         );
 
 
-    const result =
-        await response
-            .json()
-            .catch(
-                () => ({})
+        const {
+            data,
+            error
+        } = await supabase
+            .functions
+            .invoke(
+                'admin-mail',
+                {
+                    body: formData
+                }
             );
 
 
-    if (!response.ok || result?.error) {
-        throw new Error(
-            result?.error ||
-            'Não foi possível importar o PDF.'
-        );
-    }
+        if (error) {
+
+            let errorMessage =
+                error.message;
+
+            if (error.context) {
+
+                try {
+
+                    const payload =
+                        await error.context.json();
+
+                    errorMessage =
+                        payload?.error ||
+                        errorMessage;
+
+                } catch (_) {
+                    // mantém mensagem original
+                }
+            }
+
+            throw new Error(
+                errorMessage ||
+                'Não foi possível enviar o documento.'
+            );
+        }
 
 
-    /*
-       Agora tentamos também processar o PDF
-       no navegador, como a versão antiga fazia.
-    */
+        if (data?.error) {
 
-    const rows =
-        await parsePdfInBrowser(file);
+            throw new Error(
+                data.error
+            );
+
+        }
 
 
-    if (!rows.length) {
+        $('#admin-documento-result')
+            .hidden = false;
+
+        $('#admin-documento-result')
+            .textContent =
+            `Documento enviado para ${
+                data?.enviados ?? 'os'
+            } sócio(s).`;
+
+
         showMessage(
-            result?.message ||
-            'O PDF foi recebido, mas não foram encontrados dados reconhecíveis.',
-            'info'
+            'Documento enviado com sucesso.',
+            'sucesso'
         );
 
+
+        $('#admin-documento-form')
+            .reset();
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+}
+
+
+/* ============================================================
+   ADMIN — NOVO SÓCIO
+============================================================ */
+
+async function createSocioFromAdmin(event) {
+
+    event.preventDefault();
+
+
+    const button =
+        $('#novo-socio-submit');
+
+
+    button.disabled = true;
+
+
+    try {
+
+        const body = {
+
+            nome:
+                $('#novo-socio-nome')
+                    .value
+                    .trim(),
+
+            numero_socio:
+                Number(
+                    $('#novo-socio-numero')
+                        .value
+                ),
+
+            email:
+                $('#novo-socio-email')
+                    .value
+                    .trim(),
+
+            telemovel:
+                $('#novo-socio-telemovel')
+                    .value
+                    .trim()
+
+        };
+
+
+        const {
+            data,
+            error
+        } = await supabase
+            .functions
+            .invoke(
+                'criar-socio',
+                {
+                    body
+                }
+            );
+
+
+        if (error) {
+
+            let message =
+                error.message;
+
+            if (error.context) {
+
+                try {
+
+                    const payload =
+                        await error.context.json();
+
+                    message =
+                        payload?.error ||
+                        message;
+
+                } catch (_) {
+                    // mantém original
+                }
+            }
+
+            throw new Error(
+                message ||
+                'Não foi possível criar o sócio.'
+            );
+        }
+
+
+        if (data?.error) {
+
+            throw new Error(
+                data.error
+            );
+
+        }
+
+
+        $('#novo-socio-form')
+            .reset();
+
+
+        $('#novo-socio-resultado')
+            .hidden = false;
+
+        $('#novo-socio-resultado')
+            .textContent =
+            `Sócio ${body.numero_socio} criado. Foi enviado um convite para ${body.email}.`;
+
+
+        showMessage(
+            'Sócio criado e convite enviado por email.',
+            'sucesso'
+        );
+
+
+        await loadAdminSocios();
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+}
+
+
+/* ============================================================
+   ADMIN — RETIRAR PONTOS
+============================================================ */
+
+function renderAdminSocioSelect() {
+
+    const select =
+        $('#admin-remove-socio');
+
+
+    if (!select) {
         return;
     }
 
 
-    const {
-        error
-    } = await supabase
-        .from('socios')
-        .upsert(
-            rows,
-            {
-                onConflict:
-                    'numero_socio',
-                ignoreDuplicates:
-                    false
-            }
-        );
+    select.innerHTML =
+        state.sociosAdmin
+            .filter(
+                (socio) =>
+                    socio.ativo
+            )
+            .map(
+                (socio) => `
 
+                    <option value="${esc(socio.id)}">
+                        ${esc(
+                            socio.numero_socio
+                        )}
+                        —
+                        ${esc(
+                            socio.nome
+                        )}
+                    </option>
 
-    if (error) {
-        throw error;
-    }
-
-
-    $('#admin-import-result') &&
-        (
-            $('#admin-import-result').hidden =
-                false
-        );
-
-
-    if ($('#admin-import-result')) {
-        $('#admin-import-result').textContent =
-            `${rows.length} registo(s) importado(s)/atualizado(s).`;
-    }
-
-
-    showMessage(
-        `${rows.length} sócio(s) importado(s)/atualizado(s).`,
-        'sucesso'
-    );
-
-
-    await loadAdminSocios();
+                `
+            )
+            .join('');
 }
 
 
-async function parsePdfInBrowser(file) {
+async function removePoints(event) {
+
+    event.preventDefault();
+
+
+    const socioId =
+        $('#admin-remove-socio')
+            .value;
+
+
+    const pontos =
+        Number(
+            $('#admin-remove-pontos')
+                .value
+        );
+
+
+    const motivo =
+        $('#admin-remove-motivo')
+            .value
+            .trim();
+
+
+    if (!socioId) {
+
+        throw new Error(
+            'Seleciona um sócio.'
+        );
+
+    }
+
+
+    if (
+        !Number.isInteger(pontos) ||
+        pontos <= 0
+    ) {
+
+        throw new Error(
+            'Os pontos têm de ser um número inteiro positivo.'
+        );
+
+    }
+
+
+    if (!motivo) {
+
+        throw new Error(
+            'O motivo é obrigatório.'
+        );
+
+    }
+
+
+    const button =
+        $('#admin-remove-points-submit');
+
+
+    button.disabled = true;
+
+
+    try {
+
+        /*
+         * A função admin-funlearn existente no repositório
+         * já valida o saldo e cria o movimento negativo.
+         */
+
+        const {
+            data,
+            error
+        } = await supabase
+            .functions
+            .invoke(
+                'admin-funlearn',
+                {
+                    body: {
+                        action:
+                            'retirar_pontos',
+
+                        socio_id:
+                            socioId,
+
+                        pontos,
+
+                        motivo,
+
+                        notificar:
+                            true
+                    }
+                }
+            );
+
+
+        if (error) {
+
+            let message =
+                error.message;
+
+            if (error.context) {
+
+                try {
+
+                    const payload =
+                        await error.context.json();
+
+                    message =
+                        payload?.error ||
+                        message;
+
+                } catch (_) {
+                    // mantém original
+                }
+            }
+
+            throw new Error(
+                message
+            );
+        }
+
+
+        if (data?.error) {
+
+            throw new Error(
+                data.error
+            );
+
+        }
+
+
+        $('#admin-remove-points-form')
+            .reset();
+
+
+        showMessage(
+            data?.warning ||
+            'Pontos retirados e sócio notificado por email.',
+            data?.warning
+                ? 'info'
+                : 'sucesso'
+        );
+
+
+        await loadAdminSocios();
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+}
+
+
+/* ============================================================
+   ADMIN — FUN & LEARN POR PDF
+============================================================ */
+
+function normalizeName(value = '') {
+
+    return String(value)
+        .normalize('NFD')
+        .replace(
+            /[\u0300-\u036f]/g,
+            ''
+        )
+        .toLowerCase()
+        .replace(
+            /\s+/g,
+            ' '
+        )
+        .trim();
+}
+
+
+async function processFunlearnPdf(
+    file,
+    pontos,
+    atividade,
+    descricao
+) {
+
+    if (!state.admin) {
+
+        throw new Error(
+            'Apenas o administrador pode processar documentos Fun&Learn.'
+        );
+
+    }
+
+
+    if (
+        !file ||
+        file.type !== 'application/pdf'
+    ) {
+
+        throw new Error(
+            'O ficheiro do Fun&Learn deve ser PDF.'
+        );
+
+    }
+
+
+    if (
+        !Number.isInteger(pontos) ||
+        pontos <= 0
+    ) {
+
+        throw new Error(
+            'Indica um número de pontos superior a 0.'
+        );
+
+    }
+
+
     const pdfjs =
         await import(
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs'
@@ -1858,423 +2102,30 @@ async function parsePdfInBrowser(file) {
             .promise;
 
 
-    const rows = [];
-
-
-    for (
-        let pageNumber = 1;
-        pageNumber <= pdf.numPages;
-        pageNumber++
-    ) {
-        const page =
-            await pdf.getPage(
-                pageNumber
-            );
-
-
-        const content =
-            await page.getTextContent();
-
-
-        const lines = {};
-
-
-        for (
-            const item
-            of content.items
-        ) {
-            const y =
-                Math.round(
-                    item.transform[5]
-                );
-
-            if (!lines[y]) {
-                lines[y] = [];
-            }
-
-            lines[y].push(
-                item.str
-            );
-        }
-
-
-        for (
-            const parts
-            of Object.values(lines)
-        ) {
-            const line =
-                parts
-                    .join(' ')
-                    .replace(
-                        /\s+/g,
-                        ' '
-                    )
-                    .trim();
-
-
-            if (!line) {
-                continue;
-            }
-
-
-            const numberMatch =
-                line.match(
-                    /\b(\d{1,6})\b/
-                );
-
-
-            const emailMatch =
-                line.match(
-                    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
-                );
-
-
-            const numero =
-                numberMatch?.[1] ||
-                '';
-
-
-            const email =
-                emailMatch?.[0] ||
-                '';
-
-
-            let nome =
-                line
-                    .replace(
-                        email,
-                        ''
-                    )
-                    .replace(
-                        /\b\d{1,6}\b/,
-                        ''
-                    )
-                    .replace(
-                        /\s+/g,
-                        ' '
-                    )
-                    .trim();
-
-
-            if (
-                numero &&
-                nome.length >= 3
-            ) {
-                rows.push({
-                    numero_socio:
-                        Number(numero),
-
-                    nome,
-
-                    email:
-                        email || null
-                });
-            }
-        }
-    }
-
-
-    /*
-       Evita duplicados dentro do mesmo PDF.
-    */
-
-    const unique =
-        new Map();
-
-
-    for (const row of rows) {
-        unique.set(
-            String(
-                row.numero_socio
-            ),
-            row
-        );
-    }
-
-
-    return [
-        ...unique.values()
-    ];
-}
-
-
-/* ============================================================
-   ADMIN — RETIRAR PONTOS
-============================================================ */
-
-function populateAdminRemoveSocio() {
-    const select =
-        $('#admin-remove-socio');
-
-    if (!select) {
-        return;
-    }
-
-
-    select.innerHTML =
-        state.adminSocios
-            .map(
-                socio => `
-                    <option value="${escapeHtml(socio.id)}">
-                        ${escapeHtml(
-                            socio.numero_socio
-                        )}
-                        —
-                        ${escapeHtml(
-                            socio.nome
-                        )}
-                    </option>
-                `
-            )
-            .join('');
-}
-
-
-async function removeFunlearnPoints() {
-    if (!state.admin) {
-        throw new Error(
-            'Acesso reservado ao administrador.'
-        );
-    }
-
-
-    const socioId =
-        $('#admin-remove-socio')
-            ?.value;
-
-
-    const pontos =
-        Number(
-            $('#admin-remove-pontos')
-                ?.value
-        );
-
-
-    const motivo =
-        $('#admin-remove-motivo')
-            ?.value
-            ?.trim();
-
-
-    if (!socioId) {
-        throw new Error(
-            'Seleciona um sócio.'
-        );
-    }
-
-
-    if (
-        !Number.isInteger(pontos) ||
-        pontos <= 0
-    ) {
-        throw new Error(
-            'Os pontos devem ser um número inteiro superior a zero.'
-        );
-    }
-
-
-    if (!motivo) {
-        throw new Error(
-            'Indica o motivo da retirada de pontos.'
-        );
-    }
-
-
-    const {
-        data,
-        error
-    } =
-        await supabase.functions.invoke(
-            'admin-funlearn',
-            {
-                body: {
-                    action:
-                        'retirar_pontos',
-
-                    socio_id:
-                        socioId,
-
-                    pontos,
-
-                    motivo,
-
-                    notificar:
-                        true
-                }
-            }
-        );
-
-
-    if (error) {
-        throw new Error(
-            await readFunctionError(error)
-        );
-    }
-
-
-    if (data?.error) {
-        throw new Error(
-            data.error
-        );
-    }
-
-
-    let message =
-        `Foram retirados ${pontos} ponto(s).`;
-
-
-    if (
-        data?.saldo_novo !== undefined
-    ) {
-        message +=
-            ` Novo saldo: ${data.saldo_novo}.`;
-    }
-
-
-    if (data?.warning) {
-        message +=
-            ` ${data.warning}`;
-    }
-
-
-    showMessage(
-        message,
-        data?.warning
-            ? 'info'
-            : 'sucesso'
-    );
-
-
-    $('#admin-remove-pontos') &&
-        ($('#admin-remove-pontos').value =
-            '');
-
-    $('#admin-remove-motivo') &&
-        ($('#admin-remove-motivo').value =
-            '');
-
-
-    await loadAdminSocios();
-}
-
-
-/* ============================================================
-   ADMIN — FUN&LEARN POR PDF
-============================================================ */
-
-function normalizeName(value = '') {
-    return String(value)
-        .normalize('NFD')
-        .replace(
-            /[\u0300-\u036f]/g,
-            ''
-        )
-        .toLowerCase()
-        .replace(
-            /\s+/g,
-            ' '
-        )
-        .trim();
-}
-
-
-async function processFunlearnPdf(
-    file,
-    pontos,
-    atividade,
-    descricao
-) {
-    if (!state.admin) {
-        throw new Error(
-            'Apenas o administrador pode processar documentos Fun&Learn.'
-        );
-    }
-
-
-    if (
-        !file ||
-        file.type !==
-        'application/pdf'
-    ) {
-        throw new Error(
-            'O ficheiro do Fun&Learn deve ser PDF.'
-        );
-    }
-
-
-    if (
-        !Number.isInteger(pontos) ||
-        pontos <= 0
-    ) {
-        throw new Error(
-            'Indica um número de pontos superior a zero.'
-        );
-    }
-
-
-    if (!window.pdfjsLib) {
-        /*
-           A página antiga usava window.pdfjsLib.
-           Como o socio.html não o carrega necessariamente,
-           fazemos import dinâmico.
-        */
-
-        try {
-            window.pdfjsLib =
-                await import(
-                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs'
-                );
-
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-
-        } catch (error) {
-            throw new Error(
-                'Não foi possível carregar o leitor de PDF.'
-            );
-        }
-    }
-
-
-    const pdfjs =
-        window.pdfjsLib;
-
-
-    const arrayBuffer =
-        await file.arrayBuffer();
-
-
-    const pdf =
-        await pdfjs
-            .getDocument({
-                data: arrayBuffer
-            })
-            .promise;
-
-
     let text = '';
 
 
     for (
-        let pageNumber = 1;
-        pageNumber <= pdf.numPages;
-        pageNumber++
+        let page = 1;
+        page <= pdf.numPages;
+        page++
     ) {
-        const page =
-            await pdf.getPage(
-                pageNumber
-            );
+
+        const pdfPage =
+            await pdf.getPage(page);
 
 
         const content =
-            await page.getTextContent();
+            await pdfPage
+                .getTextContent();
 
 
         text +=
             ' ' +
             content.items
                 .map(
-                    item => item.str
+                    (item) =>
+                        item.str
                 )
                 .join(' ');
     }
@@ -2286,56 +2137,64 @@ async function processFunlearnPdf(
 
     const {
         data: socios,
-        error: sociosError
-    } =
-        await supabase
-            .from('socios')
-            .select(
-                'id,nome,numero_socio'
-            )
-            .eq(
-                'ativo',
-                true
-            );
+        error
+    } = await supabase
+        .from('socios')
+        .select(
+            'id,nome,numero_socio'
+        )
+        .eq(
+            'ativo',
+            true
+        );
 
 
-    if (sociosError) {
-        throw sociosError;
+    if (error) {
+        throw error;
     }
 
 
     const encontrados =
-        (socios || [])
-            .filter(
-                socio => {
+        (socios || []).filter(
+            (socio) => {
 
-                    const nome =
-                        normalizeName(
-                            socio.nome
-                        );
-
-
-                    return (
-                        nome.length >= 4 &&
-                        normalizedText.includes(
-                            nome
-                        )
+                const nome =
+                    normalizeName(
+                        socio.nome
                     );
-                }
-            );
+
+
+                return (
+                    nome.length >= 4 &&
+                    normalizedText.includes(
+                        nome
+                    )
+                );
+            }
+        );
 
 
     if (!encontrados.length) {
+
         return {
-            count: 0,
-            names: []
+            count: 0
         };
+
     }
+
+
+    const descricaoFinal =
+        atividade
+            ? `${atividade}${descricao ? ` — ${descricao}` : ''}`
+            : (
+                descricao ||
+                'Pontuação atribuída automaticamente'
+            );
 
 
     const rows =
         encontrados.map(
-            socio => ({
+            (socio) => ({
                 socio_id:
                     socio.id,
 
@@ -2346,20 +2205,16 @@ async function processFunlearnPdf(
                     'Fun&Learn',
 
                 descricao:
-                    descricao ||
-                    'Pontos atribuídos pelo administrador.'
+                    descricaoFinal
             })
         );
 
 
     const {
         error: insertError
-    } =
-        await supabase
-            .from(
-                'funlearn_pontos'
-            )
-            .insert(rows);
+    } = await supabase
+        .from('funlearn_pontos')
+        .insert(rows);
 
 
     if (insertError) {
@@ -2369,25 +2224,20 @@ async function processFunlearnPdf(
 
     return {
         count:
-            encontrados.length,
-
-        names:
-            encontrados.map(
-                socio =>
-                    `${socio.numero_socio} — ${socio.nome}`
-            )
+            encontrados.length
     };
 }
 
 
 /* ============================================================
-   ABAS
+   TABS
 ============================================================ */
 
 function setupTabs() {
+
     $$('.socio-tab')
         .forEach(
-            button => {
+            (button) => {
 
                 button.addEventListener(
                     'click',
@@ -2395,8 +2245,8 @@ function setupTabs() {
 
                         $$('.socio-tab')
                             .forEach(
-                                item =>
-                                    item.classList
+                                (tab) =>
+                                    tab.classList
                                         .remove(
                                             'active'
                                         )
@@ -2405,7 +2255,7 @@ function setupTabs() {
 
                         $$('.socio-tab-content')
                             .forEach(
-                                panel =>
+                                (panel) =>
                                     panel.classList
                                         .remove(
                                             'active'
@@ -2417,42 +2267,20 @@ function setupTabs() {
                             .add('active');
 
 
-                        /*
-                           O HTML fornecido usa:
-                           data-tab="dados"
-                           id="dados"
-
-                           A versão atual do GitHub usa:
-                           data-tab="dados"
-                           id="tab-dados"
-
-                           Suportamos ambas.
-                        */
-
-                        const target =
-                            button.dataset.tab;
-
-
-                        document
-                            .getElementById(
-                                target
-                            )
-                            ?.classList
-                            .add(
-                                'active'
+                        const panel =
+                            document.getElementById(
+                                button.dataset.tab
                             );
 
 
-                        document
-                            .getElementById(
-                                `tab-${target}`
-                            )
-                            ?.classList
-                            .add(
-                                'active'
-                            );
+                        if (panel) {
+                            panel.classList
+                                .add('active');
+                        }
+
                     }
                 );
+
             }
         );
 }
@@ -2462,90 +2290,59 @@ function setupTabs() {
    EVENTOS
 ============================================================ */
 
-function setupLogin() {
+function setupEvents() {
+
+
+    /* LOGIN */
+
     $('#login-form')
         ?.addEventListener(
             'submit',
-            async event => {
+            async (event) => {
 
                 event.preventDefault();
 
                 hideMessage();
 
 
-                const email =
-                    $('#login-email')
-                        ?.value
-                        .trim();
-
-
-                const password =
-                    $('#login-password')
-                        ?.value ||
-                    '';
-
-
-                if (!email) {
-                    showMessage(
-                        'Introduz o teu email.',
-                        'erro'
-                    );
-
-                    return;
-                }
-
-
-                if (!password) {
-                    showMessage(
-                        'Introduz a tua palavra-passe.',
-                        'erro'
-                    );
-
-                    return;
-                }
-
-
                 const button =
-                    event.currentTarget
-                        .querySelector(
-                            'button[type="submit"]'
-                        );
+                    $('#login-submit');
 
 
-                if (button) {
-                    button.disabled =
-                        true;
-                }
+                button.disabled = true;
 
 
                 try {
-                    await login(
-                        email,
-                        password
-                    );
+
+                    const email =
+                        $('#login-email')
+                            .value
+                            .trim();
 
 
-                    const {
-                        data: {
-                            session
-                        }
-                    } =
-                        await supabase
-                            .auth
-                            .getSession();
+                    const password =
+                        $('#login-password')
+                            .value;
 
 
-                    if (!session) {
+                    if (!email) {
                         throw new Error(
-                            'O login foi aceite mas não foi criada uma sessão.'
+                            'Introduz o teu email.'
                         );
                     }
 
 
-                    await loadProfile(
-                        session.user
-                    );
+                    if (!password) {
+                        throw new Error(
+                            'Introduz a tua palavra-passe.'
+                        );
+                    }
 
+
+                    await login(
+                        email,
+                        password
+                    );
 
                 } catch (error) {
 
@@ -2556,25 +2353,23 @@ function setupLogin() {
 
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível iniciar sessão.',
                         'erro'
                     );
 
                 } finally {
 
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
+                    button.disabled = false;
+
                 }
+
             }
         );
-}
 
 
-function setupPasswordReset() {
+    /* PASSWORD */
+
     $('#reset-password')
         ?.addEventListener(
             'click',
@@ -2582,18 +2377,19 @@ function setupPasswordReset() {
 
                 const email =
                     $('#login-email')
-                        ?.value
+                        .value
                         .trim();
 
 
                 if (!email) {
+
                     showMessage(
                         'Introduz primeiro o teu email.',
                         'info'
                     );
 
                     $('#login-email')
-                        ?.focus();
+                        .focus();
 
                     return;
                 }
@@ -2614,37 +2410,44 @@ function setupPasswordReset() {
                 } catch (error) {
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível enviar o email.',
                         'erro'
                     );
+
                 }
+
             }
         );
-}
 
 
-function setupPhoto() {
+    /* LOGOUT */
+
+    $('#logout-btn')
+        ?.addEventListener(
+            'click',
+            logout
+        );
+
+
+    /* FOTO */
 
     $('#photo-trigger')
         ?.addEventListener(
             'click',
-            () => {
+            () =>
                 $('#photo-input')
-                    ?.click();
-            }
+                    .click()
         );
 
 
     $('#photo-input')
         ?.addEventListener(
             'change',
-            async event => {
+            async (event) => {
 
                 const file =
-                    event.target
-                        .files?.[0];
+                    event.target.files?.[0];
 
 
                 if (!file) {
@@ -2654,9 +2457,7 @@ function setupPhoto() {
 
                 try {
 
-                    await uploadPhoto(
-                        file
-                    );
+                    await uploadPhoto(file);
 
 
                     showMessage(
@@ -2666,35 +2467,31 @@ function setupPhoto() {
 
                 } catch (error) {
 
-                    console.error(error);
-
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível atualizar a fotografia.',
                         'erro'
                     );
 
                 } finally {
 
-                    event.target.value =
-                        '';
+                    event.target.value = '';
+
                 }
+
             }
         );
-}
 
 
-function setupDocuments() {
+    /* PDF DO SÓCIO */
 
     $('#doc-input')
         ?.addEventListener(
             'change',
-            async event => {
+            async (event) => {
 
                 const file =
-                    event.target
-                        .files?.[0];
+                    event.target.files?.[0];
 
 
                 if (!file) {
@@ -2716,26 +2513,23 @@ function setupDocuments() {
 
                 } catch (error) {
 
-                    console.error(error);
-
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível carregar o documento.',
                         'erro'
                     );
 
                 } finally {
 
-                    event.target.value =
-                        '';
+                    event.target.value = '';
+
                 }
+
             }
         );
-}
 
 
-function setupProfileForms() {
+    /* DADOS */
 
     $('#editar-dados-btn')
         ?.addEventListener(
@@ -2744,20 +2538,15 @@ function setupProfileForms() {
 
                 fillEditForms();
 
-                if ($('#dados-view')) {
-                    $('#dados-view').hidden =
-                        true;
-                }
+                $('#dados-view').hidden =
+                    true;
 
-                if ($('#dados-edit-form')) {
-                    $('#dados-edit-form').hidden =
-                        false;
-                }
+                $('#dados-edit-form').hidden =
+                    false;
 
-                if ($('#editar-dados-btn')) {
-                    $('#editar-dados-btn').hidden =
-                        true;
-                }
+                $('#editar-dados-btn').hidden =
+                    true;
+
             }
         );
 
@@ -2772,21 +2561,17 @@ function setupProfileForms() {
     $('#dados-edit-form')
         ?.addEventListener(
             'submit',
-            async event => {
+            async (event) => {
 
                 event.preventDefault();
 
                 const button =
                     $('#guardar-dados-btn');
 
+                button.disabled = true;
+
 
                 try {
-
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
 
                     await savePersonalData();
 
@@ -2799,22 +2584,22 @@ function setupProfileForms() {
                 } catch (error) {
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível guardar os dados.',
                         'erro'
                     );
 
                 } finally {
 
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
+                    button.disabled = false;
+
                 }
+
             }
         );
 
+
+    /* ARBITRAGEM */
 
     $('#editar-arbitragem-btn')
         ?.addEventListener(
@@ -2823,23 +2608,15 @@ function setupProfileForms() {
 
                 fillEditForms();
 
+                $('#arbitragem-view').hidden =
+                    true;
 
-                if ($('#arbitragem-view')) {
-                    $('#arbitragem-view').hidden =
-                        true;
-                }
+                $('#arbitragem-edit-form').hidden =
+                    false;
 
+                $('#editar-arbitragem-btn').hidden =
+                    true;
 
-                if ($('#arbitragem-edit-form')) {
-                    $('#arbitragem-edit-form').hidden =
-                        false;
-                }
-
-
-                if ($('#editar-arbitragem-btn')) {
-                    $('#editar-arbitragem-btn').hidden =
-                        true;
-                }
             }
         );
 
@@ -2854,7 +2631,7 @@ function setupProfileForms() {
     $('#arbitragem-edit-form')
         ?.addEventListener(
             'submit',
-            async event => {
+            async (event) => {
 
                 event.preventDefault();
 
@@ -2864,14 +2641,10 @@ function setupProfileForms() {
                             'button[type="submit"]'
                         );
 
+                button.disabled = true;
+
 
                 try {
-
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
 
                     await saveArbitragemData();
 
@@ -2884,27 +2657,54 @@ function setupProfileForms() {
                 } catch (error) {
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Não foi possível guardar os dados.',
                         'erro'
                     );
 
                 } finally {
 
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
+                    button.disabled = false;
+
                 }
+
             }
         );
-}
 
 
-function setupAdmin() {
+    /* ADMIN */
 
-    /* Atualizar lista */
+    $('#novo-socio-form')
+        ?.addEventListener(
+            'submit',
+            async (event) => {
+
+                try {
+
+                    await createSocioFromAdmin(
+                        event
+                    );
+
+                } catch (error) {
+
+                    showMessage(
+                        error.message ||
+                        'Não foi possível criar o sócio.',
+                        'erro'
+                    );
+
+                    $('#novo-socio-resultado')
+                        .hidden = false;
+
+                    $('#novo-socio-resultado')
+                        .textContent =
+                        error.message;
+
+                }
+
+            }
+        );
+
 
     $('#admin-refresh-socios')
         ?.addEventListener(
@@ -2923,86 +2723,36 @@ function setupAdmin() {
                 } catch (error) {
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message,
                         'erro'
                     );
+
                 }
+
             }
         );
 
 
-    /* Seleção individual */
-
-    $('#admin-socios-lista')
-        ?.addEventListener(
-            'change',
-            event => {
-
-                if (
-                    !event.target.classList
-                        .contains(
-                            'admin-socio-check'
-                        )
-                ) {
-                    return;
-                }
-
-
-                const id =
-                    String(
-                        event.target.value
-                    );
-
-
-                if (event.target.checked) {
-                    state.selectedSocios
-                        .add(id);
-                } else {
-                    state.selectedSocios
-                        .delete(id);
-                }
-
-
-                updateSelectedSociosCount();
-            }
-        );
-
-
-    /* Selecionar todos */
-
-    $('#admin-select-all-socios')
+    $('#admin-select-all')
         ?.addEventListener(
             'click',
             selectAllAdminSocios
         );
 
-
-    $('#admin-selecionar-todos')
-        ?.addEventListener(
-            'click',
-            selectAllAdminSocios
-        );
-
-
-    /* Limpar seleção */
 
     $('#admin-clear-selection')
         ?.addEventListener(
             'click',
-            clearAdminSociosSelection
+            clearAdminSocios
         );
 
 
-    $('#admin-limpar-selecao')
+    $('#admin-socios-lista')
         ?.addEventListener(
-            'click',
-            clearAdminSociosSelection
+            'change',
+            updateAdminSelectedCount
         );
 
-
-    /* Quotas */
 
     $('#admin-quotas-atraso')
         ?.addEventListener(
@@ -3011,561 +2761,159 @@ function setupAdmin() {
 
                 try {
 
-                    await sendOverdueQuotaEmails();
+                    await sendOverdueEmails();
 
                 } catch (error) {
 
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message,
                         'erro'
                     );
+
                 }
+
             }
         );
 
 
-    /* Novo sócio */
-
-    $('#novo-socio-form')
+    $('#admin-overdue-select-all')
         ?.addEventListener(
-            'submit',
-            async event => {
-
-                event.preventDefault();
-
-                const button =
-                    $('#novo-socio-submit');
-
-
-                try {
-
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
-
-                    const socio =
-                        await createSocioFromAdmin();
-
-
-                    $('#novo-socio-form')
-                        ?.reset();
-
-
-                    if ($('#novo-socio-resultado')) {
-                        $('#novo-socio-resultado')
-                            .hidden =
-                            false;
-
-                        $('#novo-socio-resultado')
-                            .textContent =
-                            `Sócio ${socio.numero_socio} — ${socio.nome} criado. Foi enviado um convite para ${socio.email}.`;
-                    }
-
-
-                    await loadAdminSocios();
-
-
-                    showMessage(
-                        'Sócio criado e convite enviado por email.',
-                        'sucesso'
-                    );
-
-                } catch (error) {
-
-                    console.error(error);
-
-
-                    if ($('#novo-socio-resultado')) {
-                        $('#novo-socio-resultado')
-                            .hidden =
-                            false;
-
-                        $('#novo-socio-resultado')
-                            .textContent =
-                            getErrorMessage(
-                                error
-                            );
-                    }
-
-
-                    showMessage(
-                        getErrorMessage(
-                            error
-                        ),
-                        'erro'
-                    );
-
-                } finally {
-
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
-                }
-            }
+            'click',
+            selectAllOverdue
         );
 
 
-    /* Documento para todos */
+    $('#admin-overdue-clear')
+        ?.addEventListener(
+            'click',
+            clearOverdue
+        );
+
+
+    $('#admin-overdue-list')
+        ?.addEventListener(
+            'change',
+            updateAdminOverdueCount
+        );
+
 
     $('#admin-documento-form')
         ?.addEventListener(
             'submit',
-            async event => {
-
-                event.preventDefault();
-
-                const button =
-                    event.currentTarget
-                        .querySelector(
-                            'button[type="submit"]'
-                        );
-
+            async (event) => {
 
                 try {
 
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
-
-                    await sendDocumentToAll();
+                    await sendDocumentToAll(
+                        event
+                    );
 
                 } catch (error) {
 
-                    console.error(error);
-
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message,
                         'erro'
                     );
 
-                } finally {
-
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
                 }
+
             }
         );
 
-
-    /* Importar PDF */
-
-    $('#admin-import-form')
-        ?.addEventListener(
-            'submit',
-            async event => {
-
-                event.preventDefault();
-
-                const button =
-                    event.currentTarget
-                        .querySelector(
-                            'button[type="submit"]'
-                        );
-
-
-                try {
-
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
-
-                    await importAdminPdf();
-
-                } catch (error) {
-
-                    console.error(error);
-
-                    showMessage(
-                        getErrorMessage(
-                            error
-                        ),
-                        'erro'
-                    );
-
-                } finally {
-
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
-                }
-            }
-        );
-
-
-    /* Retirar pontos */
 
     $('#admin-remove-points-form')
         ?.addEventListener(
             'submit',
-            async event => {
-
-                event.preventDefault();
-
-                const button =
-                    event.currentTarget
-                        .querySelector(
-                            'button[type="submit"]'
-                        );
-
+            async (event) => {
 
                 try {
 
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
-
-                    await removeFunlearnPoints();
+                    await removePoints(
+                        event
+                    );
 
                 } catch (error) {
 
-                    console.error(error);
-
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message,
                         'erro'
                     );
 
-                } finally {
-
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
                 }
+
             }
         );
 
-
-    /* Fun&Learn PDF */
 
     $('#funlearn-form')
         ?.addEventListener(
             'submit',
-            async event => {
+            async (event) => {
 
                 event.preventDefault();
-
-
-                const file =
-                    $('#funlearn-file')
-                        ?.files?.[0];
-
-
-                const pontos =
-                    Number(
-                        $('#funlearn-pontos')
-                            ?.value
-                    );
-
-
-                const atividade =
-                    $('#funlearn-atividade')
-                        ?.value
-                        ?.trim();
-
-
-                const descricao =
-                    $('#funlearn-descricao')
-                        ?.value
-                        ?.trim();
-
 
                 const button =
                     $('#funlearn-submit');
 
+                button.disabled = true;
+
 
                 try {
 
-                    if (button) {
-                        button.disabled =
-                            true;
-                    }
-
-
                     const result =
                         await processFunlearnPdf(
-                            file,
-                            pontos,
-                            atividade,
-                            descricao
+
+                            $('#funlearn-file')
+                                .files?.[0],
+
+                            Number(
+                                $('#funlearn-pontos')
+                                    .value
+                            ),
+
+                            $('#funlearn-atividade')
+                                .value
+                                .trim(),
+
+                            $('#funlearn-descricao')
+                                .value
+                                .trim()
                         );
 
 
-                    if (result.count) {
-
-                        showMessage(
-                            `Processamento concluído: ${result.count} sócio(s) recebeu(ram) ${pontos} ponto(s).`,
-                            'sucesso'
-                        );
-
-                    } else {
-
-                        showMessage(
-                            'O PDF foi processado, mas não foi encontrado nenhum nome correspondente.',
-                            'info'
-                        );
-                    }
+                    showMessage(
+                        result.count
+                            ? `Processamento concluído: ${result.count} sócio(s) recebeu(ram) pontos.`
+                            : 'O PDF foi processado, mas não foi encontrado nenhum sócio correspondente.',
+                        result.count
+                            ? 'sucesso'
+                            : 'info'
+                    );
 
 
                     $('#funlearn-form')
-                        ?.reset();
+                        .reset();
 
+
+                    await loadFunlearn();
 
                 } catch (error) {
 
-                    console.error(error);
-
                     showMessage(
-                        getErrorMessage(
-                            error
-                        ),
+                        error.message ||
+                        'Erro ao processar o PDF.',
                         'erro'
                     );
 
                 } finally {
 
-                    if (button) {
-                        button.disabled =
-                            false;
-                    }
+                    button.disabled = false;
+
                 }
+
             }
         );
 }
-
-
-/* ============================================================
-   SUPORTE À CAIXA DE EMAIL
-============================================================ */
-
-/*
-   O HTML que me enviaste ainda não contém os campos
-   do assunto/mensagem.
-
-   Esta função cria os campos automaticamente caso
-   estejam em falta.
-
-   Assim não é necessário destruir o layout atual.
-*/
-
-function ensureDocumentEmailFields() {
-
-    const form =
-        $('#admin-documento-form');
-
-    if (!form) {
-        return;
-    }
-
-
-    let subject =
-        $('#admin-documento-assunto');
-
-
-    let message =
-        $('#admin-documento-mensagem');
-
-
-    if (!subject) {
-
-        const label =
-            document.createElement(
-                'label'
-            );
-
-        label.textContent =
-            'Assunto';
-
-
-        subject =
-            document.createElement(
-                'input'
-            );
-
-        subject.id =
-            'admin-documento-assunto';
-
-        subject.type =
-            'text';
-
-        subject.value =
-            'Comunicação — Núcleo Marques Bom';
-
-        label.appendChild(
-            subject
-        );
-
-
-        const file =
-            $('#admin-documento-file');
-
-
-        if (file) {
-            form.insertBefore(
-                label,
-                file
-            );
-        } else {
-            form.prepend(
-                label
-            );
-        }
-    }
-
-
-    if (!message) {
-
-        const label =
-            document.createElement(
-                'label'
-            );
-
-        label.className =
-            'wide';
-
-
-        label.textContent =
-            'Conteúdo do email';
-
-
-        message =
-            document.createElement(
-                'textarea'
-            );
-
-        message.id =
-            'admin-documento-mensagem';
-
-        message.rows =
-            7;
-
-        message.placeholder =
-            'Escreva aqui o conteúdo do email que será enviado aos sócios.';
-
-
-        label.appendChild(
-            message
-        );
-
-
-        const file =
-            $('#admin-documento-file');
-
-
-        if (file) {
-            form.insertBefore(
-                label,
-                file
-            );
-        } else {
-            form.appendChild(
-                label
-            );
-        }
-    }
-}
-
-
-/* ============================================================
-   SESSÃO EXISTENTE
-============================================================ */
-
-async function restoreSession() {
-
-    const {
-        data: {
-            session
-        }
-    } =
-        await supabase.auth
-            .getSession();
-
-
-    if (!session) {
-        return;
-    }
-
-
-    try {
-
-        await loadProfile(
-            session.user
-        );
-
-    } catch (error) {
-
-        console.error(
-            'Erro ao restaurar sessão:',
-            error
-        );
-
-
-        if ($('#login-panel')) {
-            $('#login-panel').hidden =
-                false;
-        }
-
-        if ($('#dashboard')) {
-            $('#dashboard').hidden =
-                true;
-        }
-
-
-        showMessage(
-            getErrorMessage(
-                error
-            ),
-            'erro'
-        );
-    }
-}
-
-
-/* ============================================================
-   AUTH STATE
-============================================================ */
-
-supabase.auth.onAuthStateChange(
-    (_event, session) => {
-
-        if (!session) {
-
-            state.user = null;
-            state.socio = null;
-            state.admin = false;
-
-
-            if ($('#login-panel')) {
-                $('#login-panel').hidden =
-                    false;
-            }
-
-
-            if ($('#dashboard')) {
-                $('#dashboard').hidden =
-                    true;
-            }
-        }
-    }
-);
 
 
 /* ============================================================
@@ -3576,37 +2924,82 @@ async function init() {
 
     setupTabs();
 
-    setupLogin();
-
-    setupPasswordReset();
-
-    setupPhoto();
-
-    setupDocuments();
-
-    setupProfileForms();
-
-    setupAdmin();
-
-    ensureDocumentEmailFields();
-
-    await restoreSession();
-}
+    setupEvents();
 
 
-init().catch(
-    error => {
+    try {
+
+        const {
+            data: {
+                session
+            }
+        } =
+            await supabase.auth.getSession();
+
+
+        if (!session) {
+            return;
+        }
+
+
+        await loadProfile(
+            session.user
+        );
+
+
+        renderProfile();
+
+    } catch (error) {
 
         console.error(
-            'Erro ao iniciar socio.js:',
+            'Erro ao carregar sessão:',
             error
         );
 
+
+        await supabase.auth.signOut();
+
+
         showMessage(
-            getErrorMessage(
-                error
-            ),
+            error.message ||
+            'A sessão não pôde ser carregada.',
             'erro'
         );
+
+    }
+}
+
+
+/*
+ * Mantém a interface sincronizada com alterações
+ * de autenticação.
+ */
+
+supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+
+        if (!session) {
+
+            if ($('#login-panel')) {
+                $('#login-panel').hidden =
+                    false;
+            }
+
+            if ($('#dashboard')) {
+                $('#dashboard').hidden =
+                    true;
+            }
+
+            return;
+        }
+
+        /*
+         * Não repetimos loadProfile durante o SIGNED_IN
+         * se o init já está a tratar da sessão.
+         */
+
     }
 );
+
+
+init();
