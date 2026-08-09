@@ -1,17 +1,8 @@
-/*
- * Copia este ficheiro para js/admin-config.js e preenche apenas os valores
- * da instalação Supabase. Nunca coloques aqui service_role_key, SMTP password
- * ou qualquer segredo.
- */
+/* Configuração pública do Supabase para a área administrativa. */
 window.NAF_ADMIN_CONFIG = {
-  SUPABASE_URL: "https://TEU-PROJETO.supabase.co",
-  SUPABASE_ANON_KEY: "A_TUA_ANON_KEY",
-
-  // Edge Functions existentes. Mantém os nomes que já tens no teu projeto
-  // ou altera estes dois valores.
+  SUPABASE_URL: "https://pvaupgdhtrmbumaxvvrj.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_8pqZLxvQA5kMbYYLD95WPg_0uFK5WRi",
   EMAIL_FUNCTION: "admin-email",
   ADMIN_FUNCTION: "admin-members",
-
-  // Opcional: RPC existente para retirar pontos.
   REMOVE_POINTS_RPC: "retirar_pontos_funlearn"
 };

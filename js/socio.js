@@ -8,11 +8,12 @@ const esc = v => String(v ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;',
 
 function msg(text,type='info',target='#socio-message'){
   const el=$(target); if(!el)return;
-  el.textContent=text;
-  el.className=`socio-message ${type}`;
-  el.hidden=false;
+  el.textContent=text; el.className=`socio-message ${type}`; el.hidden=false;
 }
-async function login(email,password){ const {error}=await supabase.auth.signInWithPassword({email,password}); if(error)throw error; }
+async function login(email,password){
+  const {error}=await supabase.auth.signInWithPassword({email,password});
+  if(error)throw error;
+}
 async function loadProfile(user){
   const {data,error}=await supabase.from('socios').select('*').eq('user_id',user.id).single();
   if(error)throw error;
@@ -23,8 +24,7 @@ async function loadProfile(user){
 function render(){
   const s=state.socio;
   $('#login-panel').hidden=true; $('#dashboard').hidden=false;
-  $('#socio-name').textContent=s.nome||'Sócio';
-  $('#socio-number').textContent=s.numero_socio??'—';
+  $('#socio-name').textContent=s.nome||'Sócio'; $('#socio-number').textContent=s.numero_socio??'—';
   $('#profile-nome').value=s.nome||''; $('#profile-numero').value=s.numero_socio??'';
   $('#profile-email').value=s.email||state.user.email||''; $('#profile-telemovel').value=s.telemovel||'';
   $('#profile-nascimento').value=s.data_nascimento||''; $('#profile-morada').value=s.morada||'';
@@ -34,21 +34,11 @@ function render(){
   loadPhoto(); loadDocuments(); loadFunlearn();
 }
 async function loadPhoto(){
-  const path=state.socio.fotografia_path||null;
-  const photo=$('#socio-photo');
-  const placeholder=$('#socio-photo-placeholder');
-  if(!path){
-    photo.src=''; photo.hidden=true;
-    if(placeholder) placeholder.hidden=true;
-    return;
-  }
+  const path=state.socio.fotografia_path||null, photo=$('#socio-photo');
+  if(!path){ photo.removeAttribute('src'); photo.hidden=true; return; }
   const {data,error}=await supabase.storage.from('fotografias-socios').createSignedUrl(path,3600);
   if(error)throw error;
-  if(data?.signedUrl){
-    photo.src=`${data.signedUrl}${data.signedUrl.includes('?')?'&':'?'}v=${encodeURIComponent(path)}`;
-    photo.hidden=false;
-    if(placeholder) placeholder.hidden=true;
-  }
+  if(data?.signedUrl){ photo.src=`${data.signedUrl}${data.signedUrl.includes('?')?'&':'?'}v=${encodeURIComponent(path)}`; photo.hidden=false; }
 }
 async function loadDocuments(){
   const {data,error}=await supabase.from('documentos_socios').select('*').eq('socio_id',state.socio.id).order('created_at',{ascending:false});
@@ -60,15 +50,14 @@ async function loadFunlearn(){
   const {data,error}=await supabase.from('funlearn_pontos').select('*').eq('socio_id',state.socio.id).order('created_at',{ascending:false});
   if(error)return console.error(error);
   const total=data.reduce((a,r)=>a+Number(r.pontos||0),0);
-  $('#funlearn-total').textContent=total;
-  const top=$('#funlearn-total-top'); if(top)top.textContent=total;
+  $('#funlearn-total').textContent=total; const top=$('#funlearn-total-top'); if(top)top.textContent=total;
   $('#funlearn-history').innerHTML=data.length?data.map(r=>`<div class="fun-row"><div><strong>${esc(r.atividade||'Fun&Learn')}</strong><small>${esc(r.descricao||'')}</small></div><b>${Number(r.pontos||0)>0?'+':''}${Number(r.pontos||0)}</b></div>`).join(''):'<div class="vazio">Ainda não existem movimentos de pontos.</div>';
 }
 async function updateProfile(e){
   e.preventDefault();
   const payload={email:$('#profile-email').value.trim(),telemovel:$('#profile-telemovel').value.trim(),data_nascimento:$('#profile-nascimento').value||null,morada:$('#profile-morada').value.trim(),numero_arbitro:$('#profile-arbitro').value.trim(),associacao_futebol:$('#profile-af').value.trim(),modalidade:$('#profile-modalidade').value.trim()};
   const {data,error}=await supabase.from('socios').update(payload).eq('id',state.socio.id).eq('user_id',state.user.id).select().single();
-  if(error)throw error; state.socio=data; $('#socio-name').textContent=data.nome; msg('Dados atualizados.','sucesso');
+  if(error)throw error; state.socio=data; msg('Dados atualizados.','sucesso');
 }
 async function createMember(e){
   e.preventDefault(); const button=$('#new-member-submit'); button.disabled=true;
@@ -82,8 +71,7 @@ async function uploadPhoto(file){
   if(!file)return;
   if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('A fotografia deve ser JPG, PNG ou WEBP.');
   if(file.size>6*1024*1024)throw new Error('A fotografia não pode ultrapassar 6 MB.');
-  const ext=file.type==='image/jpeg'?'jpg':file.type.split('/')[1];
-  const oldPath=state.socio.fotografia_path||null;
+  const ext=file.type==='image/jpeg'?'jpg':file.type.split('/')[1], oldPath=state.socio.fotografia_path||null;
   const path=`${state.socio.id}/fotografia-${crypto.randomUUID()}.${ext}`;
   const {error}=await supabase.storage.from('fotografias-socios').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
   if(error)throw error;
@@ -97,7 +85,7 @@ async function uploadPdf(file){
   if(!file||file.type!=='application/pdf')throw new Error('Só são permitidos ficheiros PDF.');
   const {count,error}=await supabase.from('documentos_socios').select('*',{count:'exact',head:true}).eq('socio_id',state.socio.id);
   if(error)throw error; if((count||0)>=12)throw new Error('Já atingiu o limite máximo de 12 documentos.');
-  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_'); const path=`${state.socio.id}/${crypto.randomUUID()}-${safe}`;
+  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_'), path=`${state.socio.id}/${crypto.randomUUID()}-${safe}`;
   const up=await supabase.storage.from('documentos-socios').upload(path,file,{contentType:'application/pdf',upsert:false});
   if(up.error)throw up.error;
   const ins=await supabase.from('documentos_socios').insert({socio_id:state.socio.id,nome_ficheiro:file.name,ficheiro_path:path,mime_type:'application/pdf',tamanho_bytes:file.size});
@@ -118,6 +106,6 @@ function init(){
   $('#photo-trigger').addEventListener('click',()=>$('#photo-input').click());
   $('#photo-input').addEventListener('change',async e=>{try{await uploadPhoto(e.target.files?.[0]);msg('Fotografia atualizada.','sucesso')}catch(err){msg(err.message,'erro')}e.target.value=''});
   $('#doc-input').addEventListener('change',async e=>{try{await uploadPdf(e.target.files?.[0]);msg('Documento carregado.','sucesso')}catch(err){msg(err.message,'erro')}e.target.value=''});
-  supabase.auth.getSession().then(({data:{session}})=>{if(session)loadProfile(session.user).catch(()=>msg('A conta autenticada ainda não está associada a um sócio.','erro'))});
+  supabase.auth.getSession().then(({data:{session}})=>{if(session)loadProfile(session.user).catch(err=>msg(err.message||'A conta autenticada ainda não está associada a um sócio.','erro'))});
 }
 init();
