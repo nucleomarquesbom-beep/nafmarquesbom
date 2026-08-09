@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Área Administrativa — Núcleo Marques Bom</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+</head>
+<body>
+<header>
+  <div class="container">
+    <a class="logo" href="index.html"><img src="imagens/logo.png" alt="Logo"></a>
+    <nav>
+      <a href="index.html">Início</a>
+      <a href="socio.html">Sócio</a>
+      <a href="admin.html" aria-current="page">Administração</a>
+    </nav>
+  </div>
+</header>
+
+<main class="pagina admin-modern">
+  <div class="admin-page-head">
+    <div>
+      <span class="admin-badge">Área reservada</span>
+      <h1>Administração</h1>
+      <p class="admin-help">Gestão de sócios, quotas, Fun&Learn, importação de PDF e comunicações.</p>
+    </div>
+    <button id="btn-refresh" class="admin-small-btn primary">Atualizar</button>
+  </div>
+
+  <div id="admin-result" class="admin-result" hidden></div>
+
+  <section id="admin-login-warning" class="admin-card" hidden>
+    <h3>Acesso não autorizado</h3>
+    <p>É necessário iniciar sessão com uma conta de administrador.</p>
+  </section>
+
+  <section id="admin-app" hidden>
+    <div class="admin-kpis">
+      <div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div>
+      <div class="admin-kpi"><span>Ativos</span><strong id="kpi-ativos">—</strong></div>
+      <div class="admin-kpi"><span>Quotas em atraso</span><strong id="kpi-atrasos">—</strong></div>
+      <div class="admin-kpi"><span>Pontos Fun&Learn</span><strong id="kpi-pontos">—</strong></div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-panel="socios">Sócios</button>
+      <button class="admin-tab" data-panel="pdf">Importar PDF</button>
+      <button class="admin-tab" data-panel="quotas">Quotas</button>
+      <button class="admin-tab" data-panel="email">Email geral</button>
+      <button class="admin-tab" data-panel="funlearn">Fun&Learn</button>
+    </div>
+
+    <section id="panel-socios" class="admin-tab-panel active">
+      <div class="admin-card">
+        <h3>Lista de sócios</h3>
+        <div class="admin-toolbar">
+          <input id="member-search" class="admin-search" placeholder="Pesquisar nome, nº de sócio ou email">
+          <select id="member-status" class="admin-filter">
+            <option value="">Todos</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+          <button id="btn-select-all" class="admin-small-btn">Selecionar todos</button>
+          <button id="btn-clear-selection" class="admin-small-btn">Limpar</button>
+        </div>
+        <div id="selected-count" class="admin-selected-count">0 selecionados</div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr>
+              <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th>
+            </tr></thead>
+            <tbody id="members-body"><tr><td colspan="7" class="admin-loading">A carregar…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-pdf" class="admin-tab-panel">
+      <div class="admin-card">
+        <h3>Carregar dados a partir de PDF</h3>
+        <p class="admin-help">O PDF é lido no navegador. Antes de gravar, os dados são mostrados numa pré-visualização.</p>
+        <div class="admin-file">
+          <label>PDF de origem
+            <input id="pdf-file" type="file" accept="application/pdf">
+          </label>
+          <div id="pdf-progress" class="admin-progress"><span></span></div>
+          <p class="admin-import-note">Formato esperado: linhas contendo número de sócio, nome e, quando disponível, email.</p>
+        </div>
+        <div class="admin-actions">
+          <button id="btn-parse-pdf" class="admin-small-btn primary">Ler PDF</button>
+          <button id="btn-import-pdf" class="admin-small-btn" disabled>Confirmar importação</button>
+        </div>
+        <div id="pdf-preview" class="admin-preview"></div>
+      </div>
+    </section>
+
+    <section id="panel-quotas" class="admin-tab-panel">
+      <div class="admin-card">
+        <h3>Quotas em atraso</h3>
+        <p class="admin-help">Seleciona os sócios a notificar. O envio é delegado à função segura configurada no backend.</p>
+        <div id="overdue-list" class="admin-preview"></div>
+        <div class="admin-form-grid">
+          <label class="wide">Assunto<input id="quota-subject" value="Quotas em atraso — Núcleo de Árbitros de Futebol Marques Bom"></label>
+          <label class="wide">Mensagem<textarea id="quota-message">Caro(a) sócio(a),
+
+Verificámos que existem quotas em atraso associadas ao seu registo. Pedimos que proceda à regularização assim que possível.
+
+Obrigado,
+Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
+        </div>
+        <button id="btn-send-overdue" class="admin-small-btn primary">Enviar avisos</button>
+      </div>
+    </section>
+
+    <section id="panel-email" class="admin-tab-panel">
+      <div class="admin-card">
+        <h3>Enviar documento para a lista de sócios</h3>
+        <div class="admin-form-grid">
+          <label class="wide">Assunto<input id="mail-subject" placeholder="Assunto do email"></label>
+          <label class="wide">Mensagem<textarea id="mail-message" placeholder="Mensagem"></textarea></label>
+          <label class="wide">Documento<input id="mail-file" type="file"></label>
+        </div>
+        <p class="admin-inline-note">O anexo é enviado para a função segura de email; não são expostas credenciais SMTP no navegador.</p>
+        <button id="btn-send-document" class="admin-small-btn primary">Enviar para todos</button>
+      </div>
+    </section>
+
+    <section id="panel-funlearn" class="admin-tab-panel">
+      <div class="admin-card">
+        <h3>Fun&Learn — retirar pontos</h3>
+        <div class="admin-form-grid">
+          <label>Valor a retirar<input id="points-amount" type="number" min="1" step="1" value="1"></label>
+          <label>Sócio
+            <select id="points-member"></select>
+          </label>
+          <label class="wide">Motivo<textarea id="points-reason" placeholder="Motivo obrigatório para a retirada de pontos"></textarea></label>
+        </div>
+        <div class="admin-danger-box">
+          A retirada fica registada e a função segura de email envia a notificação ao sócio.
+        </div>
+        <button id="btn-remove-points" class="admin-small-btn danger">Retirar pontos e notificar</button>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <h3>Núcleo de Árbitros de Futebol Marques Bom</h3>
+    <p>Coimbra • Portugal</p>
+    <p>Fundado em 1987</p>
+  </div>
+</footer>
+
+<script src="js/admin-config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
