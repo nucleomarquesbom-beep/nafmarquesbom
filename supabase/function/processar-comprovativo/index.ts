@@ -471,3 +471,204 @@ Deno.serve(async (req) => {
     }
 
 });
+const IBAN_NUCLEO =
+    Deno.env.get("IBAN_NUCLEO")!;
+
+const MBWAY_NUCLEO =
+    Deno.env.get("MBWAY_NUCLEO")!;
+
+
+function normalizar(
+    valor: string
+): string {
+
+    return valor
+        .replace(/\s/g, "")
+        .replace(/-/g, "")
+        .toUpperCase();
+}
+
+
+function analisarComprovativo(
+    texto: string
+) {
+
+    const original =
+        texto.toUpperCase();
+
+
+    const textoNormalizado =
+        normalizar(original);
+
+
+    let metodo =
+        "transferencia";
+
+
+    if (
+        original.includes("MBWAY") ||
+        original.includes("MB WAY")
+    ) {
+
+        metodo = "mbway";
+    }
+
+
+    const destinatarioValido =
+        textoNormalizado.includes(
+            normalizar(IBAN_NUCLEO)
+        )
+        ||
+        textoNormalizado.includes(
+            normalizar(MBWAY_NUCLEO)
+        );
+
+
+    if (!destinatarioValido) {
+
+        return {
+            valido: false,
+            motivo:
+                "O destinatário do pagamento não corresponde ao Núcleo."
+        };
+    }
+
+
+    const valor =
+        extrairValor(original);
+
+
+    if (!valor || valor <= 0) {
+
+        return {
+            valido: false,
+            motivo:
+                "Não foi possível identificar o valor do pagamento."
+        };
+    }
+
+
+    const data =
+        extrairData(original);
+
+
+    if (!data) {
+
+        return {
+            valido: false,
+            motivo:
+                "Não foi possível identificar a data do pagamento."
+        };
+    }
+
+
+    return {
+
+        valido: true,
+
+        valor,
+
+        data,
+
+        metodo,
+
+        destinatario:
+            metodo === "mbway"
+                ? MBWAY_NUCLEO
+                : IBAN_NUCLEO
+    };
+}
+function extrairValor(
+    texto: string
+): number | null {
+
+    const padroes = [
+
+        /(?:VALOR|MONTANTE|TOTAL)[^\d]{0,20}(\d+[,.]\d{2})/i,
+
+        /(\d+[,.]\d{2})\s*€/i,
+
+        /EUR\s*(\d+[,.]\d{2})/i
+    ];
+
+
+    for (const regex of padroes) {
+
+        const match =
+            texto.match(regex);
+
+        if (!match) {
+            continue;
+        }
+
+        const valor =
+            Number(
+                match[1]
+                    .replace(".", "")
+                    .replace(",", ".")
+            );
+
+        if (
+            Number.isFinite(valor) &&
+            valor > 0
+        ) {
+            return valor;
+        }
+    }
+
+
+    return null;
+}
+async function regularizarQuotas(
+    socioId: string,
+    pagamentoId: string,
+    quantidadeMeses: number
+) {
+
+    const {
+        data: quotas,
+        error
+    } =
+        await supabaseAdmin
+            .from("quotas")
+            .select("*")
+            .eq("socio_id", socioId)
+            .eq("estado", "em_atraso")
+            .order("ano", {
+                ascending: true
+            })
+            .order("mes", {
+                ascending: true
+            });
+
+
+    if (error) {
+        throw error;
+    }
+
+
+    const quotasParaPagar =
+        (quotas || [])
+            .slice(
+                0,
+                quantidadeMeses
+            );
+
+
+    for (
+        const quota of quotasParaPagar
+    ) {
+
+        await supabaseAdmin
+            .from("quotas")
+            .update({
+                estado: "paga",
+                pagamento_id:
+                    pagamentoId
+            })
+            .eq(
+                "id",
+                quota.id
+            );
+    }
+}
