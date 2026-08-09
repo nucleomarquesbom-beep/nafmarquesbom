@@ -411,3 +411,125 @@
     .socio-tabs { overflow-x:auto; flex-wrap:nowrap; }
     .socio-tab { white-space:nowrap; }
 }
+/* =========================================================
+   ALTERAÇÕES DA ÁREA DE SÓCIO
+   Mantém o layout existente.
+   ========================================================= */
+
+/* Botão discreto da fotografia */
+
+.photo-change-button {
+    border: 0;
+    background: transparent;
+    color: #777;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 6px;
+    cursor: pointer;
+    opacity: .72;
+    transition:
+        color .2s ease,
+        opacity .2s ease;
+}
+
+.photo-change-button:hover {
+    color: var(--roxo);
+    opacity: 1;
+}
+
+
+/* Barra de seleção dos sócios */
+
+.admin-selection-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 12px;
+}
+
+.admin-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--roxo);
+}
+
+.admin-select-all input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--roxo);
+    cursor: pointer;
+}
+
+#admin-selected-count {
+    color: #777;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* Caixa de mensagem do email */
+
+#admin-documento-mensagem {
+    width: 100%;
+    min-height: 150px;
+    resize: vertical;
+    padding: 13px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font: inherit;
+    line-height: 1.55;
+    background: #fff;
+}
+
+#admin-documento-mensagem:focus {
+    outline: none;
+    border-color: var(--roxo);
+    box-shadow: 0 0 0 3px rgba(91,42,114,.10);
+}
+
+
+/* Melhoria ligeira da lista de sócios */
+
+.admin-socio-row {
+    padding: 14px 4px;
+}
+
+.admin-socio-row:hover {
+    background: #fafafa;
+}
+
+.admin-socio-select {
+    flex-shrink: 0;
+}
+
+
+/* Avatar */
+
+.socio-foto-placeholder {
+    user-select: none;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .admin-selection-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .photo-change-button {
+        font-size: 12px;
+    }
+
+}
