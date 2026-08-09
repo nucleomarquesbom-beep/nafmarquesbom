@@ -146,9 +146,25 @@ function init(){
   $('#logout-btn').addEventListener('click',async()=>{await supabase.auth.signOut();location.reload()});
   $('#profile-form').addEventListener('submit',async e=>{try{await updateProfile(e)}catch(err){msg(err.message,'erro')}});
   $('#new-member-form').addEventListener('submit',createMember);
-  $('#photo-trigger-card').addEventListener('click',()=>$('#photo-input').click());
-  $('#photo-input').addEventListener('change',async e=>{try{await uploadPhoto(e.target.files?.[0]);msg('Fotografia atualizada.','sucesso')}catch(err){msg(err.message,'erro')}e.target.value=''});
+
+  // ÚNICO botão/campo de fotografia do sócio.
+  $('#photo-trigger').addEventListener('click',()=>$('#photo-input').click());
+  $('#photo-input').addEventListener('change',async e=>{
+    try{
+      await uploadPhoto(e.target.files?.[0]);
+      msg('Fotografia atualizada.','sucesso');
+    }catch(err){
+      msg(err.message,'erro');
+    }
+    e.target.value='';
+  });
+
   $('#doc-input').addEventListener('change',async e=>{try{await uploadPdf(e.target.files?.[0]);msg('Documento carregado.','sucesso')}catch(err){msg(err.message,'erro')}e.target.value=''});
-  supabase.auth.getSession().then(({data:{session}})=>{if(session)loadProfile(session.user).catch(()=>msg('A conta autenticada ainda não está associada a um sócio.','erro'))});
+
+  supabase.auth.getSession().then(({data:{session}})=>{
+    if(session){
+      loadProfile(session.user).catch(()=>msg('A conta autenticada ainda não está associada a um sócio.','erro'));
+    }
+  });
 }
 init();
