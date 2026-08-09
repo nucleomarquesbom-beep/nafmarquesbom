@@ -542,9 +542,72 @@
             <!-- QUOTAS -->
 
             <section
-                class="socio-tab-content"
-                id="quotas"
+    class="socio-tab-content"
+    id="quotas"
+>
+
+    <div class="tab-heading-row">
+
+        <div>
+            <h2>Quotas</h2>
+
+            <p>
+                Consulte a sua situação e envie o comprovativo
+                de pagamento.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div
+        id="quotas-list"
+        class="quota-list"
+    >
+        <div class="vazio">
+            A carregar…
+        </div>
+    </div>
+
+
+    <div class="quota-upload-card">
+
+        <h3>
+            Enviar comprovativo
+        </h3>
+
+        <p>
+            Carregue o PDF do comprovativo da transferência
+            ou pagamento por MB WAY.
+        </p>
+
+        <label class="upload-box">
+
+            📄 Selecionar comprovativo PDF
+
+            <input
+                id="quota-comprovativo"
+                type="file"
+                accept="application/pdf"
             >
+
+        </label>
+
+        <div
+            id="quota-upload-status"
+            class="admin-result"
+            hidden
+        ></div>
+
+    </div>
+
+
+    <div
+        id="recibos-list"
+        class="docs-list"
+    ></div>
+
+</section>
 
                 <h2>Quotas</h2>
 
