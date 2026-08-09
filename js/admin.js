@@ -113,6 +113,12 @@
     updateSelectedCount();
   }
 
+  function updateOverdueSelectedCount() {
+    const el = $("overdue-selected-count");
+    if (!el) return;
+    el.textContent = `${document.querySelectorAll(".overdue-check:checked").length} selecionados`;
+  }
+
   function renderOverdue() {
     const overdue = state.members.filter(m => m.quotas && m.email);
     $("overdue-list").innerHTML = overdue.length ? overdue.map(m => `
@@ -120,6 +126,7 @@
         <input class="admin-check overdue-check" type="checkbox" value="${esc(m.id)}" checked>
         <strong>${esc(m.numero)}</strong><span>${esc(m.nome)}</span><span>${esc(m.email)}</span>
       </label>`).join("") : `<div class="admin-loading">Não existem sócios marcados com quotas em atraso.</div>`;
+    updateOverdueSelectedCount();
   }
 
   function renderMemberSelect() {
@@ -225,10 +232,15 @@
     if (!file) throw new Error("Seleciona o documento.");
     const members = state.members.filter(m => m.email);
     if (!members.length) throw new Error("Não existem sócios com email.");
+    const subject = $("mail-subject").value.trim();
+    const message = $("mail-message").value.trim();
+    if (!subject) throw new Error("Indica o assunto do email.");
+    if (!message) throw new Error("Escreve o conteúdo do email antes de enviar.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("O documento não pode ultrapassar 10 MB.");
     await invokeEdge(cfg.EMAIL_FUNCTION, {
       action: "documento_todos",
-      subject: $("mail-subject").value.trim(),
-      message: $("mail-message").value.trim(),
+      subject,
+      message,
       attachment: { name:file.name, mime:file.type || "application/octet-stream", base64:await fileToBase64(file) },
       members: members.map(m => ({ id:m.id, numero_socio:m.numero, nome:m.nome, email:m.email }))
     });
@@ -277,6 +289,15 @@
       updateSelectedCount();
     };
     $("members-body").addEventListener("change", updateSelectedCount);
+    $("btn-overdue-select-all").onclick = () => {
+      document.querySelectorAll(".overdue-check").forEach(x => x.checked = true);
+      updateOverdueSelectedCount();
+    };
+    $("btn-overdue-clear").onclick = () => {
+      document.querySelectorAll(".overdue-check").forEach(x => x.checked = false);
+      updateOverdueSelectedCount();
+    };
+    $("overdue-list").addEventListener("change", updateOverdueSelectedCount);
     $("btn-parse-pdf").onclick = () => parsePdf().catch(fail);
     $("btn-import-pdf").onclick = () => importPdfRows().catch(fail);
     $("btn-send-overdue").onclick = () => sendOverdue().catch(fail);
