@@ -103,6 +103,11 @@
       <div class="admin-card">
         <h3>Quotas em atraso</h3>
         <p class="admin-help">Seleciona os sócios a notificar. O envio é delegado à função segura configurada no backend.</p>
+        <div class="admin-selection-bar">
+          <button id="btn-overdue-select-all" type="button" class="admin-small-btn">Selecionar todos</button>
+          <button id="btn-overdue-clear" type="button" class="admin-small-btn">Limpar seleção</button>
+          <span id="overdue-selected-count" class="admin-selected-count">0 selecionados</span>
+        </div>
         <div id="overdue-list" class="admin-preview"></div>
         <div class="admin-form-grid">
           <label class="wide">Assunto<input id="quota-subject" value="Quotas em atraso — Núcleo de Árbitros de Futebol Marques Bom"></label>
