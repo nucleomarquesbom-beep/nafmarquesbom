@@ -973,3 +973,88 @@
     }
 
 }
+/* =========================================================
+   COMPROVATIVO DE QUOTAS
+========================================================= */
+
+.quota-upload-card {
+    margin-top: 30px;
+    padding: 24px;
+    border-radius: 16px;
+    background: #fafafa;
+    border: 1px solid #eee;
+}
+
+.quota-upload-card h3 {
+    color: var(--roxo);
+    margin-bottom: 8px;
+}
+
+.quota-upload-card p {
+    color: #666;
+    margin-bottom: 18px;
+}
+
+.quota-upload-card .upload-box {
+    display: inline-flex;
+}
+
+.quota-processing {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 13px 15px;
+    border-radius: 10px;
+    background: #f3eef5;
+    color: var(--roxo);
+    font-weight: 600;
+}
+
+.quota-payment-result {
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.quota-payment-result.sucesso {
+    background: #e5f7eb;
+    color: #176b38;
+}
+
+.quota-payment-result.erro {
+    background: #ffe5e5;
+    color: #8c1717;
+}
+
+.recibo-quota-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.recibo-quota-info strong {
+    color: var(--roxo);
+}
+
+.recibo-quota-info small {
+    display: block;
+    margin-top: 4px;
+    color: #777;
+}
+
+@media(max-width:700px) {
+
+    .quota-upload-card {
+        padding: 18px;
+    }
+
+    .recibo-quota-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+}
