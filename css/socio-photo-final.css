@@ -1,0 +1,45 @@
+/* CORREÇÃO FINAL DA FOTOGRAFIA: um único arco, avatar dentro do mesmo espaço. */
+.socio-foto-3d {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    isolation: isolate;
+}
+.socio-photo-img,
+.socio-avatar {
+    position: absolute;
+    inset: 6px;
+    width: calc(100% - 12px);
+    height: calc(100% - 12px);
+    border-radius: 50%;
+}
+.socio-photo-img {
+    z-index: 3;
+    object-fit: cover;
+    object-position: center top;
+    transform: translateZ(14px) scale(1.035);
+    box-shadow: 0 8px 18px rgba(0,0,0,.18);
+}
+.socio-avatar {
+    z-index: 2;
+    background: #f2f2f2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%236b6b6b'%3E%3Cpath d='M50 47c13 0 23-10 23-23S63 1 50 1 27 11 27 24s10 23 23 23z'/%3E%3Cpath d='M10 98c2-25 18-39 40-39s38 14 40 39H10z'/%3E%3C/g%3E%3C/svg%3E") center/58% no-repeat;
+}
+.photo-upload {
+    border: 0;
+    background: transparent;
+    padding: 2px 7px;
+    margin: 0;
+    box-shadow: none;
+    font: inherit;
+    color: var(--roxo);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.photo-upload:hover {
+    text-decoration: underline;
+    background: transparent;
+}
+#photo-input { display: none !important; }
