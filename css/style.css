@@ -1471,3 +1471,78 @@ height:160px;
 
 @media(max-width:1100px){.admin-new-socio-form{grid-template-columns:1fr 1fr}.admin-new-socio-form .botao{grid-column:1/-1}.admin-new-socio-form label:first-child{grid-column:1/-1}}
 @media(max-width:700px){.socio-edit-grid,.socio-edit-locked{grid-template-columns:1fr}.socio-edit-grid .wide{grid-column:auto}.admin-new-socio-form{grid-template-columns:1fr}.admin-new-socio-form label:first-child{grid-column:auto}.admin-new-socio-form .botao{grid-column:auto}.admin-socio-row{grid-template-columns:55px 1fr}.admin-socio-status{grid-column:2;justify-self:start}}
+
+
+/* =========================================================
+   POLÍTICA DE PRIVACIDADE
+========================================================= */
+
+.privacy-page {
+    max-width: 1000px;
+    padding-top: 50px;
+    padding-bottom: 70px;
+}
+
+.privacy-page section {
+    margin-bottom: 45px;
+}
+
+.privacy-page h2 {
+    margin-bottom: 15px;
+}
+
+.privacy-page p {
+    line-height: 1.8;
+    margin-bottom: 15px;
+}
+
+.privacy-page ul {
+    margin: 15px 0 20px 25px;
+    padding: 0;
+}
+
+.privacy-page li {
+    margin-bottom: 9px;
+    line-height: 1.7;
+}
+
+.privacy-info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    margin: 20px 0;
+    padding: 22px 25px;
+
+    border-left: 4px solid var(--cor-principal, #c9a227);
+
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+}
+
+.privacy-last-update {
+    border-top: 1px solid rgba(0, 0, 0, 0.10);
+    padding-top: 25px;
+}
+
+@media (max-width: 768px) {
+
+    .privacy-page {
+        padding-top: 30px;
+        padding-bottom: 50px;
+    }
+
+    .privacy-page section {
+        margin-bottom: 35px;
+    }
+
+    .privacy-page h2 {
+        font-size: 1.35rem;
+    }
+
+    .privacy-page p,
+    .privacy-page li {
+        font-size: 0.95rem;
+    }
+
+}
