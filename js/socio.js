@@ -3163,3 +3163,127 @@ async function processarComprovativoQuota(file) {
         );
     }
 }
+const importQuotasForm =
+    document.getElementById(
+        "admin-import-quotas-form"
+    );
+
+
+if (importQuotasForm) {
+
+    importQuotasForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+
+            const file =
+                document.getElementById(
+                    "admin-quotas-excel"
+                ).files[0];
+
+
+            const resultBox =
+                document.getElementById(
+                    "admin-import-quotas-result"
+                );
+
+
+            if (!file) {
+                return;
+            }
+
+
+            resultBox.hidden = false;
+
+            resultBox.className =
+                "admin-result";
+
+            resultBox.textContent =
+                "A importar quotas...";
+
+
+            try {
+
+                const {
+                    data: {
+                        session
+                    }
+                } =
+                    await supabase.auth
+                        .getSession();
+
+
+                if (!session) {
+
+                    throw new Error(
+                        "Sessão terminada."
+                    );
+                }
+
+
+                const formData =
+                    new FormData();
+
+
+                formData.append(
+                    "excel",
+                    file
+                );
+
+
+                const response =
+                    await fetch(
+                        `${SUPABASE_URL}/functions/v1/importar-quotas`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                Authorization:
+                                    `Bearer ${session.access_token}`
+                            },
+
+                            body: formData
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error ||
+                        "Erro na importação."
+                    );
+                }
+
+
+                resultBox.className =
+                    "admin-result sucesso";
+
+
+                resultBox.textContent =
+                    result.message;
+
+
+                await carregarQuotasAdmin();
+
+                await carregarListaSocios();
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                resultBox.className =
+                    "admin-result erro";
+
+                resultBox.textContent =
+                    error.message;
+            }
+        }
+    );
+}
