@@ -1,127 +1,791 @@
-/* NÚCLEO MARQUES BOM — DRº ÁRBITRO | Futebol + Futsal */
+/*
+ * NÚCLEO MARQUES BOM — DRº ÁRBITRO
+ * Futebol + Futsal
+ * Integração única para admin.html e socio.html.
+ * Não depende de alterações no sistema principal de sócios.
+ */
 (() => {
   'use strict';
 
-  const cfg = window.NAF_ADMIN_CONFIG || {};
-  const SUPABASE_URL = cfg.SUPABASE_URL;
-  const SUPABASE_ANON_KEY = cfg.SUPABASE_ANON_KEY;
-  let sb = null;
-  let socioAtual = null;
-  let countdown = null;
+  if (window.__NAF_DR_ARBITRO_BOOTED) return;
+  window.__NAF_DR_ARBITRO_BOOTED = true;
 
-  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-  const client = () => {
-    if (!sb && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return sb;
+  const CONFIG = window.NAF_ADMIN_CONFIG || {
+    SUPABASE_URL: 'https://pvaupgdhtrmbumaxvvrj.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_8pqZLxvQA5kMbYYLD95WPg_0uFK5WRi'
   };
-  const dateText = v => v ? new Date(v).toLocaleString('pt-PT',{dateStyle:'short',timeStyle:'short'}) : '—';
-  const localValue = v => { const d=new Date(v),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
-  const isoValue = v => new Date(v).toISOString();
 
-  async function getSocio(){
-    const s=client(); if(!s)return null;
-    const {data:{user}}=await s.auth.getUser(); if(!user)return null;
-    const {data,error}=await s.from('socios').select('id,nome,numero_socio,ativo').eq('user_id',user.id).eq('ativo',true).single();
-    return error?null:data;
-  }
-  async function isAdmin(){
-    const s=client(); if(!s)return false;
-    const {data,error}=await s.rpc('is_admin'); return !error && data===true;
-  }
+  let sb = null;
+  let currentSocio = null;
+  let countdownTimer = null;
+  let currentAttempt = null;
 
-  /* ================= ADMIN ================= */
-  async function adminInit(){
-    if(!(await isAdmin()))return;
-    const app=document.querySelector('#admin-app'),tabs=document.querySelector('.admin-tabs');
-    if(!app||!tabs||tabs.querySelector('[data-panel="dr-arbitro"]'))return;
-    tabs.insertAdjacentHTML('beforeend','<button class="admin-tab" data-panel="dr-arbitro">Drº Árbitro</button>');
-    app.insertAdjacentHTML('beforeend',`<section id="panel-dr-arbitro" class="admin-tab-panel"><div class="admin-card dr-card"><h3>Drº Árbitro</h3><p class="admin-help">Gestão de Futebol e Futsal.</p><div class="dr-grid"><div id="dr-futebol" class="dr-modalidade"></div><div id="dr-futsal" class="dr-modalidade"></div></div></div></section>`);
-    const tab=tabs.querySelector('[data-panel="dr-arbitro"]');
-    tab.onclick=()=>{tabs.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');app.querySelectorAll('.admin-tab-panel').forEach(x=>x.classList.remove('active'));document.querySelector('#panel-dr-arbitro').classList.add('active');};
-    await Promise.all(['futebol','futsal'].map(loadModalidade));
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  const esc = (v = '') => String(v).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[c]));
+
+  async function client() {
+    if (sb) return sb;
+    if (window.supabase?.createClient) {
+      sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      return sb;
+    }
+    const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    sb = mod.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    return sb;
   }
 
-  async function loadModalidade(codigo){
-    const s=client(),box=document.querySelector(`#dr-${codigo}`); if(!s||!box)return;
-    const {data:m,error:me}=await s.from('dr_arbitro_modalidades').select('*').eq('codigo',codigo).single();
-    if(me||!m){box.innerHTML='<p class="dr-error">Modalidade não encontrada.</p>';return;}
-    const {data:eds,error:ee}=await s.from('dr_arbitro_edicoes').select('*').eq('modalidade_id',m.id).order('created_at',{ascending:false});
-    if(ee){box.innerHTML=`<p class="dr-error">${esc(ee.message)}</p>`;return;}
-    const ed=eds?.[0]||null, nome=codigo==='futebol'?'⚽ Drº Árbitro — Futebol':'🏆 Drº Árbitro — Futsal';
-    box.innerHTML=`<div class="dr-modalidade-head"><h4>${nome}</h4><span class="dr-badge ${m.ativo?'on':'off'}">${m.ativo?'Ativo':'Desativo'}</span></div>
-      <label class="dr-check"><input id="dr-m-${codigo}" type="checkbox" ${m.ativo?'checked':''}> Disponível no site</label>
-      <div class="dr-form"><label class="wide">Nome da edição<input id="dr-n-${codigo}" value="${esc(ed?.nome||nome)}"></label><label>N.º de testes<input id="dr-num-${codigo}" type="number" min="1" value="${ed?.numero_testes||1}"></label><label class="dr-check"><input id="dr-ed-${codigo}" type="checkbox" ${ed?.ativo?'checked':''}> Edição ativa</label><label class="dr-check"><input id="dr-ins-${codigo}" type="checkbox" ${ed?ed.inscricoes_abertas?'checked':'':'checked'}> Inscrições abertas</label></div>
-      <div class="dr-actions"><button class="admin-small-btn primary" id="dr-save-${codigo}">${ed?'Guardar edição':'Criar edição'}</button></div><div id="dr-tests-${codigo}"></div>`;
-    document.querySelector(`#dr-m-${codigo}`).onchange=async e=>{const r=await s.from('dr_arbitro_modalidades').update({ativo:e.target.checked}).eq('id',m.id);if(r.error)alert(r.error.message);};
-    document.querySelector(`#dr-save-${codigo}`).onclick=()=>saveEdicao(codigo,m,ed);
-    if(ed)renderTests(codigo,ed);
+  const dateText = value => value
+    ? new Date(value).toLocaleString('pt-PT', { dateStyle:'short', timeStyle:'short' })
+    : '—';
+
+  const localValue = value => {
+    const d = new Date(value);
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  const isoValue = value => new Date(value).toISOString();
+
+  async function getCurrentSocio() {
+    const s = await client();
+    const { data: { user }, error: authError } = await s.auth.getUser();
+    if (authError || !user) return null;
+
+    const { data, error } = await s
+      .from('socios')
+      .select('id,nome,numero_socio,ativo,is_admin')
+      .eq('user_id', user.id)
+      .eq('ativo', true)
+      .single();
+
+    return error ? null : data;
   }
 
-  async function saveEdicao(codigo,m,old){
-    const s=client(),nome=document.querySelector(`#dr-n-${codigo}`).value.trim(),numero=Number(document.querySelector(`#dr-num-${codigo}`).value),ativo=document.querySelector(`#dr-ed-${codigo}`).checked,ins=document.querySelector(`#dr-ins-${codigo}`).checked;
-    if(!nome||!Number.isInteger(numero)||numero<1){alert('Indica o nome e o número de testes.');return;}
-    let r=old?await s.from('dr_arbitro_edicoes').update({nome,numero_testes:numero,ativo,inscricoes_abertas:ins}).eq('id',old.id).select().single():await s.from('dr_arbitro_edicoes').insert({modalidade_id:m.id,nome,numero_testes:numero,ativo,inscricoes_abertas:ins}).select().single();
-    if(r.error){alert(r.error.message);return;} const ed=r.data;
-    const {data:existing}=await s.from('dr_arbitro_testes').select('numero_teste').eq('edicao_id',ed.id); const have=new Set((existing||[]).map(x=>x.numero_teste));
-    for(let i=1;i<=numero;i++)if(!have.has(i)){const start=new Date(Date.now()+3600000),end=new Date(start.getTime()+3600000);const x=await s.from('dr_arbitro_testes').insert({edicao_id:ed.id,numero_teste:i,titulo:`Teste ${i}`,inicio_em:start.toISOString(),fim_em:end.toISOString(),ativo:false});if(x.error){alert(x.error.message);return;}}
+  async function isAdmin() {
+    const s = await client();
+    const { data, error } = await s.rpc('is_admin');
+    return !error && data === true;
+  }
+
+  /* ============================================================
+     ADMIN
+     ============================================================ */
+
+  async function adminInit() {
+    if (!(await isAdmin())) return;
+
+    const app = $('#admin-app');
+    const tabs = $('.admin-tabs');
+    if (!app || !tabs || tabs.querySelector('[data-panel="dr-arbitro"]')) return;
+
+    tabs.insertAdjacentHTML('beforeend',
+      '<button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>'
+    );
+
+    app.insertAdjacentHTML('beforeend', `
+      <section id="panel-dr-arbitro" class="admin-tab-panel">
+        <div class="admin-card dr-card">
+          <div class="dr-page-head">
+            <div>
+              <h3>Drº Árbitro</h3>
+              <p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p>
+            </div>
+          </div>
+          <div class="dr-grid">
+            <div id="dr-futebol" class="dr-modalidade"></div>
+            <div id="dr-futsal" class="dr-modalidade"></div>
+          </div>
+        </div>
+      </section>
+    `);
+
+    const tab = tabs.querySelector('[data-panel="dr-arbitro"]');
+    tab.addEventListener('click', () => {
+      $$('.admin-tab', tabs).forEach(x => x.classList.remove('active'));
+      $$('.admin-tab-panel', app).forEach(x => x.classList.remove('active'));
+      tab.classList.add('active');
+      $('#panel-dr-arbitro', app)?.classList.add('active');
+    });
+
+    await Promise.all(['futebol', 'futsal'].map(loadModalidade));
+  }
+
+  async function loadModalidade(codigo) {
+    const s = await client();
+    const box = $(`#dr-${codigo}`);
+    if (!box) return;
+
+    const { data: modalidade, error: modalidadeError } = await s
+      .from('dr_arbitro_modalidades')
+      .select('*')
+      .eq('codigo', codigo)
+      .single();
+
+    if (modalidadeError || !modalidade) {
+      box.innerHTML = `<p class="dr-error">${esc(modalidadeError?.message || 'Modalidade não encontrada.')}</p>`;
+      return;
+    }
+
+    const { data: edicoes, error: edicoesError } = await s
+      .from('dr_arbitro_edicoes')
+      .select('*')
+      .eq('modalidade_id', modalidade.id)
+      .order('created_at', { ascending: false });
+
+    if (edicoesError) {
+      box.innerHTML = `<p class="dr-error">${esc(edicoesError.message)}</p>`;
+      return;
+    }
+
+    const edicao = edicoes?.[0] || null;
+    const nome = codigo === 'futebol' ? '⚽ Drº Árbitro — Futebol' : '🏆 Drº Árbitro — Futsal';
+
+    box.innerHTML = `
+      <div class="dr-modalidade-head">
+        <h4>${nome}</h4>
+        <span class="dr-badge ${modalidade.ativo ? 'on' : 'off'}">
+          ${modalidade.ativo ? 'Ativo' : 'Desativo'}
+        </span>
+      </div>
+
+      <label class="dr-check">
+        <input id="dr-m-${codigo}" type="checkbox" ${modalidade.ativo ? 'checked' : ''}>
+        Disponível no site
+      </label>
+
+      <div class="dr-form">
+        <label class="wide">
+          Nome da edição
+          <input id="dr-n-${codigo}" value="${esc(edicao?.nome || nome)}">
+        </label>
+        <label>
+          N.º de testes
+          <input id="dr-num-${codigo}" type="number" min="1" max="50" value="${edicao?.numero_testes || 1}">
+        </label>
+        <label class="dr-check">
+          <input id="dr-ed-${codigo}" type="checkbox" ${edicao?.ativo ? 'checked' : ''}>
+          Edição ativa
+        </label>
+        <label class="dr-check">
+          <input id="dr-ins-${codigo}" type="checkbox" ${edicao?.inscricoes_abertas ? 'checked' : ''}>
+          Inscrições abertas
+        </label>
+      </div>
+
+      <div class="dr-actions">
+        <button class="admin-small-btn primary" id="dr-save-${codigo}" type="button">
+          ${edicao ? 'Guardar edição' : 'Criar edição'}
+        </button>
+      </div>
+
+      <div id="dr-tests-${codigo}"></div>
+    `;
+
+    $(`#dr-m-${codigo}`).addEventListener('change', async event => {
+      const { error } = await s
+        .from('dr_arbitro_modalidades')
+        .update({ ativo: event.target.checked })
+        .eq('id', modalidade.id);
+      if (error) {
+        event.target.checked = !event.target.checked;
+        alert(error.message);
+      }
+    });
+
+    $(`#dr-save-${codigo}`).addEventListener('click', () => saveEdicao(codigo, modalidade, edicao));
+
+    if (edicao) await renderTests(codigo, edicao);
+  }
+
+  async function saveEdicao(codigo, modalidade, oldEdicao) {
+    const s = await client();
+    const nome = $(`#dr-n-${codigo}`).value.trim();
+    const numero = Number($(`#dr-num-${codigo}`).value);
+    const ativo = $(`#dr-ed-${codigo}`).checked;
+    const inscricoes = $(`#dr-ins-${codigo}`).checked;
+
+    if (!nome || !Number.isInteger(numero) || numero < 1 || numero > 50) {
+      alert('Indica um nome e um número de testes entre 1 e 50.');
+      return;
+    }
+
+    const payload = {
+      nome,
+      numero_testes: numero,
+      ativo,
+      inscricoes_abertas: inscricoes
+    };
+
+    const result = oldEdicao
+      ? await s.from('dr_arbitro_edicoes').update(payload).eq('id', oldEdicao.id).select().single()
+      : await s.from('dr_arbitro_edicoes').insert({ ...payload, modalidade_id: modalidade.id }).select().single();
+
+    if (result.error) {
+      alert(result.error.message);
+      return;
+    }
+
+    const edicao = result.data;
+    const { data: existentes } = await s
+      .from('dr_arbitro_testes')
+      .select('numero_teste')
+      .eq('edicao_id', edicao.id);
+
+    const numeros = new Set((existentes || []).map(x => Number(x.numero_teste)));
+
+    for (let i = 1; i <= numero; i++) {
+      if (numeros.has(i)) continue;
+      const r = await s.from('dr_arbitro_testes').insert({
+        edicao_id: edicao.id,
+        numero_teste: i,
+        titulo: `Teste ${i}`,
+        inicio_em: new Date(Date.now() + 3600000).toISOString(),
+        fim_em: new Date(Date.now() + 7200000).toISOString(),
+        ativo: false
+      });
+      if (r.error) {
+        alert(r.error.message);
+        return;
+      }
+    }
+
     await loadModalidade(codigo);
   }
 
-  async function renderTests(codigo,ed){
-    const s=client(),target=document.querySelector(`#dr-tests-${codigo}`); if(!target)return;
-    const {data:ts,error}=await s.from('dr_arbitro_testes').select('*').eq('edicao_id',ed.id).order('numero_teste');
-    if(error){target.innerHTML=`<p class="dr-error">${esc(error.message)}</p>`;return;}
-    target.innerHTML=(ts||[]).map(t=>`<article class="dr-test-card"><div class="dr-test-head"><strong>${esc(t.titulo)}</strong><span class="dr-badge ${t.ativo?'on':'off'}">${t.ativo?'Ativo':'Inativo'}</span></div><div class="dr-form"><label class="wide">Título<input data-title="${t.id}" value="${esc(t.titulo)}"></label><label>Início<input type="datetime-local" data-start="${t.id}" value="${localValue(t.inicio_em)}"></label><label>Fim<input type="datetime-local" data-end="${t.id}" value="${localValue(t.fim_em)}"></label><label class="dr-check"><input type="checkbox" data-active="${t.id}" ${t.ativo?'checked':''}> Teste ativo</label><label class="wide">PDF<input type="file" accept="application/pdf" data-pdf="${t.id}"></label></div><div class="dr-meta">${t.ficheiro_path?'📄 PDF carregado':'📄 PDF por carregar'}</div><div class="dr-actions"><button class="admin-small-btn primary" data-save-test="${t.id}">Guardar teste</button><button class="admin-small-btn" data-questions="${t.id}">Ver perguntas</button></div><div class="dr-question-list" id="dr-q-${t.id}"></div></article>`).join('');
-    target.querySelectorAll('[data-save-test]').forEach(b=>b.onclick=()=>saveTest(b.dataset.saveTest,ed.id,codigo));
-    target.querySelectorAll('[data-questions]').forEach(b=>b.onclick=()=>loadQuestions(b.dataset.questions));
+  async function renderTests(codigo, edicao) {
+    const s = await client();
+    const target = $(`#dr-tests-${codigo}`);
+    if (!target) return;
+
+    const { data: testes, error } = await s
+      .from('dr_arbitro_testes')
+      .select('*')
+      .eq('edicao_id', edicao.id)
+      .order('numero_teste');
+
+    if (error) {
+      target.innerHTML = `<p class="dr-error">${esc(error.message)}</p>`;
+      return;
+    }
+
+    target.innerHTML = (testes || []).map(t => `
+      <article class="dr-test-card">
+        <div class="dr-test-head">
+          <strong>${esc(t.titulo)}</strong>
+          <span class="dr-badge ${t.ativo ? 'on' : 'off'}">
+            ${t.ativo ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
+        <div class="dr-form">
+          <label class="wide">Título
+            <input data-title="${t.id}" value="${esc(t.titulo)}">
+          </label>
+          <label>Início
+            <input type="datetime-local" data-start="${t.id}" value="${localValue(t.inicio_em)}">
+          </label>
+          <label>Fim
+            <input type="datetime-local" data-end="${t.id}" value="${localValue(t.fim_em)}">
+          </label>
+          <label class="dr-check">
+            <input type="checkbox" data-active="${t.id}" ${t.ativo ? 'checked' : ''}>
+            Teste ativo
+          </label>
+          <label class="wide">PDF das perguntas
+            <input type="file" accept="application/pdf" data-pdf="${t.id}">
+          </label>
+        </div>
+        <div class="dr-meta">
+          ${t.ficheiro_path ? '📄 PDF carregado' : '📄 PDF por carregar'}
+        </div>
+        <div class="dr-actions">
+          <button class="admin-small-btn primary" data-save-test="${t.id}" type="button">Guardar teste</button>
+          <button class="admin-small-btn" data-questions="${t.id}" type="button">Ver perguntas</button>
+        </div>
+        <div class="dr-question-list" id="dr-q-${t.id}"></div>
+      </article>
+    `).join('');
+
+    $$('[data-save-test]', target).forEach(button => {
+      button.addEventListener('click', () => saveTest(button.dataset.saveTest, edicao.id, codigo));
+    });
+
+    $$('[data-questions]', target).forEach(button => {
+      button.addEventListener('click', () => loadQuestions(button.dataset.questions));
+    });
   }
 
-  async function saveTest(id,edId,codigo){
-    const s=client(),title=document.querySelector(`[data-title="${id}"]`).value.trim(),start=document.querySelector(`[data-start="${id}"]`).value,end=document.querySelector(`[data-end="${id}"]`).value,active=document.querySelector(`[data-active="${id}"]`).checked,file=document.querySelector(`[data-pdf="${id}"]`).files[0];
-    if(!title||!start||!end){alert('Preenche título, início e fim.');return;} const ini=isoValue(start),fim=isoValue(end); if(new Date(fim)<=new Date(ini)){alert('O fim tem de ser posterior ao início.');return;}
-    let path=null;if(file){if(file.type!=='application/pdf'){alert('O ficheiro tem de ser PDF.');return;}const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');path=`${edId}/${id}/${Date.now()}-${safe}`;const up=await s.storage.from('dr-arbitro').upload(path,file,{upsert:true,contentType:'application/pdf'});if(up.error){alert(up.error.message);return;}}
-    const payload={titulo:title,inicio_em:ini,fim_em:fim,ativo:active};if(path)payload.ficheiro_path=path;const r=await s.from('dr_arbitro_testes').update(payload).eq('id',id);if(r.error){alert(r.error.message);return;}alert('Teste guardado.');await loadModalidade(codigo);
+  async function saveTest(id, edicaoId, codigo) {
+    const s = await client();
+    const title = $(`[data-title="${id}"]`).value.trim();
+    const start = $(`[data-start="${id}"]`).value;
+    const end = $(`[data-end="${id}"]`).value;
+    const active = $(`[data-active="${id}"]`).checked;
+    const file = $(`[data-pdf="${id}"]`).files?.[0];
+
+    if (!title || !start || !end) {
+      alert('Preenche o título, início e fim.');
+      return;
+    }
+
+    const inicio = isoValue(start);
+    const fim = isoValue(end);
+    if (new Date(fim) <= new Date(inicio)) {
+      alert('O fim tem de ser posterior ao início.');
+      return;
+    }
+
+    let ficheiroPath;
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('O ficheiro tem de ser PDF.');
+        return;
+      }
+
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      ficheiroPath = `${edicaoId}/${id}/${Date.now()}-${safe}`;
+      const upload = await s.storage.from('dr-arbitro').upload(ficheiroPath, file, {
+        upsert: true,
+        contentType: 'application/pdf'
+      });
+
+      if (upload.error) {
+        alert(upload.error.message);
+        return;
+      }
+    }
+
+    const payload = { titulo: title, inicio_em: inicio, fim_em: fim, ativo: active };
+    if (ficheiroPath) payload.ficheiro_path = ficheiroPath;
+
+    const { error } = await s.from('dr_arbitro_testes').update(payload).eq('id', id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert('Teste guardado.');
+    await loadModalidade(codigo);
   }
 
-  async function loadQuestions(id){
-    const s=client(),el=document.querySelector(`#dr-q-${id}`);if(!el)return;const {data,error}=await s.from('dr_arbitro_perguntas').select('numero,pergunta,opcao_a,opcao_b,opcao_c,opcao_d,resposta_correta').eq('teste_id',id).order('numero');if(error){el.innerHTML=`<p class="dr-error">${esc(error.message)}</p>`;return;}el.innerHTML=(data||[]).map(q=>`<div class="dr-question"><strong>${q.numero}. ${esc(q.pergunta)}</strong><div>A — ${esc(q.opcao_a)}</div><div>B — ${esc(q.opcao_b)}</div><div>C — ${esc(q.opcao_c)}</div><div>D — ${esc(q.opcao_d)}</div><b>Correta: ${esc(q.resposta_correta)}</b></div>`).join('')||'<p class="dr-muted">Ainda não existem perguntas neste teste.</p>';
+  async function loadQuestions(id) {
+    const s = await client();
+    const el = $(`#dr-q-${id}`);
+    if (!el) return;
+
+    const { data, error } = await s
+      .from('dr_arbitro_perguntas')
+      .select('numero,pergunta,opcao_a,opcao_b,opcao_c,opcao_d,resposta_correta')
+      .eq('teste_id', id)
+      .order('numero');
+
+    if (error) {
+      el.innerHTML = `<p class="dr-error">${esc(error.message)}</p>`;
+      return;
+    }
+
+    el.innerHTML = (data || []).map(q => `
+      <div class="dr-question">
+        <strong>${q.numero}. ${esc(q.pergunta)}</strong>
+        <div>A — ${esc(q.opcao_a)}</div>
+        <div>B — ${esc(q.opcao_b)}</div>
+        <div>C — ${esc(q.opcao_c)}</div>
+        <div>D — ${esc(q.opcao_d)}</div>
+        <b>Correta: ${esc(q.resposta_correta)}</b>
+      </div>
+    `).join('') || '<p class="dr-muted">Ainda não existem perguntas neste teste.</p>';
   }
 
-  /* ================= SÓCIO ================= */
-  async function socioInit(){
-    socioAtual=await getSocio();if(!socioAtual)return;const dash=document.querySelector('#dashboard'),tabs=document.querySelector('.socio-tabs');if(!dash||!tabs)return;
-    if(!tabs.querySelector('[data-tab="dr-arbitro"]')){tabs.insertAdjacentHTML('beforeend','<button class="socio-tab" data-tab="dr-arbitro" type="button">Drº Árbitro</button>');tabs.querySelector('[data-tab="dr-arbitro"]').onclick=()=>activateTab();}
-    if(!document.querySelector('#dr-arbitro-socio-panel'))dash.insertAdjacentHTML('beforeend','<section id="dr-arbitro-socio-panel" class="socio-tab-content"><div class="dr-card"><h2>Drº Árbitro</h2><p>Atividade exclusiva para sócios.</p><div id="dr-socio-content"><div class="vazio">A carregar…</div></div></div></section>');
-    await loadSocio();
-  }
-  function activateTab(){document.querySelectorAll('.socio-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.socio-tab-content').forEach(x=>x.classList.remove('active'));document.querySelector('.socio-tab[data-tab="dr-arbitro"]')?.classList.add('active');document.querySelector('#dr-arbitro-socio-panel')?.classList.add('active');}
-  async function loadSocio(){
-    const s=client(),target=document.querySelector('#dr-socio-content');if(!s||!target)return;const {data:mods,error}=await s.from('dr_arbitro_modalidades').select('*').eq('ativo',true);if(error){target.innerHTML=`<p class="dr-error">${esc(error.message)}</p>`;return;}if(!mods?.length){target.innerHTML='<div class="vazio">O Drº Árbitro não está disponível.</div>';return;}
-    const {data:eds}=await s.from('dr_arbitro_edicoes').select('*').eq('ativo',true).order('created_at',{ascending:false});const {data:ins}=await s.from('dr_arbitro_inscricoes').select('id,edicao_id').eq('socio_id',socioAtual.id);
-    target.innerHTML=mods.map(m=>{const e=(eds||[]).find(x=>x.modalidade_id===m.id);if(!e)return'';const yes=(ins||[]).some(x=>x.edicao_id===e.id);return `<article class="dr-socio-modalidade"><h3>${m.codigo==='futebol'?'⚽':'🏆'} ${esc(m.nome)}</h3><p>${esc(e.nome)}</p>${yes?'<span class="dr-badge on">Inscrito</span>':e.inscricoes_abertas?`<button class="botao dr-inscrever" data-ed="${e.id}">Inscrever-me</button>`:'<span class="dr-badge off">Inscrições encerradas</span>'}<div class="dr-socio-tests" data-ed-tests="${e.id}"></div></article>`;}).join('');
-    target.querySelectorAll('.dr-inscrever').forEach(b=>b.onclick=async()=>{const r=await s.rpc('dr_arbitro_inscrever',{p_edicao_id:b.dataset.ed});if(r.error){alert(r.error.message);return;}await loadSocio();});
-    for(const e of eds||[]){const el=target.querySelector(`[data-ed-tests="${e.id}"]`);if(el)await renderSocioTests(el,e,(ins||[]).some(x=>x.edicao_id===e.id));}
-  }
-  async function renderSocioTests(el,ed,inscrito){
-    const s=client();const {data:ts,error}=await s.from('dr_arbitro_testes').select('id,numero_teste,titulo,inicio_em,fim_em,ativo').eq('edicao_id',ed.id).order('numero_teste');if(error){el.innerHTML=`<p class="dr-error">${esc(error.message)}</p>`;return;}if(!inscrito){el.innerHTML='<p class="dr-muted">Inscreve-te para veres os testes.</p>';return;}
-    el.innerHTML=(ts||[]).map(t=>`<div class="dr-socio-test"><div><strong>${esc(t.titulo)}</strong><small>${dateText(t.inicio_em)} → ${dateText(t.fim_em)}</small></div><span data-test-action="${t.id}">A verificar…</span></div>`).join('');for(const t of ts||[])await updateTestAction(t);
-  }
-  async function updateTestAction(t){
-    const s=client(),el=document.querySelector(`[data-test-action="${t.id}"]`);if(!el)return;const {data:tent}=await s.from('dr_arbitro_tentativas').select('id,submeteu_em,nota,total_perguntas,percentagem').eq('teste_id',t.id).eq('socio_id',socioAtual.id).maybeSingle();const now=Date.now(),ini=new Date(t.inicio_em).getTime(),fim=new Date(t.fim_em).getTime();
-    if(tent?.submeteu_em){el.innerHTML=`<span class="dr-badge on">${tent.nota}/${tent.total_perguntas} (${tent.percentagem}%)</span>`;return;}
-    if(tent){el.innerHTML=`<button class="botao" data-continue="${t.id}">Continuar</button>`;el.querySelector('button').onclick=()=>openTest(t,tent.id);return;}
-    if(!t.ativo||now<ini){el.innerHTML=`<span class="dr-badge off">Inicia ${dateText(t.inicio_em)}</span>`;return;}if(now>fim){el.innerHTML='<span class="dr-badge off">Terminado</span>';return;}
-    el.innerHTML=`<button class="botao" data-start="${t.id}">Iniciar teste</button>`;el.querySelector('button').onclick=async()=>{const r=await s.rpc('dr_arbitro_iniciar_teste',{p_teste_id:t.id});if(r.error){alert(r.error.message);return;}await openTest(t,r.data);};
-  }
-  async function openTest(t,tentativa){
-    const s=client(),{data:q,error}=await s.from('dr_arbitro_perguntas_publicas').select('id,numero,pergunta,opcao_a,opcao_b,opcao_c,opcao_d').eq('teste_id',t.id).order('numero');if(error){alert(error.message);return;}if(!q?.length){alert('Este teste ainda não tem perguntas.');return;}
-    let overlay=document.querySelector('#dr-test-overlay');if(!overlay){document.body.insertAdjacentHTML('beforeend','<div id="dr-test-overlay" class="dr-test-overlay"></div>');overlay=document.querySelector('#dr-test-overlay');}
-    overlay.innerHTML=`<div class="dr-test-window"><div class="dr-test-head"><div><h2>${esc(t.titulo)}</h2><p>A tentativa fica registada ao entrar.</p></div><strong id="dr-countdown">—</strong></div><form id="dr-test-form">${q.map(x=>`<fieldset class="dr-question"><legend>${x.numero}. ${esc(x.pergunta)}</legend>${['A','B','C','D'].map(l=>`<label class="dr-option"><input type="radio" name="q-${x.id}" value="${l}"><span><b>${l}</b> ${esc(x['opcao_'+l.toLowerCase()])}</span></label>`).join('')}</fieldset>`).join('')}<button class="botao" type="submit">Submeter respostas</button></form></div>`;overlay.hidden=false;startCountdown(t.fim_em);
-    document.querySelector('#dr-test-form').onsubmit=async ev=>{ev.preventDefault();if(!confirm('Submeter o teste? Não poderás alterar as respostas.'))return;const respostas=q.map(x=>{const r=document.querySelector(`input[name="q-${x.id}"]:checked`);return r?{pergunta_id:x.id,resposta:r.value}:null;}).filter(Boolean);const r=await s.rpc('dr_arbitro_submeter_teste',{p_tentativa_id:tentativa,p_respostas:respostas});if(r.error){alert(r.error.message);return;}stopCountdown();overlay.hidden=true;alert(`Teste submetido: ${r.data?.[0]?.nota||0}/${r.data?.[0]?.total_perguntas||q.length}.`);await loadSocio();};
-  }
-  function startCountdown(end){stopCountdown();const tick=()=>{const el=document.querySelector('#dr-countdown');if(!el)return;let x=new Date(end).getTime()-Date.now();if(x<=0){el.textContent='Tempo terminado';return;}x=Math.floor(x/1000);el.textContent=x>=3600?`${Math.floor(x/3600)}h ${String(Math.floor(x%3600/60)).padStart(2,'0')}m`:`${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`;};tick();countdown=setInterval(tick,1000);}
-  function stopCountdown(){if(countdown)clearInterval(countdown);countdown=null;}
+  /* ============================================================
+     SÓCIO
+     ============================================================ */
 
-  function boot(){client();if(!sb)return;if(/(^|\/)admin\.html$/i.test(location.pathname))setTimeout(adminInit,900);if(/(^|\/)socio\.html$/i.test(location.pathname))setTimeout(socioInit,1100);}
+  async function socioInit() {
+    currentSocio = await getCurrentSocio();
+    if (!currentSocio) return;
+
+    const dashboard = $('#dashboard');
+    const tabs = $('.socio-tabs');
+    if (!dashboard || !tabs) return;
+
+    if (!tabs.querySelector('[data-tab="dr-arbitro"]')) {
+      tabs.insertAdjacentHTML('beforeend',
+        '<button class="socio-tab" data-tab="dr-arbitro" type="button">Drº Árbitro</button>'
+      );
+      tabs.querySelector('[data-tab="dr-arbitro"]').addEventListener('click', activateSocioTab);
+    }
+
+    if (!$('#dr-arbitro-socio-panel')) {
+      dashboard.insertAdjacentHTML('beforeend', `
+        <section id="dr-arbitro-socio-panel" class="socio-tab-content">
+          <div class="dr-card">
+            <div class="tab-heading-row">
+              <div>
+                <h2>Drº Árbitro</h2>
+                <p>Atividade exclusiva para sócios.</p>
+              </div>
+            </div>
+            <div id="dr-socio-content">
+              <div class="vazio">A carregar…</div>
+            </div>
+          </div>
+        </section>
+      `);
+    }
+
+    await loadSocioArea();
+  }
+
+  function activateSocioTab() {
+    $$('.socio-tab').forEach(x => x.classList.remove('active'));
+    $$('.socio-tab-content').forEach(x => x.classList.remove('active'));
+    $('.socio-tab[data-tab="dr-arbitro"]')?.classList.add('active');
+    $('#dr-arbitro-socio-panel')?.classList.add('active');
+  }
+
+  async function loadSocioArea() {
+    const s = await client();
+    const target = $('#dr-socio-content');
+    if (!target) return;
+
+    const { data: modalidades, error } = await s
+      .from('dr_arbitro_modalidades')
+      .select('*')
+      .eq('ativo', true);
+
+    if (error) {
+      target.innerHTML = `<p class="dr-error">${esc(error.message)}</p>`;
+      return;
+    }
+
+    if (!modalidades?.length) {
+      target.innerHTML = '<div class="vazio">O Drº Árbitro não está disponível neste momento.</div>';
+      return;
+    }
+
+    const { data: edicoes, error: edicaoError } = await s
+      .from('dr_arbitro_edicoes')
+      .select('*')
+      .eq('ativo', true)
+      .order('created_at', { ascending: false });
+
+    if (edicaoError) {
+      target.innerHTML = `<p class="dr-error">${esc(edicaoError.message)}</p>`;
+      return;
+    }
+
+    const { data: inscricoes, error: inscricaoError } = await s
+      .from('dr_arbitro_inscricoes')
+      .select('id,edicao_id')
+      .eq('socio_id', currentSocio.id);
+
+    if (inscricaoError) {
+      target.innerHTML = `<p class="dr-error">${esc(inscricaoError.message)}</p>`;
+      return;
+    }
+
+    const cards = modalidades.map(m => {
+      const edicao = (edicoes || []).find(e => e.modalidade_id === m.id);
+      if (!edicao) return '';
+      const inscrito = (inscricoes || []).some(i => i.edicao_id === edicao.id);
+      const nome = m.codigo === 'futebol' ? '⚽ Futebol' : '🏆 Futsal';
+
+      return `
+        <article class="dr-socio-modalidade">
+          <div class="dr-modalidade-head">
+            <h3>Drº Árbitro — ${nome}</h3>
+            <span class="dr-badge on">Disponível</span>
+          </div>
+          <p><strong>${esc(edicao.nome)}</strong></p>
+          ${inscrito
+            ? '<span class="dr-badge on">Inscrito</span>'
+            : edicao.inscricoes_abertas
+              ? `<button class="botao dr-inscrever" data-ed="${edicao.id}" type="button">Inscrever-me</button>`
+              : '<span class="dr-badge off">Inscrições encerradas</span>'}
+          <div class="dr-socio-tests" data-ed-tests="${edicao.id}"></div>
+        </article>
+      `;
+    }).join('');
+
+    target.innerHTML = cards || '<div class="vazio">Não existe nenhuma edição ativa neste momento.</div>';
+
+    $$('.dr-inscrever', target).forEach(button => {
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          const { data, error: rpcError } = await s.rpc('dr_arbitro_inscrever', {
+            p_edicao_id: button.dataset.ed
+          });
+          if (rpcError) throw rpcError;
+          if (data === false) throw new Error('Não foi possível efetuar a inscrição.');
+          await loadSocioArea();
+        } catch (err) {
+          alert(err.message || 'Não foi possível efetuar a inscrição.');
+          button.disabled = false;
+        }
+      });
+    });
+
+    for (const edicao of edicoes || []) {
+      const el = target.querySelector(`[data-ed-tests="${edicao.id}"]`);
+      if (el) {
+        await renderSocioTests(
+          el,
+          edicao,
+          (inscricoes || []).some(i => i.edicao_id === edicao.id)
+        );
+      }
+    }
+  }
+
+  async function renderSocioTests(target, edicao, inscrito) {
+    if (!inscrito) {
+      target.innerHTML = '<p class="dr-muted">Inscreve-te para veres os testes.</p>';
+      return;
+    }
+
+    const s = await client();
+    const { data: testes, error } = await s
+      .from('dr_arbitro_testes')
+      .select('id,numero_teste,titulo,inicio_em,fim_em,ativo')
+      .eq('edicao_id', edicao.id)
+      .order('numero_teste');
+
+    if (error) {
+      target.innerHTML = `<p class="dr-error">${esc(error.message)}</p>`;
+      return;
+    }
+
+    target.innerHTML = (testes || []).map(t => `
+      <div class="dr-socio-test">
+        <div>
+          <strong>${esc(t.titulo)}</strong>
+          <small>${dateText(t.inicio_em)} → ${dateText(t.fim_em)}</small>
+        </div>
+        <span data-test-action="${t.id}">A verificar…</span>
+      </div>
+    `).join('') || '<p class="dr-muted">Ainda não existem testes configurados.</p>';
+
+    for (const teste of testes || []) await updateSocioTestAction(teste);
+  }
+
+  async function updateSocioTestAction(teste) {
+    const s = await client();
+    const el = $(`[data-test-action="${teste.id}"]`);
+    if (!el) return;
+
+    const { data: tentativa, error } = await s
+      .from('dr_arbitro_tentativas')
+      .select('id,iniciou_em,submeteu_em,nota,total_perguntas,percentagem')
+      .eq('teste_id', teste.id)
+      .eq('socio_id', currentSocio.id)
+      .maybeSingle();
+
+    if (error) {
+      el.innerHTML = `<span class="dr-error">${esc(error.message)}</span>`;
+      return;
+    }
+
+    if (tentativa?.submeteu_em) {
+      el.innerHTML = `<span class="dr-badge on">${esc(tentativa.nota ?? 0)}/${esc(tentativa.total_perguntas ?? 0)} — ${esc(tentativa.percentagem ?? 0)}%</span>`;
+      return;
+    }
+
+    const now = Date.now();
+    const inicio = new Date(teste.inicio_em).getTime();
+    const fim = new Date(teste.fim_em).getTime();
+
+    if (tentativa && now >= fim) {
+      // O prazo acabou. Não reabrimos a tentativa. A classificação é apresentada
+      // assim que o backend a tiver finalizado.
+      el.innerHTML = '<span class="dr-badge off">Prazo terminado</span>';
+      return;
+    }
+
+    if (tentativa) {
+      // Regra do Drº Árbitro: depois de entrar no teste não existe botão
+      // "voltar a entrar". A tentativa fica bloqueada nesta sessão/estado.
+      el.innerHTML = '<span class="dr-badge off">Teste iniciado — não pode voltar a entrar</span>';
+      return;
+    }
+
+    if (!teste.ativo || now < inicio) {
+      el.innerHTML = `<span class="dr-badge off">Inicia ${dateText(teste.inicio_em)}</span>`;
+      return;
+    }
+
+    if (now > fim) {
+      el.innerHTML = '<span class="dr-badge off">Terminado</span>';
+      return;
+    }
+
+    el.innerHTML = '<button class="botao" type="button">Iniciar teste</button>';
+    el.querySelector('button').addEventListener('click', async () => {
+      const button = el.querySelector('button');
+      button.disabled = true;
+      try {
+        const { data, error: rpcError } = await s.rpc('dr_arbitro_iniciar_teste', {
+          p_teste_id: teste.id
+        });
+        if (rpcError) throw rpcError;
+        currentAttempt = data;
+        await openTest(teste, data);
+      } catch (err) {
+        alert(err.message || 'Não foi possível iniciar o teste.');
+        button.disabled = false;
+      }
+    });
+  }
+
+  async function openTest(teste, tentativaId) {
+    const s = await client();
+    const { data: perguntas, error } = await s
+      .from('dr_arbitro_perguntas_publicas')
+      .select('id,numero,pergunta,opcao_a,opcao_b,opcao_c,opcao_d')
+      .eq('teste_id', teste.id)
+      .order('numero');
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (!perguntas?.length) {
+      alert('Este teste ainda não tem perguntas.');
+      return;
+    }
+
+    let overlay = $('#dr-test-overlay');
+    if (!overlay) {
+      document.body.insertAdjacentHTML('beforeend', '<div id="dr-test-overlay" class="dr-test-overlay"></div>');
+      overlay = $('#dr-test-overlay');
+    }
+
+    overlay.innerHTML = `
+      <div class="dr-test-window" role="dialog" aria-modal="true" aria-labelledby="dr-test-title">
+        <div class="dr-test-head">
+          <div>
+            <h2 id="dr-test-title">${esc(teste.titulo)}</h2>
+            <p>Depois de iniciar, não podes sair e voltar a entrar neste teste.</p>
+          </div>
+          <strong id="dr-countdown">—</strong>
+        </div>
+        <form id="dr-test-form">
+          ${perguntas.map(q => `
+            <fieldset class="dr-question">
+              <legend>${q.numero}. ${esc(q.pergunta)}</legend>
+              ${['A','B','C','D'].map(letra => `
+                <label class="dr-option">
+                  <input type="radio" name="q-${q.id}" value="${letra}">
+                  <span><b>${letra}</b> ${esc(q[`opcao_${letra.toLowerCase()}`])}</span>
+                </label>
+              `).join('')}
+            </fieldset>
+          `).join('')}
+          <button class="botao" id="dr-submit-test" type="submit">Submeter respostas</button>
+        </form>
+      </div>
+    `;
+
+    overlay.hidden = false;
+    document.body.classList.add('dr-test-running');
+
+    const submit = async auto => {
+      const button = $('#dr-submit-test');
+      if (button) button.disabled = true;
+
+      const respostas = perguntas.map(q => {
+        const selected = $(`input[name="q-${q.id}"]:checked`);
+        return selected ? { pergunta_id: q.id, resposta: selected.value } : null;
+      }).filter(Boolean);
+
+      const { data, error: rpcError } = await s.rpc('dr_arbitro_submeter_teste', {
+        p_tentativa_id: tentativaId,
+        p_respostas: respostas
+      });
+
+      if (rpcError) {
+        if (button) button.disabled = false;
+        if (!auto) alert(rpcError.message);
+        return false;
+      }
+
+      stopCountdown();
+      overlay.hidden = true;
+      document.body.classList.remove('dr-test-running');
+      currentAttempt = null;
+
+      if (auto) {
+        alert('O tempo terminou. O teste foi submetido automaticamente.');
+      } else {
+        const result = Array.isArray(data) ? data[0] : data;
+        alert(`Teste submetido: ${result?.nota ?? 0}/${result?.total_perguntas ?? perguntas.length}.`);
+      }
+
+      await loadSocioArea();
+      return true;
+    };
+
+    $('#dr-test-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!confirm('Submeter o teste? Depois de submeter não poderás alterar as respostas.')) return;
+      await submit(false);
+    });
+
+    startCountdown(teste.fim_em, () => submit(true));
+  }
+
+  function startCountdown(end, onExpire) {
+    stopCountdown();
+    const tick = () => {
+      const el = $('#dr-countdown');
+      if (!el) return;
+      let remaining = new Date(end).getTime() - Date.now();
+      if (remaining <= 0) {
+        el.textContent = 'Tempo terminado';
+        stopCountdown();
+        onExpire?.();
+        return;
+      }
+      remaining = Math.floor(remaining / 1000);
+      el.textContent = remaining >= 3600
+        ? `${Math.floor(remaining / 3600)}h ${String(Math.floor((remaining % 3600) / 60)).padStart(2, '0')}m`
+        : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+    };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  function stopCountdown() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+
+  function ensureCss() {
+    if (document.querySelector('link[data-dr-arbitro-css]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'css/dr-arbitro.css?v=20260812-2';
+    link.dataset.drArbitroCss = '1';
+    document.head.appendChild(link);
+  }
+
+  async function boot() {
+    ensureCss();
+    try {
+      await client();
+      if (/\/admin\.html$/i.test(location.pathname)) {
+        setTimeout(() => adminInit().catch(console.error), 300);
+      }
+      if (/\/socio\.html$/i.test(location.pathname)) {
+        setTimeout(() => socioInit().catch(console.error), 300);
+      }
+    } catch (error) {
+      console.error('Drº Árbitro: não foi possível inicializar.', error);
+    }
+  }
+
   boot();
 })();
