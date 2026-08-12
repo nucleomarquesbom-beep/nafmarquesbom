@@ -101,6 +101,9 @@
      ADMIN
      ============================================================ */
 
+  // API pública: o admin.js chama isto depois de autenticar o administrador.
+  window.initDrArbitroAdmin = adminInit;
+
   async function adminInit() {
     if (!(await isAdmin())) return;
 
@@ -1098,120 +1101,52 @@
     document.head.appendChild(link);
   }
 
-  function waitForAdminShell(timeout = 10000) {
-    return new Promise(resolve => {
-      const ready = () =>
-        document.getElementById('admin-app') &&
-        document.querySelector('.admin-tabs');
-
-      if (ready()) {
-        resolve(true);
-        return;
-      }
-
-      const observer = new MutationObserver(() => {
-        if (ready()) {
-          observer.disconnect();
-          resolve(true);
-        }
-      });
-
-      if (document.documentElement) {
-        observer.observe(document.documentElement, {
-          childList: true,
-          subtree: true
-        });
-      }
-
-      setTimeout(() => {
-        observer.disconnect();
-        resolve(!!ready());
-      }, timeout);
-    });
-  }
-
   async function boot() {
     ensureCss();
 
     try {
+      if (document.readyState === 'loading') {
+        await new Promise(resolve => {
+          document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        });
+      }
+
       await client();
 
       if (/\/admin\.html$/i.test(location.pathname)) {
-        /*
-         * O admin.js constrói a área administrativa depois de o
-         * HTML inicial ser carregado. Não usamos um atraso fixo:
-         * esperamos pelos elementos reais antes de inicializar.
-         */
-        const ready = await waitForAdminShell();
+        // O admin.js é a autoridade sobre a autenticação administrativa.
+        // Aqui apenas aguardamos que o painel esteja efetivamente visível.
+        for (let tentativa = 0; tentativa < 120; tentativa++) {
+          const app = $('#admin-app');
+          const tabs = $('.admin-tabs');
 
-        if (ready) {
-          await adminInit();
-        } else {
-          console.error(
-            'Drº Árbitro: a área administrativa não ficou disponível.'
-          );
+          if (app && tabs && !app.hidden && app.offsetParent !== null) {
+            // O admin.js continua a ser responsável por iniciar o módulo.
+            // Se a API pública ainda não tiver sido chamada, fazemos nós
+            // apenas a inicialização como fallback.
+            if (!tabs.querySelector('[data-panel="dr-arbitro"]')) {
+              await adminInit();
+            }
+            break;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
       }
 
       if (/\/socio\.html$/i.test(location.pathname)) {
-        /*
-         * Mantemos a inicialização da área do sócio separada.
-         */
-        await socioInit();
+        for (let tentativa = 0; tentativa < 120; tentativa++) {
+          if ($('#dashboard') && $('.socio-tabs')) {
+            await socioInit();
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
       }
-
     } catch (error) {
-      console.error(
-        'Drº Árbitro: não foi possível inicializar.',
-        error
-      );
+      console.error('Drº Árbitro: não foi possível inicializar.', error);
     }
   }
-(function () {
-  let started = false;
 
-  function adminShellReady() {
-    const app = document.getElementById('admin-app');
-    if (!app) return false;
-
-    const style = window.getComputedStyle(app);
-    return style.display !== 'none' &&
-           style.visibility !== 'hidden' &&
-           !app.hidden &&
-           app.offsetParent !== null;
-  }
-
-  function startWhenReady() {
-    if (started || !adminShellReady()) return;
-
-    started = true;
-    boot();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startWhenReady, { once: false });
-  } else {
-    startWhenReady();
-  }
-
-  const observer = new MutationObserver(() => {
-    startWhenReady();
-    if (started) observer.disconnect();
-  });
-
-  observer.observe(document.documentElement, {
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['style', 'class', 'hidden']
-  });
-
-  // Safety net for async Supabase authentication.
-  const timer = setInterval(() => {
-    startWhenReady();
-    if (started) clearInterval(timer);
-  }, 250);
-
-  setTimeout(() => clearInterval(timer), 30000);
-})();
-
+  boot();
 })();
