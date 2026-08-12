@@ -1167,6 +1167,51 @@
       );
     }
   }
+(function () {
+  let started = false;
 
-  boot();
+  function adminShellReady() {
+    const app = document.getElementById('admin-app');
+    if (!app) return false;
+
+    const style = window.getComputedStyle(app);
+    return style.display !== 'none' &&
+           style.visibility !== 'hidden' &&
+           !app.hidden &&
+           app.offsetParent !== null;
+  }
+
+  function startWhenReady() {
+    if (started || !adminShellReady()) return;
+
+    started = true;
+    boot();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startWhenReady, { once: false });
+  } else {
+    startWhenReady();
+  }
+
+  const observer = new MutationObserver(() => {
+    startWhenReady();
+    if (started) observer.disconnect();
+  });
+
+  observer.observe(document.documentElement, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class', 'hidden']
+  });
+
+  // Safety net for async Supabase authentication.
+  const timer = setInterval(() => {
+    startWhenReady();
+    if (started) clearInterval(timer);
+  }, 250);
+
+  setTimeout(() => clearInterval(timer), 30000);
+})();
+
 })();
