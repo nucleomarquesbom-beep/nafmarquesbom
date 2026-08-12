@@ -102,11 +102,34 @@
      ============================================================ */
 
   async function adminInit() {
-    if (!(await isAdmin())) return;
-
+    /*
+     * admin.js é quem autentica e torna #admin-app visível.
+     * Não dependemos de um atraso fixo nem de uma segunda verificação
+     * que possa falhar por uma condição de corrida.
+     */
     const app = $('#admin-app');
     const tabs = $('.admin-tabs');
-    if (!app || !tabs || tabs.querySelector('[data-panel="dr-arbitro"]')) return;
+
+    if (!app || !tabs) return false;
+
+    /*
+     * Se a área administrativa ainda estiver escondida, damos
+     * oportunidade ao admin.js para terminar a sua inicialização.
+     */
+    if (app.hidden) {
+      if (!(await isAdmin())) return false;
+    }
+
+    /*
+     * O admin.js já confirmou o acesso. Se, por alguma razão,
+     * #admin-app continuar escondido, não mostramos funcionalidades
+     * administrativas.
+     */
+    if (app.hidden) return false;
+
+    if (tabs.querySelector('[data-panel="dr-arbitro"]')) {
+      return true;
+    }
 
     tabs.insertAdjacentHTML('beforeend',
       '<button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>'
@@ -1100,14 +1123,45 @@
 
   async function boot() {
     ensureCss();
+
     try {
       await client();
+
       if (/\/admin\.html$/i.test(location.pathname)) {
-        setTimeout(() => adminInit().catch(console.error), 300);
+        /*
+         * admin.js também inicializa de forma assíncrona. Em vez de
+         * assumir que 300 ms são suficientes, aguardamos realmente
+         * pela área administrativa.
+         */
+        for (let tentativa = 0; tentativa < 40; tentativa++) {
+          const app = $('#admin-app');
+          const tabs = $('.admin-tabs');
+
+          if (app && tabs && !app.hidden) {
+            const inicializado = await adminInit();
+            if (inicializado || tabs.querySelector('[data-panel="dr-arbitro"]')) {
+              break;
+            }
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
       }
+
       if (/\/socio\.html$/i.test(location.pathname)) {
-        setTimeout(() => socioInit().catch(console.error), 300);
+        /*
+         * A área do sócio também pode estar a ser criada por socio.js.
+         * Mantemos a inicialização tolerante à ordem de carregamento.
+         */
+        for (let tentativa = 0; tentativa < 40; tentativa++) {
+          if ($('#dashboard') && $('.socio-tabs')) {
+            await socioInit();
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
       }
+
     } catch (error) {
       console.error('Drº Árbitro: não foi possível inicializar.', error);
     }
