@@ -1,0 +1,19 @@
+Formato recomendado:
+
+1. Qual é a resposta correta?
+
+A) Resposta A
+B) Resposta B
+C) Resposta C
+D) Resposta D
+
+Resposta correta: B
+
+2. Outra pergunta?
+
+A) ...
+B) ...
+C) ...
+D) ...
+
+Resposta correta: D
