@@ -1,3 +1,4 @@
+import './dr-arbitro.js?v=20260812-1';
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
@@ -224,103 +225,61 @@ async function uploadPhoto(file) {
 }
 
 function cleanupDuplicateQuotaMarkup() {
+    // O HTML publicado chegou a conter mais do que uma secção de quotas.
+    // Mantemos apenas a primeira secção com id="quotas" para evitar IDs duplicados.
     const sections = [...document.querySelectorAll('section#quotas')];
-    if (sections.length <= 1) return;
-
-    sections.slice(1).forEach(section => section.remove());
-}
-
-function quotaStatusClass(status) {
-    const value = String(status || '').trim().toLowerCase();
-
-    if ([
-        'paga',
-        'pago',
-        'regularizada',
-        'regularizado',
-        'liquidada',
-        'liquidado'
-    ].includes(value)) {
-        return 'paga';
+    if (sections.length > 1) {
+        sections.slice(1).forEach(section => section.remove());
     }
 
-    if ([
-        'em_atraso',
-        'em atraso',
-        'atrasada',
-        'atrasado',
-        'vencida',
-        'vencido',
-        'não paga',
-        'nao paga'
-    ].includes(value)) {
-        return 'atrasada';
+    // Também pode existir mais do que um elemento #quotas-list.
+    // O primeiro pertence à secção oficial; os restantes são removidos.
+    const lists = [...document.querySelectorAll('#quotas-list')];
+    if (lists.length > 1) {
+        lists.slice(1).forEach(list => list.remove());
     }
-
-    return 'pendente';
 }
 
 function quotaStatusLabel(status) {
-    const value = String(status || '').trim().toLowerCase();
+    const normalized = String(status || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
 
-    const labels = {
-        paga: 'Paga',
-        pago: 'Pago',
-        regularizada: 'Regularizada',
-        regularizado: 'Regularizado',
-        liquidada: 'Liquidada',
-        liquidado: 'Liquidado',
-        em_atraso: 'Em atraso',
-        'em atraso': 'Em atraso',
-        atrasada: 'Em atraso',
-        atrasado: 'Em atraso',
-        vencida: 'Em atraso',
-        vencido: 'Em atraso',
-        'não paga': 'Não paga',
-        'nao paga': 'Não paga',
-        pendente: 'Pendente'
-    };
-
-    return labels[value] || (status ? String(status) : 'Pendente');
-}
-
-function formatQuotaMonth(month) {
-    const months = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-
-    const number = Number(month);
-    if (Number.isInteger(number) && number >= 1 && number <= 12) {
-        return months[number - 1];
+    if (['paga', 'pago', 'regularizada', 'regularizado', 'liquidada', 'liquidado'].includes(normalized)) {
+        return 'Paga';
     }
-
-    return month ? String(month) : '';
+    if (['em_atraso', 'em atraso', 'atrasada', 'atrasado', 'vencida', 'vencido'].includes(normalized)) {
+        return 'Em atraso';
+    }
+    if (['pendente', 'por_pagar', 'por pagar'].includes(normalized)) {
+        return 'Pendente';
+    }
+    return status ? String(status) : 'Por regularizar';
 }
 
-function formatQuotaValue(value) {
-    if (value === null || value === undefined || value === '') return '—';
+function quotaStatusClass(status) {
+    const label = quotaStatusLabel(status).toLowerCase();
+    if (label === 'paga') return 'quota-paga';
+    if (label === 'em atraso') return 'quota-atraso';
+    return 'quota-pendente';
+}
 
-    const number = Number(value);
-    if (!Number.isFinite(number)) return String(value);
-
-    return new Intl.NumberFormat('pt-PT', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(number);
+function formatQuotaMonth(year, month) {
+    if (!year || !month) return '';
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 }
 
 async function loadQuotas() {
     cleanupDuplicateQuotaMarkup();
 
     const el = $('#quotas-list');
-    if (!el) return;
+    if (!el || !state.socio?.id) return;
 
-    if (!state.socio?.id) {
-        el.innerHTML = '<div class="vazio">Não foi possível identificar o sócio.</div>';
-        return;
-    }
-
+    // Nunca deixamos o texto estático "A carregar…" se a consulta falhar.
     el.innerHTML = '<div class="vazio">A carregar quotas…</div>';
 
     try {
@@ -331,62 +290,57 @@ async function loadQuotas() {
             .order('ano', { ascending: false })
             .order('mes', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Erro ao carregar quotas:', error);
+            throw error;
+        }
 
         const quotas = Array.isArray(data) ? data : [];
 
         if (!quotas.length) {
-            el.innerHTML = `
-                <div class="vazio">
-                    ${escapeHtml(state.socio.quotas || 'Não existem quotas registadas para este sócio.')}
-                </div>
-            `;
+            el.innerHTML = `<div class="vazio">${escapeHtml(
+                state.socio.quotas || 'Não existem quotas registadas.'
+            )}</div>`;
             return;
         }
 
-        const pagas = quotas.filter(q => quotaStatusClass(q.estado) === 'paga');
-        const atrasadas = quotas.filter(q => quotaStatusClass(q.estado) === 'atrasada');
-        const pendentes = quotas.filter(q => quotaStatusClass(q.estado) === 'pendente');
+        const atrasadas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Em atraso');
+        const pagas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Paga');
+        const pendentes = quotas.filter(q => quotaStatusLabel(q.estado) === 'Pendente');
 
         const resumo = `
-            <div class="vazio quota-resumo">
-                <strong>${quotas.length}</strong>
-                quota${quotas.length === 1 ? '' : 's'}
-                ${pagas.length ? ` • <strong>${pagas.length}</strong> paga${pagas.length === 1 ? '' : 's'}` : ''}
-                ${pendentes.length ? ` • <strong>${pendentes.length}</strong> pendente${pendentes.length === 1 ? '' : 's'}` : ''}
-                ${atrasadas.length ? ` • <strong>${atrasadas.length}</strong> em atraso` : ''}
-            </div>
-        `;
+            <div class="vazio">
+                ${atrasadas.length ? `<strong>Quotas em atraso: ${atrasadas.length}</strong>` : 'Quotas regularizadas.'}
+                ${pagas.length ? ` • ${pagas.length} pagas` : ''}
+                ${pendentes.length ? ` • ${pendentes.length} pendentes` : ''}
+            </div>`;
 
-        const lista = quotas.map(quota => {
-            const statusClass = quotaStatusClass(quota.estado);
-            const statusLabel = quotaStatusLabel(quota.estado);
-            const periodo = [formatQuotaMonth(quota.mes), quota.ano]
-                .filter(Boolean)
-                .join(' ');
+        const linhas = quotas.map(q => {
+            const periodo = formatQuotaMonth(q.ano, q.mes) ||
+                [q.ano, q.mes].filter(Boolean).join('/');
+            const valor = q.valor !== null && q.valor !== undefined && q.valor !== ''
+                ? `${Number(q.valor).toFixed(2).replace('.', ',')} €`
+                : '';
+            const estado = quotaStatusLabel(q.estado);
 
             return `
-                <div class="quota-item ${statusClass}">
-                    <div class="quota-info">
+                <div class="quota-row">
+                    <div>
                         <strong>${escapeHtml(periodo || 'Quota')}</strong>
-                        <small>${escapeHtml(formatQuotaValue(quota.valor))}</small>
+                        ${valor ? `<small>${escapeHtml(valor)}</small>` : ''}
                     </div>
-                    <span class="quota-estado ${statusClass}">
-                        ${escapeHtml(statusLabel)}
-                    </span>
-                </div>
-            `;
+                    <span class="${quotaStatusClass(q.estado)}">${escapeHtml(estado)}</span>
+                </div>`;
         }).join('');
 
-        el.innerHTML = `${resumo}<div class="quotas-items">${lista}</div>`;
+        el.innerHTML = resumo + `<div class="quotas-tabela">${linhas}</div>`;
     } catch (error) {
-        console.error('Erro ao carregar quotas:', error);
-
-        el.innerHTML = `
-            <div class="vazio">
-                Não foi possível carregar as quotas neste momento.
-            </div>
-        `;
+        // Se a tabela ainda não existir ou as políticas RLS impedirem a leitura,
+        // mostramos uma mensagem útil em vez de deixar "A carregar…" para sempre.
+        const fallback = state.socio.quotas
+            ? escapeHtml(state.socio.quotas)
+            : 'Não foi possível carregar as quotas neste momento.';
+        el.innerHTML = `<div class="vazio">${fallback}</div>`;
     }
 }
 
@@ -1014,9 +968,7 @@ async function init() {
     });
 
     $('#logout-btn')?.addEventListener('click', logout);
-$('#photo-trigger')?.addEventListener('click', () => {
-    $('#photo-input')?.click();
-});
+
     $('#photo-input')?.addEventListener('change', async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
