@@ -1105,12 +1105,13 @@
     ensureCss();
 
     try {
-      if (document.readyState === 'loading') {
-        await new Promise(resolve => {
-          document.addEventListener('DOMContentLoaded', resolve, { once: true });
-        });
-      }
-
+      /*
+       * admin.html carrega este ficheiro com `defer`.
+       * Um script defer já é executado depois de o HTML ter sido
+       * totalmente analisado. Esperar aqui pelo DOMContentLoaded cria
+       * uma espera circular: o próprio script bloqueia o evento que
+       * está à espera.
+       */
       await client();
 
       if (/\/admin\.html$/i.test(location.pathname)) {
