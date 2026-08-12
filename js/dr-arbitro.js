@@ -102,34 +102,11 @@
      ============================================================ */
 
   async function adminInit() {
-    /*
-     * admin.js é quem autentica e torna #admin-app visível.
-     * Não dependemos de um atraso fixo nem de uma segunda verificação
-     * que possa falhar por uma condição de corrida.
-     */
+    if (!(await isAdmin())) return;
+
     const app = $('#admin-app');
     const tabs = $('.admin-tabs');
-
-    if (!app || !tabs) return false;
-
-    /*
-     * Se a área administrativa ainda estiver escondida, damos
-     * oportunidade ao admin.js para terminar a sua inicialização.
-     */
-    if (app.hidden) {
-      if (!(await isAdmin())) return false;
-    }
-
-    /*
-     * O admin.js já confirmou o acesso. Se, por alguma razão,
-     * #admin-app continuar escondido, não mostramos funcionalidades
-     * administrativas.
-     */
-    if (app.hidden) return false;
-
-    if (tabs.querySelector('[data-panel="dr-arbitro"]')) {
-      return true;
-    }
+    if (!app || !tabs || tabs.querySelector('[data-panel="dr-arbitro"]')) return;
 
     tabs.insertAdjacentHTML('beforeend',
       '<button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>'
@@ -1121,6 +1098,38 @@
     document.head.appendChild(link);
   }
 
+  function waitForAdminShell(timeout = 10000) {
+    return new Promise(resolve => {
+      const ready = () =>
+        document.getElementById('admin-app') &&
+        document.querySelector('.admin-tabs');
+
+      if (ready()) {
+        resolve(true);
+        return;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (ready()) {
+          observer.disconnect();
+          resolve(true);
+        }
+      });
+
+      if (document.documentElement) {
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(!!ready());
+      }, timeout);
+    });
+  }
+
   async function boot() {
     ensureCss();
 
@@ -1129,41 +1138,33 @@
 
       if (/\/admin\.html$/i.test(location.pathname)) {
         /*
-         * admin.js também inicializa de forma assíncrona. Em vez de
-         * assumir que 300 ms são suficientes, aguardamos realmente
-         * pela área administrativa.
+         * O admin.js constrói a área administrativa depois de o
+         * HTML inicial ser carregado. Não usamos um atraso fixo:
+         * esperamos pelos elementos reais antes de inicializar.
          */
-        for (let tentativa = 0; tentativa < 40; tentativa++) {
-          const app = $('#admin-app');
-          const tabs = $('.admin-tabs');
+        const ready = await waitForAdminShell();
 
-          if (app && tabs && !app.hidden) {
-            const inicializado = await adminInit();
-            if (inicializado || tabs.querySelector('[data-panel="dr-arbitro"]')) {
-              break;
-            }
-          }
-
-          await new Promise(resolve => setTimeout(resolve, 250));
+        if (ready) {
+          await adminInit();
+        } else {
+          console.error(
+            'Drº Árbitro: a área administrativa não ficou disponível.'
+          );
         }
       }
 
       if (/\/socio\.html$/i.test(location.pathname)) {
         /*
-         * A área do sócio também pode estar a ser criada por socio.js.
-         * Mantemos a inicialização tolerante à ordem de carregamento.
+         * Mantemos a inicialização da área do sócio separada.
          */
-        for (let tentativa = 0; tentativa < 40; tentativa++) {
-          if ($('#dashboard') && $('.socio-tabs')) {
-            await socioInit();
-            break;
-          }
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
+        await socioInit();
       }
 
     } catch (error) {
-      console.error('Drº Árbitro: não foi possível inicializar.', error);
+      console.error(
+        'Drº Árbitro: não foi possível inicializar.',
+        error
+      );
     }
   }
 
