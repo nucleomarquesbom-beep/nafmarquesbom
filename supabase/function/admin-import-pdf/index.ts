@@ -5,7 +5,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-async function requireAdmin(req: Request) {
+async function getAdmin(req: Request) {
   const authorization = req.headers.get('Authorization');
   if (!authorization) throw new Error('Sessão não autenticada.');
 
@@ -27,52 +27,99 @@ async function requireAdmin(req: Request) {
     throw new Error('Acesso reservado ao administrador.');
   }
 
-  return adminClient;
+  return { user, adminClient };
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const adminClient = await requireAdmin(req);
-    const form = await req.formData();
-    const file = form.get('pdf');
+    const { user, adminClient } = await getAdmin(req);
+    const body = await req.json();
 
-    if (!(file instanceof File) || file.type !== 'application/pdf') {
-      return json({ error: 'PDF inválido ou em falta.' }, 400);
+    if (body.action !== 'retirar_pontos') {
+      return json({ error: 'Ação inválida.' }, 400);
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      return json({ error: 'O PDF não pode ultrapassar 10 MB.' }, 400);
+    const socioId = String(body.socio_id || '');
+    const pontos = Number(body.pontos);
+    const motivo = String(body.motivo || '').trim();
+
+    if (!socioId || !Number.isInteger(pontos) || pontos <= 0 || !motivo) {
+      return json({ error: 'Indique sócio, pontos inteiros positivos e motivo.' }, 400);
     }
 
-    // O parsing principal é feito no browser com PDF.js porque o site já
-    // carrega essa biblioteca e isso evita dependências pesadas no Edge Runtime.
-    // Esta função serve como endpoint autenticado para receber o PDF caso
-    // seja necessário evoluir o processamento para o backend.
-    const storagePath = `admin-imports/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]+/g, '_')}`;
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    const { data: socio, error: socioError } = await adminClient
+      .from('socios')
+      .select('id,nome,email,numero_socio')
+      .eq('id', socioId)
+      .single();
 
-    const { error: uploadError } = await adminClient.storage
-      .from('funlearn')
-      .upload(storagePath, bytes, {
-        contentType: 'application/pdf',
-        upsert: false
-      });
+    if (socioError) throw socioError;
 
-    if (uploadError) {
+    const { data: saldoAtual, error: saldoError } = await adminClient
+      .rpc('funlearn_total_pontos', { p_socio_id: socioId });
+
+    if (saldoError) throw saldoError;
+
+    if (Number(saldoAtual || 0) < pontos) {
       return json({
-        ok: true,
-        stored: false,
-        warning: `PDF recebido mas não foi guardado no bucket funlearn: ${uploadError.message}`
-      });
+        error: `O sócio tem apenas ${Number(saldoAtual || 0)} ponto(s) disponíveis.`
+      }, 400);
     }
+
+    const { data: movimento, error: movimentoError } = await adminClient
+      .from('funlearn_pontos')
+      .insert({
+        socio_id: socioId,
+        pontos: -pontos,
+        atividade: 'Fun&Learn',
+        descricao: `Pontos retirados pelo administrador: ${motivo}`,
+      })
+      .select('id,pontos,atividade,descricao,created_at')
+      .single();
+
+    if (movimentoError) throw movimentoError;
+
+    let email = null;
+    if (body.notificar !== false && socio.email) {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-mail`, {
+        method: 'POST',
+        headers: {
+          Authorization: req.headers.get('Authorization')!,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'funlearn_pontos_retirados',
+          socio_id: socio.id,
+          pontos,
+          motivo
+        })
+      });
+
+      email = await response.json().catch(() => null);
+      if (!response.ok || email?.error) {
+        return json({
+          ok: true,
+          warning: 'Os pontos foram retirados, mas o email não foi enviado.',
+          pontos_retirados: pontos,
+          movimento,
+          email
+        }, 200);
+      }
+    }
+
+    const novoSaldo = Number(saldoAtual || 0) - pontos;
 
     return json({
       ok: true,
-      stored: true,
-      storage_path: storagePath,
-      message: 'PDF recebido. O site pode continuar o processamento dos registos no browser.'
+      socio_id: socio.id,
+      numero_socio: socio.numero_socio,
+      pontos_retirados: pontos,
+      saldo_anterior: Number(saldoAtual || 0),
+      saldo_novo: novoSaldo,
+      movimento,
+      email
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
