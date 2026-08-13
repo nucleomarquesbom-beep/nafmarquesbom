@@ -11,7 +11,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
   <script src="js/admin-excel.js"></script>
 </head>
-
 <body>
 <header>
   <div class="container">
@@ -23,7 +22,6 @@
     </nav>
   </div>
 </header>
-
 <main class="pagina admin-modern">
   <div class="admin-page-head">
     <div>
@@ -33,14 +31,11 @@
     </div>
     <button id="btn-refresh" class="admin-small-btn primary">Atualizar</button>
   </div>
-
   <div id="admin-result" class="admin-result" hidden></div>
-
   <section id="admin-login-warning" class="admin-card" hidden>
     <h3>Acesso não autorizado</h3>
     <p>É necessário iniciar sessão com uma conta de administrador.</p>
   </section>
-
   <section id="admin-app" hidden>
     <div class="admin-kpis">
       <div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div>
@@ -48,13 +43,13 @@
       <div class="admin-kpi"><span>Quotas em atraso</span><strong id="kpi-atrasos">—</strong></div>
       <div class="admin-kpi"><span>Pontos Fun&Learn</span><strong id="kpi-pontos">—</strong></div>
     </div>
-
     <div class="admin-tabs">
       <button class="admin-tab active" data-panel="socios">Sócios</button>
       <button class="admin-tab" data-panel="pdf">Importar PDF</button>
       <button class="admin-tab" data-panel="quotas">Quotas</button>
       <button class="admin-tab" data-panel="email">Email geral</button>
       <button class="admin-tab" data-panel="funlearn">Fun&Learn</button>
+      <button class="admin-tab" data-panel="dr-arbitro">Drº Árbitro</button>
     </div>
 
     <section id="panel-socios" class="admin-tab-panel active">
@@ -63,22 +58,15 @@
         <div class="admin-toolbar">
           <input id="member-search" class="admin-search" placeholder="Pesquisar nome, nº de sócio ou email">
           <select id="member-status" class="admin-filter">
-            <option value="">Todos</option>
-            <option value="ativo">Ativos</option>
-            <option value="inativo">Inativos</option>
+            <option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option>
           </select>
           <button id="btn-select-all" class="admin-small-btn">Selecionar todos</button>
           <button id="btn-clear-selection" class="admin-small-btn">Limpar</button>
         </div>
         <div id="selected-count" class="admin-selected-count">0 selecionados</div>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr>
-              <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th>
-            </tr></thead>
-            <tbody id="members-body"><tr><td colspan="7" class="admin-loading">A carregar…</td></tr></tbody>
-          </table>
-        </div>
+        <div class="admin-table-wrap"><table class="admin-table"><thead><tr>
+          <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th>
+        </tr></thead><tbody id="members-body"><tr><td colspan="7" class="admin-loading">A carregar…</td></tr></tbody></table></div>
       </div>
     </section>
 
@@ -86,17 +74,12 @@
       <div class="admin-card">
         <h3>Carregar dados a partir de PDF</h3>
         <p class="admin-help">O PDF é lido no navegador. Antes de gravar, os dados são mostrados numa pré-visualização.</p>
-        <div class="admin-file">
-          <label>PDF de origem
-            <input id="pdf-file" type="file" accept="application/pdf">
-          </label>
+        <div class="admin-file"><label>PDF de origem<input id="pdf-file" type="file" accept="application/pdf"></label>
           <div id="pdf-progress" class="admin-progress"><span></span></div>
           <p class="admin-import-note">Formato esperado: linhas contendo número de sócio, nome e, quando disponível, email.</p>
         </div>
-        <div class="admin-actions">
-          <button id="btn-parse-pdf" class="admin-small-btn primary">Ler PDF</button>
-          <button id="btn-import-pdf" class="admin-small-btn" disabled>Confirmar importação</button>
-        </div>
+        <div class="admin-actions"><button id="btn-parse-pdf" class="admin-small-btn primary">Ler PDF</button>
+          <button id="btn-import-pdf" class="admin-small-btn" disabled>Confirmar importação</button></div>
         <div id="pdf-preview" class="admin-preview"></div>
       </div>
     </section>
@@ -105,11 +88,9 @@
       <div class="admin-card">
         <h3>Quotas em atraso</h3>
         <p class="admin-help">Seleciona os sócios a notificar. O envio é delegado à função segura configurada no backend.</p>
-        <div class="admin-selection-bar">
-          <button id="btn-overdue-select-all" type="button" class="admin-small-btn">Selecionar todos</button>
+        <div class="admin-selection-bar"><button id="btn-overdue-select-all" type="button" class="admin-small-btn">Selecionar todos</button>
           <button id="btn-overdue-clear" type="button" class="admin-small-btn">Limpar seleção</button>
-          <span id="overdue-selected-count" class="admin-selected-count">0 selecionados</span>
-        </div>
+          <span id="overdue-selected-count" class="admin-selected-count">0 selecionados</span></div>
         <div id="overdue-list" class="admin-preview"></div>
         <div class="admin-form-grid">
           <label class="wide">Assunto<input id="quota-subject" value="Quotas em atraso — Núcleo de Árbitros de Futebol Marques Bom"></label>
@@ -142,28 +123,31 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
         <h3>Fun&Learn — retirar pontos</h3>
         <div class="admin-form-grid">
           <label>Valor a retirar<input id="points-amount" type="number" min="1" step="1" value="1"></label>
-          <label>Sócio
-            <select id="points-member"></select>
-          </label>
+          <label>Sócio<select id="points-member"></select></label>
           <label class="wide">Motivo<textarea id="points-reason" placeholder="Motivo obrigatório para a retirada de pontos"></textarea></label>
         </div>
-        <div class="admin-danger-box">
-          A retirada fica registada e a função segura de email envia a notificação ao sócio.
-        </div>
+        <div class="admin-danger-box">A retirada fica registada e a função segura de email envia a notificação ao sócio.</div>
         <button id="btn-remove-points" class="admin-small-btn danger">Retirar pontos e notificar</button>
+      </div>
+    </section>
+
+    <section id="panel-dr-arbitro" class="admin-tab-panel">
+      <div class="admin-card dr-card">
+        <div class="dr-page-head"><div>
+          <h3>Drº Árbitro</h3>
+          <p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p>
+        </div></div>
+        <div class="dr-grid">
+          <div id="dr-futebol" class="dr-modalidade"></div>
+          <div id="dr-futsal" class="dr-modalidade"></div>
+        </div>
       </div>
     </section>
   </section>
 </main>
-
-<footer>
-  <div class="container">
-    <h3>Núcleo de Árbitros de Futebol Marques Bom</h3>
-    <p>Coimbra • Portugal</p>
-    <p>Fundado em 1987</p>
-  </div>
-</footer>
-
+<footer><div class="container">
+  <h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Portugal</p><p>Fundado em 1987</p>
+</div></footer>
 <script src="js/admin-config.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/dr-arbitro.js" defer></script>
