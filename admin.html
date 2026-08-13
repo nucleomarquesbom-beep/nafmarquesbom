@@ -46,6 +46,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-panel="socios">Sócios</button>
       <button class="admin-tab" data-panel="pdf">Importar PDF</button>
+      <button id="tab-admins" class="admin-tab" data-panel="admins" hidden>Administradores</button>
       <button class="admin-tab" data-panel="quotas">Quotas</button>
       <button class="admin-tab" data-panel="email">Email geral</button>
       <button class="admin-tab" data-panel="funlearn">Fun&Learn</button>
@@ -65,8 +66,16 @@
         </div>
         <div id="selected-count" class="admin-selected-count">0 selecionados</div>
         <div class="admin-table-wrap"><table class="admin-table"><thead><tr>
-          <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th><th></th>
+          <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th>
         </tr></thead><tbody id="members-body"><tr><td colspan="7" class="admin-loading">A carregar…</td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="panel-admins" class="admin-tab-panel" hidden>
+      <div class="admin-card">
+        <h3>Administradores</h3>
+        <p id="admin-permissions-help" class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p>
+        <div id="admin-permissions-list" class="admin-preview"></div>
       </div>
     </section>
 
