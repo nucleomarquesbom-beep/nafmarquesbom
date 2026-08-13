@@ -50,3 +50,6 @@
 .admin-progress span{display:block;height:100%;width:0;background:var(--dourado);transition:width .2s}
 @media(max-width:1000px){.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.admin-kpis{grid-template-columns:1fr}.admin-page-head{flex-direction:column;align-items:stretch}.admin-form-grid{grid-template-columns:1fr}.admin-form-grid .wide{grid-column:auto}.admin-card{padding:18px}}
+
+.admin-permission-row{display:grid;grid-template-columns:90px 1fr 1.4fr 150px auto;gap:12px;align-items:center;}
+@media (max-width:700px){.admin-permission-row{grid-template-columns:1fr;gap:6px;}}

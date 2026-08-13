@@ -1546,3 +1546,27 @@ height:160px;
     }
 
 }
+
+/* =========================================================
+   CORPOS SOCIAIS — ENQUADRAMENTO ROBUSTO
+   Fallback quando a deteção de pose não estiver disponível:
+   rosto centrado, peito/ombros visíveis e sem corpo inteiro.
+========================================================= */
+.membro .foto-container img {
+    object-fit: cover;
+    object-position: 50% 20%;
+}
+.membro .foto-container img.foto-sem-deteccao {
+    object-position: 50% 20%;
+    --foto-zoom: 1.28;
+}
+.membro .foto-container img.foto-enquadrada {
+    object-position: var(--foto-x, 50%) var(--foto-y, 20%);
+}
+
+.historia-page{padding:90px 0;background:#fff}.historia-intro{max-width:850px;margin:0 auto 55px;text-align:center}.historia-intro h2{color:var(--roxo);font-size:42px;margin-bottom:15px}.historia-intro p{color:#666;line-height:1.8}.historia-galeria{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}.presidente-historico{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,.09);border:1px solid #eee;transition:.3s}.presidente-historico:hover{transform:translateY(-7px);box-shadow:0 25px 50px rgba(0,0,0,.14)}.presidente-foto{height:300px;background:#f3f0f4;display:flex;align-items:center;justify-content:center;overflow:hidden}.presidente-foto img{width:100%;height:100%;object-fit:cover;object-position:center 25%}.foto-sem-registo{text-align:center;color:#777;font-weight:600;line-height:1.5}.presidente-info{padding:25px;text-align:center}.presidente-info span{display:inline-block;color:var(--dourado);font-weight:800;margin-bottom:8px}.presidente-info h3{color:var(--roxo);font-size:21px;margin-bottom:10px}.presidente-info p{color:#666;line-height:1.6;margin:0}.historia-nota{margin:45px auto 0;max-width:850px;padding:20px 25px;border-left:5px solid var(--dourado);background:#faf8fb;color:#666}.historia-nota strong{color:var(--roxo)}
+@media(max-width:900px){.historia-galeria{grid-template-columns:1fr 1fr}}@media(max-width:700px){.historia-page{padding:55px 0}.historia-intro h2{font-size:32px}.historia-galeria{grid-template-columns:1fr}.presidente-historico{box-shadow:none}.historia-nota{font-size:14px}}
+
+
+.membro .foto-container img{object-fit:cover;object-position:50% 20%}.membro .foto-container img.foto-sem-deteccao{object-position:50% 20%;--foto-zoom:1.28}.membro .foto-container img.foto-enquadrada{object-position:var(--foto-x,50%) var(--foto-y,20%)}
+@media(max-width:700px){.historia-galeria,.historia-nota{display:none}.historia-intro:after{content:'A galeria histórica está disponível na versão desktop.';display:block;margin-top:18px;color:#777;font-size:14px}}
