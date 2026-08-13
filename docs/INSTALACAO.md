@@ -33,3 +33,13 @@ A importação automática das perguntas do PDF é a próxima peça a ligar à i
 
 ## Nota importante
 Antes de produção, testar RLS/Storage e a lógica temporal com pelo menos duas contas de sócio de teste. Não executar alterações de RLS existentes fora das tabelas `dr_arbitro_*` sem revisão.
+
+
+## Reconstrução de 2026-08-13
+
+1. Executar `supabase/migrations/20260813_reconstrucao_site.sql` no SQL Editor do projeto Supabase.
+2. Fazer deploy da Edge Function `supabase/function/importar-quotas`.
+3. Fazer deploy da Edge Function `supabase/function/aniversarios`.
+4. Configurar `RESEND_API_KEY`, `MAIL_FROM` e `CRON_SECRET` para os emails de aniversário.
+5. Agendar diariamente um POST autenticado para `/functions/v1/aniversarios`.
+6. Publicar todos os ficheiros deste ZIP no repositório, preservando a estrutura de pastas.
