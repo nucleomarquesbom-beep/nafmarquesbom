@@ -14,212 +14,165 @@
            TIMELINE DOS PRESIDENTES
            ===================================================== */
 
-        .presidentes-container {
-            max-width: 1100px;
-            margin: 50px auto 80px;
-            padding: 0 20px;
-        }
-
-        .presidentes-intro {
-            text-align: center;
-            margin-bottom: 55px;
-        }
-
-        .presidentes-intro h2 {
-            margin-bottom: 12px;
-        }
-
-        .presidentes-intro p {
-            color: #666;
-            font-size: 1rem;
-        }
-
         .presidentes-timeline {
             position: relative;
-            width: 100%;
-            padding: 20px 0;
+            max-width: 900px;
+            margin: 50px auto 80px;
+            padding: 10px 0 10px 55px;
         }
 
-        /* Linha central */
+        /* Linha vertical - baseada na timeline do
+           Plano de Atividades */
 
         .presidentes-timeline::before {
             content: "";
             position: absolute;
+            left: 25px;
             top: 0;
             bottom: 0;
-            left: 50%;
             width: 4px;
-            background: linear-gradient(
-                to bottom,
-                #c9c9c9,
-                #777,
-                #c9c9c9
-            );
-            transform: translateX(-50%);
-            border-radius: 10px;
+            background: var(--dourado, #c9a227);
+            border-radius: 4px;
         }
 
         /* Cada presidente */
 
-        .presidente-item {
+        .presidente {
             position: relative;
-            width: 50%;
-            min-height: 190px;
+            min-height: 120px;
+            margin-bottom: 35px;
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
         }
 
-        .presidente-item:nth-child(odd) {
-            left: 0;
-            justify-content: flex-end;
-            padding-right: 70px;
-        }
+        /* Círculo */
 
-        .presidente-item:nth-child(even) {
-            left: 50%;
-            justify-content: flex-start;
-            padding-left: 70px;
-        }
-
-        /* Ponto da timeline */
-
-        .presidente-ponto {
+        .presidente .circulo-presidente {
             position: absolute;
-            top: 50%;
-            width: 18px;
-            height: 18px;
-            background: #ffffff;
-            border: 4px solid #333;
+            left: -48px;
+
+            width: 46px;
+            height: 46px;
+
             border-radius: 50%;
-            transform: translateY(-50%);
-            z-index: 3;
-            box-shadow: 0 0 0 5px rgba(255,255,255,0.9);
-        }
 
-        .presidente-item:nth-child(odd) .presidente-ponto {
-            right: -9px;
-        }
-
-        .presidente-item:nth-child(even) .presidente-ponto {
-            left: -9px;
-        }
-
-        /* Fotografia */
-
-        .presidente-foto-wrapper {
-            position: relative;
-            width: 150px;
-            height: 150px;
-            flex-shrink: 0;
-        }
-
-        .presidente-foto {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 5px solid #fff;
-            box-shadow: 0 5px 18px rgba(0,0,0,0.20);
-            background: #e9e9e9;
-            display: block;
-        }
-
-        /* Avatar provisório */
-
-        .presidente-placeholder {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 5px solid #fff;
-            background: linear-gradient(
-                145deg,
-                #eeeeee,
-                #d0d0d0
-            );
-            box-shadow: 0 5px 18px rgba(0,0,0,0.20);
+            background: var(--roxo, #4b1f6f);
+            border: 4px solid var(--dourado, #c9a227);
 
             display: flex;
             align-items: center;
             justify-content: center;
 
-            color: #777;
-            font-size: 58px;
-        }
+            overflow: hidden;
 
-        /* Caixa que aparece no hover */
+            box-sizing: border-box;
 
-        .presidente-info {
-            position: absolute;
-            top: 50%;
-            width: 245px;
-            padding: 15px 18px;
-
-            background: #ffffff;
-            border-radius: 10px;
-
-            box-shadow: 0 8px 25px rgba(0,0,0,0.18);
-
-            opacity: 0;
-            visibility: hidden;
-
-            transform: translateY(-50%) scale(0.92);
+            z-index: 2;
 
             transition:
-                opacity 0.25s ease,
                 transform 0.25s ease,
-                visibility 0.25s ease;
-
-            z-index: 10;
+                box-shadow 0.25s ease;
         }
 
-        .presidente-item:nth-child(odd) .presidente-info {
-            right: 170px;
+        .presidente:hover .circulo-presidente {
+            transform: scale(1.12);
+            box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.18);
         }
 
-        .presidente-item:nth-child(even) .presidente-info {
-            left: 170px;
+        /* Fotografia */
+
+        .circulo-presidente img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
-        .presidente-foto-wrapper:hover .presidente-info {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(-50%) scale(1);
+        /* Bot provisório enquanto não existe fotografia */
+
+        .presidente-placeholder {
+            font-size: 22px;
+            line-height: 1;
+            color: #ffffff;
         }
+
+        /* Cartão de informação
+           inspirado no .card-evento do Plano */
+
+        .presidente-card {
+            position: relative;
+
+            width: 100%;
+
+            background: #ffffff;
+
+            border-radius: 10px;
+
+            padding: 18px 22px;
+
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+
+            border-top: 3px solid var(--dourado, #c9a227);
+
+            box-sizing: border-box;
+
+            cursor: default;
+
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease;
+        }
+
+        .presidente:hover .presidente-card {
+            transform: translateX(5px);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.18);
+        }
+
+        /* Informação */
 
         .presidente-anos {
             display: block;
+
             font-size: 0.85rem;
+
             font-weight: bold;
-            color: #777;
+
+            color: var(--roxo, #4b1f6f);
+
             margin-bottom: 5px;
         }
 
         .presidente-nome {
             display: block;
+
             font-size: 1.15rem;
+
             font-weight: bold;
-            color: #222;
+
+            color: #333333;
         }
 
-        /* Pequeno título junto da fotografia */
+        /* Pequeno número */
 
         .presidente-numero {
             position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
 
-            background: #333;
-            color: white;
+            right: 18px;
+            top: 50%;
 
-            padding: 4px 12px;
-            border-radius: 20px;
+            transform: translateY(-50%);
 
-            font-size: 0.72rem;
-            white-space: nowrap;
+            color: #999;
 
-            z-index: 5;
+            font-size: 0.75rem;
+
+            opacity: 0;
+
+            transition: opacity 0.25s ease;
+        }
+
+        .presidente:hover .presidente-numero {
+            opacity: 1;
         }
 
 
@@ -227,89 +180,43 @@
            RESPONSIVO
            ===================================================== */
 
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
 
-            .presidentes-container {
-                padding: 0 10px;
+            .presidentes-timeline {
+                margin: 35px 15px 60px;
+                padding-left: 48px;
             }
 
             .presidentes-timeline::before {
-                left: 35px;
-                transform: none;
+                left: 20px;
             }
 
-            .presidente-item,
-            .presidente-item:nth-child(odd),
-            .presidente-item:nth-child(even) {
-                width: 100%;
-                left: 0;
-                min-height: 170px;
+            .presidente .circulo-presidente {
+                left: -43px;
 
-                justify-content: flex-start;
-
-                padding-left: 75px;
-                padding-right: 10px;
+                width: 42px;
+                height: 42px;
             }
 
-            .presidente-ponto,
-            .presidente-item:nth-child(odd) .presidente-ponto,
-            .presidente-item:nth-child(even) .presidente-ponto {
-                left: 26px;
-                right: auto;
+            .presidente-card {
+                padding: 15px 17px;
             }
 
-            .presidente-foto-wrapper {
-                width: 125px;
-                height: 125px;
+            .presidente-nome {
+                font-size: 1rem;
             }
 
-            .presidente-foto,
-            .presidente-placeholder {
-                width: 125px;
-                height: 125px;
-            }
-
-            .presidente-info,
-            .presidente-item:nth-child(odd) .presidente-info,
-            .presidente-item:nth-child(even) .presidente-info {
-                left: 145px;
-                right: auto;
-                width: 210px;
-            }
-
-            .presidente-placeholder {
-                font-size: 48px;
+            .presidente-numero {
+                display: none;
             }
         }
-
-        @media (max-width: 450px) {
-
-            .presidente-info,
-            .presidente-item:nth-child(odd) .presidente-info,
-            .presidente-item:nth-child(even) .presidente-info {
-                width: 180px;
-                left: 130px;
-            }
-
-            .presidente-foto-wrapper {
-                width: 110px;
-                height: 110px;
-            }
-
-            .presidente-foto,
-            .presidente-placeholder {
-                width: 110px;
-                height: 110px;
-            }
-        }
-
     </style>
 </head>
 
 <body>
 
     <!-- =====================================================
-         CABEÇALHO
+         MENU
          ===================================================== -->
 
     <header>
@@ -326,7 +233,7 @@
 
 
     <!-- =====================================================
-         CONTEÚDO
+         CONTEÚDO DA HISTÓRIA
          ===================================================== -->
 
     <main>
@@ -336,20 +243,17 @@
                  alt="Núcleo de Árbitros de Futebol Marques Bom">
         </section>
 
-        <section class="presidentes-container">
 
-            <div class="presidentes-intro">
+        <section class="container">
 
-                <h1>História</h1>
+            <h1>História</h1>
 
-                <h2>Presidentes do Núcleo</h2>
+            <h2>Presidentes do Núcleo</h2>
 
-                <p>
-                    Ao longo da sua história, o Núcleo de Árbitros de Futebol
-                    Marques Bom foi dirigido por diferentes presidentes.
-                </p>
-
-            </div>
+            <p>
+                Ao longo da sua história, o Núcleo de Árbitros de Futebol
+                Marques Bom foi dirigido por diferentes presidentes.
+            </p>
 
 
             <!-- =================================================
@@ -361,31 +265,25 @@
 
                 <!-- PRESIDENTE 1 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 1
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 1
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            01
+                        </span>
 
                     </div>
 
@@ -394,31 +292,25 @@
 
                 <!-- PRESIDENTE 2 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 2
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 2
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            02
+                        </span>
 
                     </div>
 
@@ -427,31 +319,25 @@
 
                 <!-- PRESIDENTE 3 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 3
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 3
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            03
+                        </span>
 
                     </div>
 
@@ -460,31 +346,25 @@
 
                 <!-- PRESIDENTE 4 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 4
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 4
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            04
+                        </span>
 
                     </div>
 
@@ -493,31 +373,25 @@
 
                 <!-- PRESIDENTE 5 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 5
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 5
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            05
+                        </span>
 
                     </div>
 
@@ -526,31 +400,25 @@
 
                 <!-- PRESIDENTE 6 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 6
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 6
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            06
+                        </span>
 
                     </div>
 
@@ -559,31 +427,25 @@
 
                 <!-- PRESIDENTE 7 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 7
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 7
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            07
+                        </span>
 
                     </div>
 
@@ -592,31 +454,25 @@
 
                 <!-- PRESIDENTE 8 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 8
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 8
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            08
+                        </span>
 
                     </div>
 
@@ -625,31 +481,25 @@
 
                 <!-- PRESIDENTE 9 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 9
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 9
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            09
+                        </span>
 
                     </div>
 
@@ -658,31 +508,25 @@
 
                 <!-- PRESIDENTE 10 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 10
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 10
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            10
+                        </span>
 
                     </div>
 
@@ -691,31 +535,25 @@
 
                 <!-- PRESIDENTE 11 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 11
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 11
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            11
+                        </span>
 
                     </div>
 
@@ -724,31 +562,25 @@
 
                 <!-- PRESIDENTE 12 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 12
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 12
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            12
+                        </span>
 
                     </div>
 
@@ -757,31 +589,25 @@
 
                 <!-- PRESIDENTE 13 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 13
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 13
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            13
+                        </span>
 
                     </div>
 
@@ -790,31 +616,25 @@
 
                 <!-- PRESIDENTE 14 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 14
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 14
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            14
+                        </span>
 
                     </div>
 
@@ -823,31 +643,25 @@
 
                 <!-- PRESIDENTE 15 -->
 
-                <div class="presidente-item">
+                <div class="presidente">
 
-                    <div class="presidente-ponto"></div>
+                    <div class="circulo-presidente">
+                        <span class="presidente-placeholder">🤖</span>
+                    </div>
 
-                    <div class="presidente-foto-wrapper">
+                    <div class="presidente-card">
 
-                        <div class="presidente-placeholder">
-                            🤖
-                        </div>
+                        <span class="presidente-anos">
+                            ???? – ????
+                        </span>
 
-                        <span class="presidente-numero">
+                        <span class="presidente-nome">
                             Presidente 15
                         </span>
 
-                        <div class="presidente-info">
-
-                            <span class="presidente-anos">
-                                ???? – ????
-                            </span>
-
-                            <span class="presidente-nome">
-                                Presidente 15
-                            </span>
-
-                        </div>
+                        <span class="presidente-numero">
+                            15
+                        </span>
 
                     </div>
 
