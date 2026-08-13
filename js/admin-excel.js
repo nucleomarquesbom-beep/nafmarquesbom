@@ -151,7 +151,7 @@ async function preview() {
     ].join("") || `<div class="admin-loading">Nenhum registo válido.</div>`;
 
     $("btn-excel-import").disabled = validRows.length === 0 || errors.length > 0;
-    if (errors.length) throw new Error("Corrige os erros do Excel antes de confirmar.");
+    if (errors.length) throw new Error("Corrige os erros do Excel antes de confirmar a importação.");
     show("Excel validado. Podes confirmar a importação.");
   } catch(e) {
     console.error(e);
