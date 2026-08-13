@@ -12,6 +12,65 @@ const state = {
     selectedSocios: new Set()
 };
 
+
+  async function loadPublicMembers() {
+    const root = document.getElementById('public-members-list');
+    if (!root || !window.supabase) return;
+    try {
+      const client = supabase;
+      const { data, error } = await client.rpc('socios_publicos_por_categoria');
+      if (error) throw error;
+      const groups = { Futebol: [], Futsal: [] };
+      (data || []).forEach(row => {
+        const modalidade = String(row.modalidade || '').toLowerCase() === 'futsal' ? 'Futsal' : 'Futebol';
+        if (!row.categoria || !row.nome) return;
+        (groups[modalidade] ||= []).push({ categoria: String(row.categoria), nome: String(row.nome) });
+      });
+      const order = {
+        Futebol:['C1','C2','C3','C4','C4 Core','C5','C6','C7','Cj','CF1','CF2','CF3','CF4'],
+        Futsal:['C1','C2','C3','C4','C5','C6','C7','Cj','CFF1','CFF2']
+      };
+      const norm = v => v.trim().toLowerCase();
+      root.innerHTML = '';
+      Object.entries(groups).forEach(([modalidade, rows]) => {
+        const cats = [...new Set(rows.map(r => r.categoria))].sort((a,b) => {
+          const ia=order[modalidade].findIndex(x=>norm(x)===norm(a));
+          const ib=order[modalidade].findIndex(x=>norm(x)===norm(b));
+          return (ia<0?999:ia)-(ib<0?999:ib) || a.localeCompare(b,'pt');
+        });
+        if (!cats.length) return;
+        const group=document.createElement('section');
+        group.className='public-members-group';
+        group.innerHTML=`<h3>${modalidade}</h3><div class="public-category-row"></div>`;
+        const rowEl=group.querySelector('.public-category-row');
+        cats.forEach(cat=>{
+          const members=rows.filter(r=>norm(r.categoria)===norm(cat)).sort((a,b)=>a.nome.localeCompare(b.nome,'pt'));
+          const wrap=document.createElement('div');
+          wrap.className='public-category';
+          const button=document.createElement('button');
+          button.type='button'; button.className='public-category-trigger'; button.textContent=cat;
+          button.setAttribute('aria-expanded','false');
+          const panel=document.createElement('div');
+          panel.className='public-category-members';
+          const ul=document.createElement('ul');
+          members.forEach(m=>{const li=document.createElement('li'); li.textContent=m.nome; ul.appendChild(li);});
+          panel.appendChild(ul); wrap.append(button,panel); rowEl.appendChild(wrap);
+          button.addEventListener('click',()=>{
+            if (window.matchMedia('(max-width: 700px)').matches) {
+              const open=!wrap.classList.contains('open');
+              document.querySelectorAll('.public-category.open').forEach(x=>{x.classList.remove('open');x.querySelector('button')?.setAttribute('aria-expanded','false')});
+              wrap.classList.toggle('open',open); button.setAttribute('aria-expanded',String(open));
+            }
+          });
+        });
+        root.appendChild(group);
+      });
+      if (!root.children.length) root.innerHTML='<div class="vazio">Não existem categorias com sócios ativos.</div>';
+    } catch (e) {
+      console.error('Sócios públicos:',e);
+      root.innerHTML='<div class="vazio">Não foi possível carregar a lista de sócios.</div>';
+    }
+  }
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -106,23 +165,22 @@ async function logout() {
 
 async function loadProfile(user) {
     if (!user?.id) throw new Error('Utilizador autenticado inválido.');
-
-    const { data, error } = await supabase
-        .from('socios')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('ativo', true)
-        .single();
-
-    if (error) throw error;
+    let data;
+    const { data: acesso, error: acessoError } = await supabase.rpc('validar_acesso_socio');
+    if (!acessoError) {
+        const resultado = Array.isArray(acesso) ? acesso[0] : acesso;
+        if (!resultado?.permitido) throw new Error(resultado?.motivo || 'O acesso ao espaço de sócio está inativo.');
+    } else {
+        // Compatibilidade durante a transição: a migration da regra pode ainda não ter sido aplicada.
+        const fallback = await supabase.from('socios').select('*').eq('user_id', user.id).eq('ativo', true).single();
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+    }
+    const result = data ? { data, error: null } : await supabase.from('socios').select('*').eq('user_id', user.id).eq('ativo', true).single();
+    if (result.error) throw result.error;
+    data = result.data;
     if (!data) throw new Error('A conta autenticada não está associada a um sócio ativo.');
-
-    state.user = user;
-    state.socio = data;
-    state.admin =
-        Number(data.numero_socio) === ADMIN_NUMERO &&
-        data.is_admin === true &&
-        data.ativo === true;
+    state.user=user; state.socio=data; state.admin=data.is_admin===true && data.ativo===true;
 }
 
 function renderProfile() {
@@ -153,6 +211,8 @@ function renderProfile() {
     loadQuotas();
     loadDocuments();
     loadFunlearn();
+    window.NAF_DR_ARBITRO_START?.();
+    window.NAF_DR_ARBITRO_START?.();
 
     if (state.admin) {
         loadAdminSocios();
@@ -956,19 +1016,61 @@ function normalizeName(value = '') {
         .trim();
 }
 
-function setupTabs() {
-    $$('.socio-tab').forEach(button => {
-        button.addEventListener('click', () => {
-            $$('.socio-tab').forEach(item => item.classList.remove('active'));
-            $$('.socio-tab-content').forEach(panel => panel.classList.remove('active'));
+function syncMobileTabSelector() {
+    const select = $('#socio-tab-select');
+    const buttons = $$('.socio-tab');
+    if (!select) return;
 
-            button.classList.add('active');
-            document.getElementById(button.dataset.tab)?.classList.add('active');
-        });
-    });
+    const previous = select.value;
+    select.innerHTML = buttons.map(button =>
+        `<option value="${escapeHtml(button.dataset.tab || '')}">${escapeHtml(button.textContent.trim())}</option>`
+    ).join('');
+
+    const active = buttons.find(button => button.classList.contains('active'))?.dataset.tab;
+    select.value = previous && buttons.some(button => button.dataset.tab === previous)
+        ? previous
+        : (active || buttons[0]?.dataset.tab || '');
+}
+
+function activateSocioTab(tabName) {
+    const button = $(`.socio-tab[data-tab="${CSS.escape(tabName)}"]`);
+    if (!button) return;
+    $$('.socio-tab').forEach(item => item.classList.remove('active'));
+    $$('.socio-tab-content').forEach(panel => panel.classList.remove('active'));
+    button.classList.add('active');
+    document.getElementById(tabName)?.classList.add('active');
+    const select = $('#socio-tab-select');
+    if (select) select.value = tabName;
+}
+
+function syncMobileTabSelector() {
+    const select=$('#socio-tab-select'); if(!select) return;
+    const buttons=$$('.socio-tab'); const active=buttons.find(b=>b.classList.contains('active'))?.dataset.tab;
+    const previous=select.value;
+    select.innerHTML=buttons.map(b=>`<option value="${escapeHtml(b.dataset.tab||'')}">${escapeHtml(b.textContent.trim())}</option>`).join('');
+    select.value=buttons.some(b=>b.dataset.tab===previous)?previous:(active||buttons[0]?.dataset.tab||'');
+}
+function activateSocioTab(tabName) {
+    const button=$$('.socio-tab').find(b=>b.dataset.tab===tabName); if(!button) return;
+    $$('.socio-tab').forEach(b=>b.classList.remove('active')); $$('.socio-tab-content').forEach(p=>p.classList.remove('active'));
+    button.classList.add('active'); document.getElementById(tabName)?.classList.add('active');
+    const select=$('#socio-tab-select'); if(select) select.value=tabName;
+}
+function setupTabs() {
+    $$('.socio-tab').forEach(button=>button.addEventListener('click',()=>activateSocioTab(button.dataset.tab)));
+    $('#socio-tab-select')?.addEventListener('change',e=>activateSocioTab(e.target.value));
+    syncMobileTabSelector();
+    const tabs=$('.socio-tabs');
+    if(tabs&&!tabs.dataset.mobileObserver){
+      const observer=new MutationObserver(()=>{
+        syncMobileTabSelector();
+        $$('.socio-tab').forEach(button=>{if(!button.dataset.bound){button.dataset.bound='1';button.addEventListener('click',()=>activateSocioTab(button.dataset.tab));}});
+      }); observer.observe(tabs,{childList:true}); tabs.dataset.mobileObserver='1';
+    }
 }
 
 async function init() {
+    await loadPublicMembers();
     // Nunca mostrar dados privados por defeito.
     clearPrivateUI();
     cleanupDuplicateQuotaMarkup();

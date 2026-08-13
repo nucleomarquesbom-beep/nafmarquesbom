@@ -105,8 +105,7 @@
   window.initDrArbitroAdmin = adminInit;
 
   async function adminInit() {
-    if (window.__NAF_DR_ADMIN_INITIALIZED) return true;
-    if (!(await isAdmin())) return false;
+    if (!(await isAdmin())) return;
 
     /*
      * A aba e o painel Drº Árbitro pertencem ao layout fixo de admin.html,
@@ -127,12 +126,10 @@
 
     if (!futebol || !futsal) {
       console.error('Drº Árbitro: contentores Futebol/Futsal não encontrados.');
-      return false;
+      return;
     }
 
-    window.__NAF_DR_ADMIN_INITIALIZED = true;
     await Promise.all(['futebol', 'futsal'].map(loadModalidade));
-    return true;
   }
 
   async function loadModalidade(codigo) {
@@ -701,6 +698,13 @@
     await loadSocioArea();
   }
 
+  window.NAF_DR_ARBITRO_START = async function () {
+    try { await socioInit(); }
+    catch (error) { console.error('Drº Árbitro: erro ao iniciar área do sócio.', error); }
+  };
+
+  window.NAF_DR_ARBITRO_START = async function () { try { await socioInit(); } catch (error) { console.error('Drº Árbitro: erro ao iniciar área do sócio.', error); } };
+
   function normalizarModalidade(value) {
     return String(value || '')
       .normalize('NFD')
@@ -849,7 +853,7 @@
 
     const { data: tentativa, error } = await s
       .from('dr_arbitro_tentativas')
-      .select('id,iniciou_em,submeteu_em,nota,total_perguntas,percentagem')
+      .select('id,iniciou_em,submeteu_em,nota,total_perguntas,percentagem,estado')
       .eq('teste_id', teste.id)
       .eq('socio_id', currentSocio.id)
       .maybeSingle();
@@ -936,7 +940,7 @@
         <strong>Resultado</strong>
         <span>Nota: ${esc(result.nota ?? 0)}/${esc(result.total_perguntas ?? 0)}</span>
         <span>Percentagem: ${esc(result.percentagem ?? 0)}%</span>
-        <span>Média do teste: ${esc(result.media_teste ?? 0)}%</span>
+        <span>Média do teste: ${esc(result.media_percentagem ?? 0)}%</span>
         <button class="admin-small-btn" type="button" data-show-answers="${testeId}">Ver respostas</button>
         <div class="dr-answers" data-answers="${testeId}"></div>
       </div>
@@ -949,7 +953,7 @@
     const el = $(`[data-answers="${testeId}"]`);
     if (!el) return;
     const s = await client();
-    const { data, error } = await s.rpc('dr_arbitro_resultado_teste', { p_teste_id: testeId });
+    const { data, error } = await s.rpc('dr_arbitro_respostas_resultado', { p_teste_id: testeId });
     if (error) {
       el.innerHTML = `<p class="dr-error">${esc(error.message)}</p>`;
       return;
@@ -957,8 +961,8 @@
 
     el.innerHTML = (data || []).map(q => `
       <div class="dr-answer-row ${q.correta ? 'correct' : 'wrong'}">
-        <strong>${esc(q.pergunta_numero)}. ${esc(q.pergunta)}</strong>
-        <span>A tua resposta: ${esc(q.resposta_dada || 'Sem resposta')}</span>
+        <strong>${esc(q.numero)}. ${esc(q.pergunta)}</strong>
+        <span>A tua resposta: ${esc(q.resposta || 'Sem resposta')}</span>
         <span>Resposta correta: ${esc(q.resposta_correta)}</span>
       </div>
     `).join('') || '<p class="dr-muted">Não existem respostas disponíveis.</p>';
@@ -1088,7 +1092,7 @@
     if (document.querySelector('link[data-dr-arbitro-css]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dr-arbitro.css?v=20260812-3';
+    link.href = 'css/dr-arbitro.css?v=20260813-1';
     link.dataset.drArbitroCss = '1';
     document.head.appendChild(link);
   }
@@ -1107,8 +1111,22 @@
       await client();
 
       if (/\/admin\.html$/i.test(location.pathname)) {
-        // O admin.js é a única autoridade para arrancar o módulo no modo
-        // administrador. Evitamos aqui uma segunda via de inicialização.
+        // O admin.js é a autoridade sobre a autenticação administrativa.
+        // Aqui apenas aguardamos que o painel esteja efetivamente visível.
+        for (let tentativa = 0; tentativa < 120; tentativa++) {
+          const app = $('#admin-app');
+          const tabs = $('.admin-tabs');
+
+          if (app && tabs && !app.hidden && app.offsetParent !== null) {
+            // O próprio módulo é responsável por iniciar-se uma única vez
+            // depois de o admin.js ter validado o acesso. O painel é fixo no
+            // HTML, portanto não usamos a existência da tab como condição.
+            await adminInit();
+            break;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
       }
 
       if (/\/socio\.html$/i.test(location.pathname)) {

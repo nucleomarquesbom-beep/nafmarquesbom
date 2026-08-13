@@ -78,12 +78,12 @@ function addUI() {
   panel.innerHTML = `
     <div class="admin-card" id="admin-excel-panel">
       <h3>Importar quotas a partir de Excel</h3>
-      <p class="admin-help">Carrega um Excel com Nº Sócio, Ano, Mês e Estado. Os dados são validados antes da importação.</p>
+      <p class="admin-help">Carrega um Excel com Nº Sócio, Ano, Mês, Estado e, opcionalmente, Valor. Os dados são validados antes da importação.</p>
       <div class="admin-file">
         <label>Ficheiro Excel
           <input id="excel-file" type="file" accept=".xlsx,.xls">
         </label>
-        <p class="admin-import-note">Formato esperado: Nº Sócio, Ano, Mês, Estado.</p>
+        <p class="admin-import-note">Formato: Nº Sócio, Ano, Mês, Estado e opcionalmente Valor.</p>
       </div>
       <div class="admin-actions">
         <button id="btn-excel-preview" type="button" class="admin-small-btn primary">Validar Excel</button>
@@ -124,6 +124,7 @@ async function preview() {
     const ca = col(headers, ["ano","year"]);
     const cm = col(headers, ["mês","mes","month"]);
     const ce = col(headers, ["estado","status","situacao","situação"]);
+    const cv = col(headers, ["valor","value","quota","valor quota","valor quota mensal"]);
     if (!cs || !ca || !cm || !ce) throw new Error("O Excel precisa das colunas Nº Sócio, Ano, Mês e Estado.");
 
     const errors = [];
@@ -135,23 +136,26 @@ async function preview() {
       const ano = Number(r[ca]);
       const mes = Number(month(r[cm]));
       const st = state(r[ce]);
+      const rawValor = cv ? String(r[cv] ?? "").trim().replace(",", ".") : "";
+      const valor = rawValor === "" ? null : Number(rawValor);
 
       if (!Number.isInteger(numero) || numero <= 0) return errors.push(`Linha ${line}: Nº Sócio inválido.`);
       if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) return errors.push(`Linha ${line}: ano inválido.`);
       if (!Number.isInteger(mes) || mes < 1 || mes > 12) return errors.push(`Linha ${line}: mês inválido.`);
-      if (!["paga","em_atraso"].includes(st)) return errors.push(`Linha ${line}: estado inválido.`);
+      if (!["paga","em_atraso","pendente","nao_paga"].includes(st)) return errors.push(`Linha ${line}: estado inválido.`);
+      if (valor !== null && (!Number.isFinite(valor) || valor < 0)) return errors.push(`Linha ${line}: valor inválido.`);
 
-      validRows.push({numero_socio:numero, ano, mes, estado:st});
+      validRows.push({numero_socio:numero, ano, mes, estado:st, valor});
     });
 
     $("excel-summary").textContent = `${rows.length} linhas • ${validRows.length} válidas • ${errors.length} erros`;
     $("excel-preview").innerHTML = [
-      ...validRows.slice(0,100).map((r,i)=>`<div class="admin-preview-row"><span>${i+2}</span><strong>${esc(r.numero_socio)}</strong><span>${r.ano}</span><span>${r.mes}</span><span>${esc(r.estado)}</span></div>`),
+      ...validRows.slice(0,100).map((r,i)=>`<div class="admin-preview-row"><span>${i+2}</span><strong>${esc(r.numero_socio)}</strong><span>${r.ano}</span><span>${r.mes}</span><span>${r.valor === null ? "—" : esc(r.valor)}</span><span>${esc(r.estado)}</span></div>`),
       ...errors.slice(0,50).map(e=>`<div class="admin-preview-row"><span>ERRO</span><span>${esc(e)}</span></div>`)
     ].join("") || `<div class="admin-loading">Nenhum registo válido.</div>`;
 
     $("btn-excel-import").disabled = validRows.length === 0 || errors.length > 0;
-    if (errors.length) throw new Error("Corrige os erros do Excel antes de confirmar a importação.");
+    if (errors.length) throw new Error("Corrige os erros do Excel antes de confirmar.");
     show("Excel validado. Podes confirmar a importação.");
   } catch(e) {
     console.error(e);
