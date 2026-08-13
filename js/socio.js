@@ -15,7 +15,7 @@ const state = {
 
   async function loadPublicMembers() {
     const root = document.getElementById('public-members-list');
-    if (!root || !window.supabase) return;
+    if (!root) return;
     try {
       const client = supabase;
       const { data, error } = await client.rpc('socios_publicos_por_categoria');
@@ -211,7 +211,6 @@ function renderProfile() {
     loadQuotas();
     loadDocuments();
     loadFunlearn();
-    window.NAF_DR_ARBITRO_START?.();
     window.NAF_DR_ARBITRO_START?.();
 
     if (state.admin) {
@@ -1014,33 +1013,6 @@ function normalizeName(value = '') {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
-}
-
-function syncMobileTabSelector() {
-    const select = $('#socio-tab-select');
-    const buttons = $$('.socio-tab');
-    if (!select) return;
-
-    const previous = select.value;
-    select.innerHTML = buttons.map(button =>
-        `<option value="${escapeHtml(button.dataset.tab || '')}">${escapeHtml(button.textContent.trim())}</option>`
-    ).join('');
-
-    const active = buttons.find(button => button.classList.contains('active'))?.dataset.tab;
-    select.value = previous && buttons.some(button => button.dataset.tab === previous)
-        ? previous
-        : (active || buttons[0]?.dataset.tab || '');
-}
-
-function activateSocioTab(tabName) {
-    const button = $(`.socio-tab[data-tab="${CSS.escape(tabName)}"]`);
-    if (!button) return;
-    $$('.socio-tab').forEach(item => item.classList.remove('active'));
-    $$('.socio-tab-content').forEach(panel => panel.classList.remove('active'));
-    button.classList.add('active');
-    document.getElementById(tabName)?.classList.add('active');
-    const select = $('#socio-tab-select');
-    if (select) select.value = tabName;
 }
 
 function syncMobileTabSelector() {

@@ -57,13 +57,10 @@
         return;
       }
 
-      const isAdmin =
-        state.user.user_metadata?.tipo_utilizador === "admin" ||
-        state.user.user_metadata?.role === "admin" ||
-        state.user.app_metadata?.tipo_utilizador === "admin" ||
-        state.user.app_metadata?.role === "admin";
+      const { data: isAdmin, error: adminError } = await state.supabase.rpc("is_admin");
+      if (adminError) throw adminError;
 
-      if (!isAdmin) {
+      if (isAdmin !== true) {
         $("admin-login-warning").hidden = false;
         return;
       }
