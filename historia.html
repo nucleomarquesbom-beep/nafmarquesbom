@@ -1,19 +1,274 @@
 <!DOCTYPE html>
 <html lang="pt-PT">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>História | Núcleo de Árbitros de Futebol Marques Bom</title>
-<link rel="stylesheet" href="css/style.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>História | Núcleo de Árbitros de Futebol Marques Bom</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+        /* =========================================================
+           HISTÓRIA — LINHA VERTICAL DE PRESIDENTES
+           Mantém a linguagem visual da timeline do Plano de Atividades.
+           Desktop: esquerda + conteúdo à direita.
+           Mobile: linha sobe para o topo em formato compacto.
+           ========================================================= */
+
+        .historia-layout {
+            display: grid;
+            grid-template-columns: 290px minmax(0, 1fr);
+            gap: 48px;
+            align-items: start;
+        }
+
+        .presidentes-timeline {
+            position: relative;
+            padding: 8px 0 8px 42px;
+        }
+
+        .presidentes-timeline::before {
+            content: "";
+            position: absolute;
+            left: 18px;
+            top: 24px;
+            bottom: 24px;
+            width: 4px;
+            border-radius: 999px;
+            background: #d2a51f;
+        }
+
+        .presidentes-titulo {
+            margin: 0 0 22px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+            color: #5d267b;
+            text-transform: uppercase;
+        }
+
+        .presidente-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-height: 92px;
+        }
+
+        .presidente-linha {
+            position: absolute;
+            left: 18px;
+            width: 26px;
+            height: 4px;
+            border-radius: 999px;
+            background: #d2a51f;
+        }
+
+        .presidente-circulo {
+            position: relative;
+            z-index: 2;
+            width: 76px;
+            height: 76px;
+            margin-left: -20px;
+            padding: 0;
+            border: 4px solid #d2a51f;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 5px 16px rgba(0, 0, 0, .10);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            cursor: pointer;
+            transition:
+                transform .22s ease,
+                box-shadow .22s ease,
+                border-color .22s ease;
+        }
+
+        .presidente-circulo:hover,
+        .presidente-circulo:focus-visible {
+            transform: scale(1.08);
+            box-shadow: 0 9px 24px rgba(0, 0, 0, .15);
+            border-color: #5d267b;
+            outline: none;
+        }
+
+        .presidente-circulo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .presidente-avatar {
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: #f3f3f3;
+        }
+
+        .presidente-info {
+            position: absolute;
+            left: 78px;
+            top: 50%;
+            transform: translateY(-50%) translateX(-6px);
+            width: 210px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: #fff;
+            border-top: 4px solid #d2a51f;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .13);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition:
+                opacity .18s ease,
+                transform .18s ease,
+                visibility .18s ease;
+        }
+
+        .presidente-info::before {
+            content: "";
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            width: 14px;
+            height: 14px;
+            transform: translateY(-50%) rotate(45deg);
+            background: #fff;
+            box-shadow: -2px 2px 5px rgba(0, 0, 0, .04);
+        }
+
+        .presidente-info strong {
+            display: block;
+            color: #5d267b;
+            font-size: .95rem;
+            line-height: 1.25;
+            margin-bottom: 4px;
+        }
+
+        .presidente-info span {
+            display: block;
+            color: #6a6a6a;
+            font-size: .8rem;
+            font-weight: 600;
+            letter-spacing: .03em;
+        }
+
+        .presidente-item:hover .presidente-info,
+        .presidente-item:focus-within .presidente-info {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(-50%) translateX(0);
+        }
+
+        .historia-conteudo {
+            min-width: 0;
+        }
+
+        .historia-card {
+            border-top: 4px solid #d2a51f;
+        }
+
+        /* =========================================================
+           MOBILE
+           ========================================================= */
+
+        @media (max-width: 900px) {
+            .historia-layout {
+                grid-template-columns: 1fr;
+                gap: 28px;
+            }
+
+            .presidentes-timeline {
+                padding-left: 34px;
+                overflow-x: visible;
+            }
+
+            .presidentes-timeline::before {
+                left: 15px;
+            }
+
+            .presidente-linha {
+                left: 15px;
+                width: 20px;
+            }
+
+            .presidente-circulo {
+                width: 68px;
+                height: 68px;
+                margin-left: -19px;
+            }
+
+            .presidente-info {
+                left: 70px;
+                width: min(220px, calc(100vw - 120px));
+            }
+        }
+
+        @media (max-width: 600px) {
+            .presidentes-timeline {
+                padding-left: 28px;
+            }
+
+            .presidentes-timeline::before {
+                left: 12px;
+                top: 18px;
+                bottom: 18px;
+            }
+
+            .presidente-item {
+                min-height: 82px;
+            }
+
+            .presidente-linha {
+                left: 12px;
+                width: 16px;
+                height: 3px;
+            }
+
+            .presidente-circulo {
+                width: 60px;
+                height: 60px;
+                margin-left: -18px;
+                border-width: 3px;
+            }
+
+            .presidente-info {
+                left: 62px;
+                width: calc(100vw - 110px);
+                max-width: 240px;
+                padding: 11px 12px;
+            }
+
+            .presidentes-titulo {
+                font-size: 1rem;
+            }
+        }
+    </style>
 </head>
+
 <body>
+
 <header>
     <div class="container">
-        <a href="index.html" class="logo"><img src="imagens/logo.png" alt="Logótipo"></a>
+        <a href="index.html" class="logo">
+            <img src="imagens/logo.png" alt="Logótipo">
+        </a>
+
         <nav>
             <a href="index.html">Início</a>
-            <a href="historia.html">História</a>
+            <a href="historia.html" class="ativo">História</a>
             <a href="corpos-sociais.html">Corpos Sociais</a>
             <a href="plano-atividades.html">Plano de Atividades</a>
             <a href="documentos.html">Documentos</a>
@@ -22,25 +277,386 @@
         </nav>
     </div>
 </header>
+
 <section class="page-hero">
     <img src="imagens/cabecalho.png" alt="Núcleo de Árbitros">
-    <div class="page-title"><h1>História</h1></div>
+    <div class="page-title">
+        <h1>História</h1>
+    </div>
 </section>
+
 <main class="pagina pagina-construcao">
     <div class="container">
-        <div class="construcao-card">
-            <h2>História</h2>
-            <p>Esta página está a ser construída.</p>
+
+        <div class="historia-layout">
+
+            <!-- =====================================================
+                 LINHA VERTICAL DOS PRESIDENTES
+                 ===================================================== -->
+
+            <aside class="presidentes-timeline">
+
+                <h2 class="presidentes-titulo">
+                    Presidentes
+                </h2>
+
+                
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 01"
+            >
+                <img
+                    src="imagens/presidentes/presidente-01.jpg"
+                    alt="Fotografia do Presidente 01"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 01</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 02"
+            >
+                <img
+                    src="imagens/presidentes/presidente-02.jpg"
+                    alt="Fotografia do Presidente 02"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 02</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 03"
+            >
+                <img
+                    src="imagens/presidentes/presidente-03.jpg"
+                    alt="Fotografia do Presidente 03"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 03</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 04"
+            >
+                <img
+                    src="imagens/presidentes/presidente-04.jpg"
+                    alt="Fotografia do Presidente 04"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 04</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 05"
+            >
+                <img
+                    src="imagens/presidentes/presidente-05.jpg"
+                    alt="Fotografia do Presidente 05"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 05</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 06"
+            >
+                <img
+                    src="imagens/presidentes/presidente-06.jpg"
+                    alt="Fotografia do Presidente 06"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 06</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 07"
+            >
+                <img
+                    src="imagens/presidentes/presidente-07.jpg"
+                    alt="Fotografia do Presidente 07"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 07</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 08"
+            >
+                <img
+                    src="imagens/presidentes/presidente-08.jpg"
+                    alt="Fotografia do Presidente 08"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 08</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 09"
+            >
+                <img
+                    src="imagens/presidentes/presidente-09.jpg"
+                    alt="Fotografia do Presidente 09"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 09</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 10"
+            >
+                <img
+                    src="imagens/presidentes/presidente-10.jpg"
+                    alt="Fotografia do Presidente 10"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 10</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 11"
+            >
+                <img
+                    src="imagens/presidentes/presidente-11.jpg"
+                    alt="Fotografia do Presidente 11"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 11</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 12"
+            >
+                <img
+                    src="imagens/presidentes/presidente-12.jpg"
+                    alt="Fotografia do Presidente 12"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 12</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 13"
+            >
+                <img
+                    src="imagens/presidentes/presidente-13.jpg"
+                    alt="Fotografia do Presidente 13"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 13</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 14"
+            >
+                <img
+                    src="imagens/presidentes/presidente-14.jpg"
+                    alt="Fotografia do Presidente 14"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 14</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+        <article class="presidente-item">
+            <div class="presidente-linha"></div>
+            <button
+                class="presidente-circulo"
+                type="button"
+                aria-label="Presidente 15"
+            >
+                <img
+                    src="imagens/presidentes/presidente-15.jpg"
+                    alt="Fotografia do Presidente 15"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+                <span class="presidente-avatar" aria-hidden="true">👤</span>
+            </button>
+
+            <div class="presidente-info" role="tooltip">
+                <strong>Presidente 15</strong>
+                <span>ANO / PERÍODO</span>
+            </div>
+        </article>
+
+
+            </aside>
+
+            <!-- =====================================================
+                 MENSAGEM ATUAL DA HISTÓRIA — MANTIDA
+                 ===================================================== -->
+
+            <section class="construcao-card historia-card historia-conteudo">
+                <h2>História</h2>
+
+                <p>
+                    Esta página está a ser construída.
+                </p>
+            </section>
+
         </div>
+
     </div>
 </main>
+
 <footer>
     <div class="container">
-        <h3>Núcleo de Árbitros de Futebol Marques Bom</h3>
-        <p>Coimbra • Portugal</p>
-        <p>Email: geral@nafmarquesbom.pt</p>
-        <p>© 2026 Todos os direitos reservados.</p>
+
+        <h3>
+            Núcleo de Árbitros de Futebol Marques Bom
+        </h3>
+
+        <p>
+            Coimbra • Portugal
+        </p>
+
+        <p>
+            Email: geral@nafmarquesbom.pt
+        </p>
+
+        <p>
+            © 2026 Todos os direitos reservados.
+        </p>
+
     </div>
 </footer>
+
 </body>
 </html>
