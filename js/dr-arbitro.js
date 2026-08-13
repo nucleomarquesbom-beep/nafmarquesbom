@@ -107,38 +107,27 @@
   async function adminInit() {
     if (!(await isAdmin())) return;
 
+    /*
+     * A aba e o painel Drº Árbitro pertencem ao layout fixo de admin.html,
+     * exatamente como as restantes funcionalidades administrativas.
+     * Este módulo apenas preenche o painel existente.
+     */
     const app = $('#admin-app');
     const tabs = $('.admin-tabs');
-    if (!app || !tabs || tabs.querySelector('[data-panel="dr-arbitro"]')) return;
+    const panel = $('#panel-dr-arbitro');
 
-    tabs.insertAdjacentHTML('beforeend',
-      '<button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>'
-    );
+    if (!app || !tabs || !panel) {
+      console.error('Drº Árbitro: painel administrativo não encontrado no HTML.');
+      return;
+    }
 
-    app.insertAdjacentHTML('beforeend', `
-      <section id="panel-dr-arbitro" class="admin-tab-panel">
-        <div class="admin-card dr-card">
-          <div class="dr-page-head">
-            <div>
-              <h3>Drº Árbitro</h3>
-              <p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p>
-            </div>
-          </div>
-          <div class="dr-grid">
-            <div id="dr-futebol" class="dr-modalidade"></div>
-            <div id="dr-futsal" class="dr-modalidade"></div>
-          </div>
-        </div>
-      </section>
-    `);
+    const futebol = $('#dr-futebol', panel);
+    const futsal = $('#dr-futsal', panel);
 
-    const tab = tabs.querySelector('[data-panel="dr-arbitro"]');
-    tab.addEventListener('click', () => {
-      $$('.admin-tab', tabs).forEach(x => x.classList.remove('active'));
-      $$('.admin-tab-panel', app).forEach(x => x.classList.remove('active'));
-      tab.classList.add('active');
-      $('#panel-dr-arbitro', app)?.classList.add('active');
-    });
+    if (!futebol || !futsal) {
+      console.error('Drº Árbitro: contentores Futebol/Futsal não encontrados.');
+      return;
+    }
 
     await Promise.all(['futebol', 'futsal'].map(loadModalidade));
   }
