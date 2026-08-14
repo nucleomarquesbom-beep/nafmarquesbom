@@ -1,201 +1,298 @@
 (() => {
-"use strict";
+  "use strict";
 
-const $ = id => document.getElementById(id);
-const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({
-  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-}[c]));
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
 
-let validRows = [];
+  let rowsToImport = [];
+  let isReady = false;
 
-function show(message, type="success") {
-  const el = $("admin-result");
-  if (!el) return;
-  el.textContent = message;
-  el.className = `admin-result ${type}`;
-  el.hidden = false;
-}
-
-function col(headers, aliases) {
-  const norm = x => String(x ?? "").normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"").toLowerCase()
-    .replace(/[^a-z0-9]/g,"");
-  const hs = headers.map(norm);
-  for (const a of aliases) {
-    const i = hs.indexOf(norm(a));
-    if (i >= 0) return headers[i];
+  function show(message, type="success") {
+    const el = $("admin-result");
+    if (!el) return;
+    el.textContent = message;
+    el.className = `admin-result ${type}`;
+    el.hidden = false;
   }
-  return null;
-}
 
-function month(v) {
-  const s = String(v ?? "").trim().toLowerCase();
-  const names = {
-    janeiro:1,jan:1,fevereiro:2,fev:2,marco:3,"março":3,mar:3,
-    abril:4,abr:4,maio:5,mai:5,junho:6,jun:6,julho:7,jul:7,
-    agosto:8,ago:8,setembro:9,set:9,outubro:10,out:10,
-    novembro:11,nov:11,dezembro:12,dez:12
-  };
-  return names[s] || Number(s);
-}
+  function getClient() {
+    return window.supabaseClient || window.__NAF_SUPABASE || null;
+  }
 
-function state(v) {
-  const s = String(v ?? "").trim().toLowerCase();
-  if (["paga","pago","paid","regularizada","regularizado"].includes(s)) return "paga";
-  if (["em_atraso","atrasada","atrasado","em atraso","unpaid","pending"].includes(s)) return "em_atraso";
-  return s;
-}
+  async function loadXLSX() {
+    if (window.XLSX) return;
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Não foi possível carregar o leitor de Excel."));
+      document.head.appendChild(s);
+    });
+  }
 
-async function loadXLSX() {
-  if (window.XLSX) return;
-  await new Promise((resolve,reject) => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
-    s.onload = resolve;
-    s.onerror = () => reject(new Error("Não foi possível carregar o leitor de Excel."));
-    document.head.appendChild(s);
-  });
-}
+  function normalizeHeader(v) {
+    return String(v ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
 
-function addUI() {
-  if ($("admin-excel-panel")) return;
-  const tabs = document.querySelector(".admin-tabs");
-  const quotas = $("panel-quotas");
-  const app = $("admin-app");
-  if (!tabs || !quotas || !app) return;
+  function findHeader(headers, aliases) {
+    const normalized = headers.map(normalizeHeader);
+    for (const alias of aliases) {
+      const idx = normalized.indexOf(normalizeHeader(alias));
+      if (idx >= 0) return headers[idx];
+    }
+    return null;
+  }
 
-  const tab = document.createElement("button");
-  tab.className = "admin-tab";
-  tab.dataset.panel = "excel";
-  tab.textContent = "Importar Excel";
+  function addUI() {
+    if ($("admin-excel-final-panel")) return;
 
-  const emailTab = [...tabs.children].find(x => x.dataset.panel === "email");
-  tabs.insertBefore(tab, emailTab || null);
+    const tabs = document.querySelector(".admin-tabs");
+    const quotasPanel = $("panel-quotas");
+    if (!tabs || !quotasPanel) return;
 
-  const panel = document.createElement("section");
-  panel.id = "panel-excel";
-  panel.className = "admin-tab-panel";
-  panel.innerHTML = `
-    <div class="admin-card" id="admin-excel-panel">
-      <h3>Importar quotas a partir de Excel</h3>
-      <p class="admin-help">Carrega um Excel com Nº Sócio, Ano, Mês, Estado e, opcionalmente, Valor. Os dados são validados antes da importação.</p>
-      <div class="admin-file">
-        <label>Ficheiro Excel
-          <input id="excel-file" type="file" accept=".xlsx,.xls">
-        </label>
-        <p class="admin-import-note">Formato: Nº Sócio, Ano, Mês, Estado e opcionalmente Valor.</p>
-      </div>
-      <div class="admin-actions">
-        <button id="btn-excel-preview" type="button" class="admin-small-btn primary">Validar Excel</button>
-        <button id="btn-excel-import" type="button" class="admin-small-btn" disabled>Confirmar importação</button>
-      </div>
-      <div id="excel-summary" class="admin-selected-count"></div>
-      <div id="excel-preview" class="admin-preview"></div>
-    </div>`;
+    const oldTab = [...tabs.children].find(x => x.dataset.panel === "excel");
+    const tab = oldTab || document.createElement("button");
+    tab.className = "admin-tab";
+    tab.dataset.panel = "excel";
+    tab.textContent = "Quotas Excel";
 
-  quotas.insertAdjacentElement("afterend", panel);
+    if (!oldTab) {
+      const quotasTab = [...tabs.children].find(x => x.dataset.panel === "quotas");
+      tabs.insertBefore(tab, quotasTab ? quotasTab.nextSibling : null);
+    }
 
-  tab.onclick = () => {
-    document.querySelectorAll(".admin-tab").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll(".admin-tab-panel").forEach(x => x.classList.remove("active"));
-    tab.classList.add("active");
-    panel.classList.add("active");
-  };
+    let panel = $("panel-excel");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "panel-excel";
+      panel.className = "admin-tab-panel";
+      panel.innerHTML = `
+        <div class="admin-card" id="admin-excel-final-panel">
+          <h3>Quotas em dívida — Excel</h3>
+          <p class="admin-help">
+            Importa apenas a dívida anual total de cada sócio. A quota anual é de
+            12 €. O sistema distribui automaticamente a dívida pelos anos mais recentes.
+          </p>
 
-  $("btn-excel-preview").onclick = preview;
-  $("btn-excel-import").onclick = importRows;
-}
+          <div class="admin-file">
+            <label>Excel de dívida
+              <input id="quota-excel-file" type="file" accept=".xlsx,.xls">
+            </label>
+            <p class="admin-import-note">
+              Colunas: Nº Sócio, Nome, Valor em dívida total.
+              O valor tem de ser múltiplo de 12 €.
+            </p>
+          </div>
 
-async function preview() {
-  try {
-    const file = $("excel-file")?.files?.[0];
+          <div class="admin-actions">
+            <button id="btn-quota-excel-preview" type="button" class="admin-small-btn primary">
+              Validar Excel
+            </button>
+            <button id="btn-quota-excel-import" type="button" class="admin-small-btn" disabled>
+              Importar dívida
+            </button>
+            <button id="btn-quota-excel-export" type="button" class="admin-small-btn">
+              Exportar quotas em dívida
+            </button>
+          </div>
+
+          <div id="quota-excel-summary" class="admin-selected-count"></div>
+          <div id="quota-excel-preview" class="admin-preview"></div>
+        </div>
+      `;
+      quotasPanel.insertAdjacentElement("afterend", panel);
+    }
+
+    tab.onclick = () => {
+      document.querySelectorAll(".admin-tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".admin-tab-panel").forEach(x => x.classList.remove("active"));
+      tab.classList.add("active");
+      $("panel-excel").classList.add("active");
+    };
+
+    $("btn-quota-excel-preview").onclick = () => previewExcel().catch(showError);
+    $("btn-quota-excel-import").onclick = () => importDebt().catch(showError);
+    $("btn-quota-excel-export").onclick = () => exportDebt().catch(showError);
+
+    isReady = true;
+  }
+
+  function showError(e) {
+    console.error(e);
+    show(e?.message || String(e), "error");
+  }
+
+  async function previewExcel() {
+    const file = $("quota-excel-file")?.files?.[0];
     if (!file) throw new Error("Seleciona um ficheiro Excel.");
     if (!/\.(xlsx|xls)$/i.test(file.name)) throw new Error("O ficheiro tem de ser .xlsx ou .xls.");
-    if (file.size > 10*1024*1024) throw new Error("O Excel não pode ultrapassar 10 MB.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("O Excel não pode ultrapassar 10 MB.");
 
     await loadXLSX();
-    const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, {defval:"", raw:false});
-    if (!rows.length) throw new Error("A primeira folha está vazia.");
 
-    const headers = Object.keys(rows[0]);
-    const cs = col(headers, ["nº sócio","nº socio","numero socio","numero_socio","numero","socio"]);
-    const ca = col(headers, ["ano","year"]);
-    const cm = col(headers, ["mês","mes","month"]);
-    const ce = col(headers, ["estado","status","situacao","situação"]);
-    const cv = col(headers, ["valor","value","quota","valor quota","valor quota mensal"]);
-    if (!cs || !ca || !cm || !ce) throw new Error("O Excel precisa das colunas Nº Sócio, Ano, Mês e Estado.");
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
 
+    if (!data.length) throw new Error("A primeira folha está vazia.");
+
+    const headers = Object.keys(data[0]);
+    const hNumero = findHeader(headers, ["Nº Sócio","Nº Socio","Numero Socio","Número Sócio","numero_socio"]);
+    const hNome = findHeader(headers, ["Nome","Nome Completo","Socio"]);
+    const hValor = findHeader(headers, ["Valor em dívida total","Valor Divida Total","Valor em divida total","Valor Divida","Divida Total"]);
+
+    if (!hNumero || !hNome || !hValor) {
+      throw new Error("O Excel precisa das colunas Nº Sócio, Nome e Valor em dívida total.");
+    }
+
+    rowsToImport = [];
     const errors = [];
-    validRows = [];
 
-    rows.forEach((r,i) => {
-      const line = i+2;
-      const numero = Number(r[cs]);
-      const ano = Number(r[ca]);
-      const mes = Number(month(r[cm]));
-      const st = state(r[ce]);
-      const rawValor = cv ? String(r[cv] ?? "").trim().replace(",", ".") : "";
-      const valor = rawValor === "" ? null : Number(rawValor);
+    data.forEach((r, idx) => {
+      const line = idx + 2;
+      const numero = Number(String(r[hNumero] ?? "").trim());
+      const nome = String(r[hNome] ?? "").trim();
+      const raw = String(r[hValor] ?? "").trim().replace(/\s/g,"").replace(",", ".");
+      const valor = Number(raw);
 
-      if (!Number.isInteger(numero) || numero <= 0) return errors.push(`Linha ${line}: Nº Sócio inválido.`);
-      if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) return errors.push(`Linha ${line}: ano inválido.`);
-      if (!Number.isInteger(mes) || mes < 1 || mes > 12) return errors.push(`Linha ${line}: mês inválido.`);
-      if (!["paga","em_atraso","pendente","nao_paga"].includes(st)) return errors.push(`Linha ${line}: estado inválido.`);
-      if (valor !== null && (!Number.isFinite(valor) || valor < 0)) return errors.push(`Linha ${line}: valor inválido.`);
+      if (!Number.isInteger(numero) || numero <= 0) {
+        errors.push(`Linha ${line}: Nº Sócio inválido.`);
+        return;
+      }
+      if (!nome) {
+        errors.push(`Linha ${line}: Nome vazio.`);
+        return;
+      }
+      if (!Number.isFinite(valor) || valor <= 0) {
+        errors.push(`Linha ${line}: Valor em dívida inválido.`);
+        return;
+      }
+      if (Math.abs(valor % 12) > 0.000001) {
+        errors.push(`Linha ${line}: O valor em dívida tem de ser múltiplo de 12 €.`);
+        return;
+      }
 
-      validRows.push({numero_socio:numero, ano, mes, estado:st, valor});
+      rowsToImport.push({
+        numero_socio: numero,
+        nome,
+        valor_divida: Number(valor.toFixed(2))
+      });
     });
 
-    $("excel-summary").textContent = `${rows.length} linhas • ${validRows.length} válidas • ${errors.length} erros`;
-    $("excel-preview").innerHTML = [
-      ...validRows.slice(0,100).map((r,i)=>`<div class="admin-preview-row"><span>${i+2}</span><strong>${esc(r.numero_socio)}</strong><span>${r.ano}</span><span>${r.mes}</span><span>${r.valor === null ? "—" : esc(r.valor)}</span><span>${esc(r.estado)}</span></div>`),
-      ...errors.slice(0,50).map(e=>`<div class="admin-preview-row"><span>ERRO</span><span>${esc(e)}</span></div>`)
-    ].join("") || `<div class="admin-loading">Nenhum registo válido.</div>`;
+    $("quota-excel-summary").textContent =
+      `${data.length} linhas • ${rowsToImport.length} válidas • ${errors.length} erros`;
 
-    $("btn-excel-import").disabled = validRows.length === 0 || errors.length > 0;
-    if (errors.length) throw new Error("Corrige os erros do Excel antes de confirmar.");
-    show("Excel validado. Podes confirmar a importação.");
-  } catch(e) {
-    console.error(e);
-    show(e.message || String(e), "error");
+    $("quota-excel-preview").innerHTML = [
+      ...rowsToImport.slice(0,100).map((r,i) => {
+        const anos = Math.round(r.valor_divida / 12);
+        return `<div class="admin-preview-row">
+          <span>${i+2}</span>
+          <strong>${esc(r.numero_socio)}</strong>
+          <span>${esc(r.nome)}</span>
+          <span>${esc(r.valor_divida.toFixed(2))} €</span>
+          <span>${anos} ano(s)</span>
+        </div>`;
+      }),
+      ...errors.slice(0,50).map(e => `<div class="admin-preview-row"><span>ERRO</span><span>${esc(e)}</span></div>`)
+    ].join("");
+
+    $("btn-quota-excel-import").disabled = rowsToImport.length === 0 || errors.length > 0;
+
+    if (errors.length) {
+      throw new Error("Corrige os erros indicados antes de importar.");
+    }
+
+    show("Excel validado. A dívida será distribuída começando pelo ano mais recente.");
   }
-}
 
-async function importRows() {
-  try {
-    if (!validRows.length) throw new Error("Valida primeiro o Excel.");
+  async function importDebt() {
+    const client = getClient();
+    if (!client) throw new Error("Cliente Supabase não encontrado.");
+    if (!rowsToImport.length) throw new Error("Valida primeiro o Excel.");
 
-    const supa = window.supabaseClient || window.__NAF_SUPABASE;
-    if (!supa?.functions) throw new Error("Cliente Supabase não encontrado.");
+    const { data, error } = await client.rpc(
+      "admin_importar_divida_anual_excel",
+      {
+        p_rows: rowsToImport.map(r => ({
+          numero_socio: r.numero_socio,
+          nome: r.nome,
+          valor_divida: r.valor_divida
+        })),
+        p_ano_inicial: new Date().getFullYear()
+      }
+    );
 
-    const {data,error} = await supa.functions.invoke("importar-quotas", {
-      body:{rows:validRows}
-    });
     if (error) throw error;
-    if (data?.error) throw new Error(data.error);
 
-    show(`Importação concluída: ${data?.imported ?? validRows.length} registos.`);
-    $("btn-excel-import").disabled = true;
-    validRows = [];
-  } catch(e) {
-    console.error(e);
-    show(e.message || String(e), "error");
+    const count = Number(data?.quotas_geradas ?? 0);
+    show(`Importação concluída: ${rowsToImport.length} sócio(s), ${count} quotas anuais geradas.`);
+    rowsToImport = [];
+    $("btn-quota-excel-import").disabled = true;
+    await exportDebtPreview();
   }
-}
 
-function boot() {
-  addUI();
-  const app = $("admin-app");
-  if (app && app.hidden) {
-    const obs = new MutationObserver(() => {
-      if (!app.hidden) { addUI(); obs.disconnect(); }
+  function downloadWorkbook(rows) {
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ["numero_socio","nome","valor_divida_total"]
     });
-    obs.observe(app,{attributes:true,attributeFilter:["hidden"]});
-  }
-}
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",boot);
-else boot();
+    ws["A1"] = { t:"s", v:"Nº Sócio" };
+    ws["B1"] = { t:"s", v:"Nome" };
+    ws["C1"] = { t:"s", v:"Valor em dívida total" };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Quotas em dívida");
+    XLSX.writeFile(wb, "quotas-em-divida.xlsx");
+  }
+
+  async function exportDebtPreview() {
+    const client = getClient();
+    if (!client) throw new Error("Cliente Supabase não encontrado.");
+
+    const { data, error } = await client.rpc(
+      "admin_exportar_divida_anual_excel",
+      { p_ano_inicial: new Date().getFullYear() }
+    );
+
+    if (error) throw error;
+
+    const rows = (data || []).map(r => ({
+      numero_socio: r.numero_socio,
+      nome: r.nome,
+      valor_divida_total: Number(r.valor_divida_total || 0)
+    }));
+
+    downloadWorkbook(rows);
+  }
+
+  async function exportDebt() {
+    await loadXLSX();
+    await exportDebtPreview();
+  }
+
+  function boot() {
+    addUI();
+    const app = $("admin-app");
+    if (app && app.hidden) {
+      const obs = new MutationObserver(() => {
+        if (!app.hidden) {
+          addUI();
+          obs.disconnect();
+        }
+      });
+      obs.observe(app, { attributes: true, attributeFilter: ["hidden"] });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
 })();
