@@ -1,0 +1,2 @@
+/* Carrega a funcionalidade de quotas Excel na área de administrador do socio.html. */
+(function(){if(window.__NAF_QUOTAS_EXCEL_BRIDGE)return;window.__NAF_QUOTAS_EXCEL_BRIDGE=true;var s=document.createElement("script");s.src="js/admin-excel.js?v=20260814-1";s.defer=true;document.head.appendChild(s)})();
