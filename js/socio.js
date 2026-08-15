@@ -116,7 +116,7 @@ function clearPrivateUI() {
         '#socio-name', '#socio-number', '#dados-nome', '#dados-numero',
         '#dados-nascimento', '#dados-email', '#dados-morada',
         '#dados-telemovel', '#dados-arbitro', '#dados-af',
-        '#dados-modalidade', '#funlearn-total', '#funlearn-total-top'
+        '#dados-modalidade', '#dados-categoria', '#funlearn-total', '#funlearn-total-top'
     ];
 
     clearIds.forEach((id) => {
@@ -207,7 +207,11 @@ function renderProfile() {
     $('#dados-af').textContent = s.associacao_futebol || '—';
     $('#dados-modalidade').textContent = s.modalidade || '—';
 
+    const categoriaView = $('#dados-categoria');
+    if (categoriaView) categoriaView.textContent = s.categoria || '—';
+
     fillEditForms();
+    setupArbitragemSelectors();
     loadPhoto();
     loadQuotas();
     loadDocuments();
@@ -456,7 +460,7 @@ async function loadDocuments() {
 
     const { data, error } = await supabase
         .from('documentos_socios')
-        .select('*')
+        .select('id,nome_ficheiro,storage_path,tamanho_bytes,tipo_mime,created_at')
         .eq('socio_id', state.socio.id)
         .order('created_at', { ascending: false });
 
@@ -474,34 +478,44 @@ async function loadDocuments() {
         return;
     }
 
-    list.innerHTML = '';
+    const urlResults = await Promise.all(
+        documents.map(async record => {
+            if (!record.storage_path) return [record.id, null];
+            const cached = window.__NAF_DOC_URL_CACHE?.get(record.storage_path);
+            if (cached && cached.expires > Date.now()) return [record.id, cached.url];
 
-    for (const record of documents) {
-        let signedUrl = null;
-
-        if (record.storage_path) {
             const result = await supabase.storage
                 .from('documentos-socios')
                 .createSignedUrl(record.storage_path, 3600);
 
-            if (!result.error) signedUrl = result.data?.signedUrl || null;
-        }
+            const signedUrl = result.error ? null : (result.data?.signedUrl || null);
+            if (signedUrl) {
+                window.__NAF_DOC_URL_CACHE ||= new Map();
+                window.__NAF_DOC_URL_CACHE.set(record.storage_path, {
+                    url: signedUrl,
+                    expires: Date.now() + (55 * 60 * 1000)
+                });
+            }
+            return [record.id, signedUrl];
+        })
+    );
 
-        const item = document.createElement('div');
-        item.className = 'documento-socio-item';
+    const urlById = new Map(urlResults);
 
-        item.innerHTML = `
-            <div>
-                <strong>📄 ${escapeHtml(record.nome_ficheiro || 'Documento PDF')}</strong>
-                <small>${record.created_at
-                    ? new Date(record.created_at).toLocaleDateString('pt-PT')
-                    : ''}</small>
+    list.innerHTML = documents.map(record => {
+        const signedUrl = urlById.get(record.id);
+        return `
+            <div class="documento-socio-item">
+                <div>
+                    <strong>📄 ${escapeHtml(record.nome_ficheiro || 'Documento PDF')}</strong>
+                    <small>${record.created_at
+                        ? new Date(record.created_at).toLocaleDateString('pt-PT')
+                        : ''}</small>
+                </div>
+                ${signedUrl ? `<a class="botao" href="${escapeHtml(signedUrl)}" target="_blank" rel="noopener">Abrir</a>` : ''}
             </div>
-            ${signedUrl ? `<a class="botao" href="${signedUrl}" target="_blank" rel="noopener">Abrir</a>` : ''}
         `;
-
-        list.appendChild(item);
-    }
+    }).join('');
 }
 
 async function uploadSocioPdf(file) {
@@ -590,6 +604,8 @@ function fillEditForms() {
 
     $('#edit-nome').value = s.nome || '';
     $('#edit-numero').value = s.numero_socio ?? '';
+    $('#edit-numero').readOnly = true;
+    $('#edit-numero').disabled = true;
     $('#edit-nascimento').value = s.data_nascimento || '';
     $('#edit-email').value = s.email || state.user?.email || '';
     $('#edit-morada').value = s.morada || '';
@@ -597,6 +613,15 @@ function fillEditForms() {
     $('#edit-arbitro').value = s.numero_arbitro || '';
     $('#edit-af').value = s.associacao_futebol || '';
     $('#edit-modalidade').value = s.modalidade || '';
+
+    const categoria = $('#edit-categoria');
+    if (categoria) {
+        const cats = CATEGORIAS_ARBITRAGEM[s.modalidade] || [];
+        categoria.innerHTML = '<option value="">Selecionar categoria</option>' +
+            cats.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+        categoria.disabled = !s.modalidade;
+        categoria.value = s.categoria || '';
+    }
 }
 
 function closeEditForms() {
@@ -644,16 +669,117 @@ async function savePersonalData() {
     });
 }
 
+const CATEGORIAS_ARBITRAGEM = {
+    Futebol: ['C1','C2','C3','C4','C4 Core','C5','C6','C7','Cj','CF1','CF2','CF3','CF4'],
+    Futsal: ['C1','C2','C3','C4','C5','C6','C7','Cj','CFF1','CFF2']
+};
+
+const ASSOCIACOES_FUTEBOL = [
+    'AF Algarve','AF Angra do Heroísmo','AF Aveiro','AF Beja','AF Braga',
+    'AF Bragança','AF Castelo Branco','AF Coimbra','AF Évora','AF Guarda',
+    'AF Horta','AF Leiria','AF Lisboa','AF Madeira','AF Ponta Delgada',
+    'AF Portalegre','AF Porto','AF Santarém','AF Setúbal',
+    'AF Viana do Castelo','AF Vila Real','AF Viseu'
+];
+
+async function loadAssociacoesFutebol() {
+    const select = $('#edit-af');
+    if (!select) return;
+
+    let rows = null;
+    try {
+        const { data, error } = await supabase.rpc('lista_associacoes_futebol');
+        if (!error && Array.isArray(data)) rows = data;
+    } catch (_) {}
+
+    const nomes = (rows?.length ? rows.map(r => r.nome) : ASSOCIACOES_FUTEBOL);
+    select.innerHTML = '<option value="">Selecionar Associação de Futebol</option>' +
+        nomes.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    select.value = state.socio?.associacao_futebol || '';
+}
+
+function setupArbitragemSelectors() {
+    const modalidade = $('#edit-modalidade');
+    const af = $('#edit-af');
+    const form = $('#arbitragem-edit-form');
+    if (!modalidade || !af || !form) return;
+
+    if (modalidade.tagName !== 'SELECT') {
+        const select = document.createElement('select');
+        select.id = 'edit-modalidade';
+        select.required = true;
+        modalidade.replaceWith(select);
+    }
+
+    const m = $('#edit-modalidade');
+    m.innerHTML = '<option value="">Selecionar modalidade</option>' +
+        '<option value="Futebol">Futebol</option>' +
+        '<option value="Futsal">Futsal</option>';
+    m.value = state.socio?.modalidade || '';
+
+    if (af.tagName !== 'SELECT') {
+        const select = document.createElement('select');
+        select.id = 'edit-af';
+        select.required = true;
+        af.replaceWith(select);
+    }
+
+    let categoria = $('#edit-categoria');
+    if (!categoria) {
+        const label = document.createElement('label');
+        label.innerHTML = 'Categoria <select id="edit-categoria" required></select>';
+        const grid = form.querySelector('.socio-edit-grid');
+        grid?.appendChild(label);
+        categoria = $('#edit-categoria');
+    }
+
+    const refreshCategoria = () => {
+        const cats = CATEGORIAS_ARBITRAGEM[m.value] || [];
+        categoria.innerHTML = '<option value="">Selecionar categoria</option>' +
+            cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        categoria.disabled = !m.value;
+        categoria.value = state.socio?.categoria && cats.includes(state.socio.categoria)
+            ? state.socio.categoria
+            : '';
+    };
+
+    if (!m.dataset.nafBound) {
+        m.dataset.nafBound = '1';
+        m.addEventListener('change', refreshCategoria);
+    }
+
+    refreshCategoria();
+    loadAssociacoesFutebol();
+}
+
 async function saveArbitragemData() {
-    await saveProfileFields({
-        data_nascimento: state.socio.data_nascimento,
-        morada: state.socio.morada,
-        email: state.socio.email || state.user.email,
-        telemovel: state.socio.telemovel,
-        numero_arbitro: $('#edit-arbitro').value || null,
-        associacao_futebol: $('#edit-af').value || null,
-        modalidade: $('#edit-modalidade').value || null
+    const modalidade = $('#edit-modalidade')?.value || '';
+    const categoria = $('#edit-categoria')?.value || '';
+    const associacao = $('#edit-af')?.value || '';
+    const numeroArbitro = $('#edit-arbitro').value.trim();
+
+    if (!CATEGORIAS_ARBITRAGEM[modalidade]) {
+        throw new Error('Seleciona Futebol ou Futsal.');
+    }
+    if (!CATEGORIAS_ARBITRAGEM[modalidade].includes(categoria)) {
+        throw new Error('Seleciona uma categoria válida para a modalidade.');
+    }
+    if (!ASSOCIACOES_FUTEBOL.includes(associacao)) {
+        throw new Error('Seleciona uma Associação de Futebol válida.');
+    }
+
+    const { data, error } = await supabase.rpc('atualizar_dados_arbitragem_socio', {
+        p_numero_arbitro: numeroArbitro || null,
+        p_associacao_futebol: associacao,
+        p_modalidade: modalidade,
+        p_categoria: categoria
     });
+
+    if (error) throw error;
+
+    state.socio = { ...state.socio, ...data };
+    renderProfile();
+    closeEditForms();
 }
 
 /* ---------------- ADMIN ---------------- */
@@ -716,11 +842,7 @@ async function functionError(error, fallback) {
 async function loadAdminSocios() {
     if (!state.admin || !$('#admin-socios-lista')) return;
 
-    const { data, error } = await supabase
-        .from('socios')
-        .select('id,numero_socio,nome,email,telemovel,ativo,user_id')
-        .order('numero_socio', { ascending: true });
-
+    const { data, error } = await supabase.rpc('admin_listar_socios');
     if (error) {
         $('#admin-socios-lista').innerHTML =
             `<div class="vazio">${escapeHtml(error.message)}</div>`;
@@ -729,17 +851,24 @@ async function loadAdminSocios() {
 
     const rows = data || [];
     state.adminSocios = rows;
+    setupAdminSocioActions();
 
     $('#admin-socios-lista').innerHTML = rows.length
         ? rows.map(s => `
-            <label class="admin-socio-row">
+            <div class="admin-socio-row" data-socio-id="${escapeHtml(s.id)}">
                 <input
                     class="admin-socio-select"
                     type="checkbox"
                     value="${escapeHtml(s.id)}"
                     data-name="${escapeHtml(s.nome || '')}"
                 >
-                <span class="admin-socio-numero">${escapeHtml(s.numero_socio)}</span>
+                <input
+                    class="admin-socio-numero-input"
+                    type="number"
+                    min="1"
+                    value="${escapeHtml(s.numero_socio)}"
+                    aria-label="Número de sócio"
+                >
                 <span class="admin-socio-main">
                     <strong>${escapeHtml(s.nome)}</strong>
                     <small>${escapeHtml(s.email || 'Sem email')} · ${escapeHtml(s.telemovel || 'Sem telemóvel')}</small>
@@ -747,7 +876,13 @@ async function loadAdminSocios() {
                 <span class="admin-socio-status ${s.ativo ? 'ativo' : 'inativo'}">
                     ${s.ativo ? 'Ativo' : 'Inativo'}
                 </span>
-            </label>
+                <label class="admin-socio-admin-toggle">
+                    <input type="checkbox" class="admin-is-admin" ${s.is_admin ? 'checked' : ''}>
+                    Admin
+                </label>
+                <button type="button" class="admin-small-btn admin-save-numero">Guardar nº</button>
+                <button type="button" class="admin-small-btn admin-email-individual">Email</button>
+            </div>
         `).join('')
         : '<div class="vazio">Ainda não existem sócios.</div>';
 
@@ -758,10 +893,88 @@ async function loadAdminSocios() {
             .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.numero_socio)} — ${escapeHtml(s.nome)}</option>`)
             .join('');
     }
+
+    updateAdminSelectionUI();
 }
 
 function selectedSocioIds() {
     return $$('.admin-socio-select:checked').map(el => el.value);
+}
+
+function setupAdminSocioActions() {
+    const root = $('#admin-socios-lista');
+    if (!root || root.dataset.adminActionsBound) return;
+    root.dataset.adminActionsBound = '1';
+
+    root.addEventListener('click', async (event) => {
+        const row = event.target.closest('[data-socio-id]');
+        if (!row) return;
+        const id = row.dataset.socioId;
+
+        if (event.target.classList.contains('admin-save-numero')) {
+            try {
+                event.target.disabled = true;
+                await assertAdmin();
+                const numero = Number(row.querySelector('.admin-socio-numero-input')?.value);
+                if (!Number.isInteger(numero) || numero <= 0) throw new Error('Número de sócio inválido.');
+                const { error } = await supabase.rpc('admin_alterar_numero_socio', {
+                    p_socio_id: id,
+                    p_novo_numero: numero
+                });
+                if (error) throw error;
+                await loadAdminSocios();
+                showMessage('Número de sócio atualizado.', 'sucesso');
+            } catch (error) {
+                showMessage(error.message || 'Não foi possível alterar o número.', 'erro');
+            } finally {
+                event.target.disabled = false;
+            }
+        }
+
+        if (event.target.classList.contains('admin-email-individual')) {
+            const socio = state.adminSocios.find(s => s.id === id);
+            if (!socio?.email) return showMessage('Este sócio não tem email registado.', 'erro');
+
+            const subject = prompt('Assunto do email:', 'Comunicação — Núcleo Marques Bom');
+            if (subject === null) return;
+            const message = prompt(`Mensagem para ${socio.nome}:`, '');
+            if (message === null) return;
+            if (!message.trim()) return showMessage('A mensagem não pode ficar vazia.', 'erro');
+
+            try {
+                event.target.disabled = true;
+                await invokeAdminMail({ action: 'individual', socio_id: id, subject, message });
+                showMessage(`Email enviado para ${socio.email}.`, 'sucesso');
+            } catch (error) {
+                showMessage(error.message || 'Falha no envio do email.', 'erro');
+            } finally {
+                event.target.disabled = false;
+            }
+        }
+    });
+
+    root.addEventListener('change', async (event) => {
+        if (!event.target.classList.contains('admin-is-admin')) return;
+        const row = event.target.closest('[data-socio-id]');
+        if (!row) return;
+
+        try {
+            event.target.disabled = true;
+            await assertAdmin();
+            const { error } = await supabase.rpc('admin_definir_admin', {
+                p_socio_id: row.dataset.socioId,
+                p_is_admin: event.target.checked
+            });
+            if (error) throw error;
+            await loadAdminSocios();
+            showMessage(event.target.checked ? 'Administrador atribuído.' : 'Administrador retirado.', 'sucesso');
+        } catch (error) {
+            event.target.checked = !event.target.checked;
+            showMessage(error.message || 'Não foi possível alterar a permissão.', 'erro');
+        } finally {
+            event.target.disabled = false;
+        }
+    });
 }
 
 function updateAdminSelectionUI() {
@@ -1144,6 +1357,7 @@ async function init() {
 
     $('#editar-arbitragem-btn')?.addEventListener('click', () => {
         fillEditForms();
+        setupArbitragemSelectors();
         $('#arbitragem-view').hidden = true;
         $('#arbitragem-edit-form').hidden = false;
         $('#editar-arbitragem-btn').hidden = true;
@@ -1191,6 +1405,11 @@ async function init() {
 
     $('#admin-select-all')?.addEventListener('change', (event) => {
         selectAllAdminSocios(event.currentTarget.checked);
+    });
+    $('#admin-select-all')?.addEventListener('click', (event) => {
+        if (event.currentTarget.type !== 'checkbox') {
+            selectAllAdminSocios(true);
+        }
     });
 
     $('#admin-socios-lista')?.addEventListener('change', (event) => {
