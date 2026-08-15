@@ -1,232 +1,56 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders, json } from '../_shared/cors.ts';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const MAIL_FROM = Deno.env.get('MAIL_FROM');
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
 
-async function getAdmin(req: Request) {
-  const authorization = req.headers.get('Authorization');
-  if (!authorization) throw new Error('Sessão não autenticada.');
+function base64(bytes:Uint8Array){let binary="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));return btoa(binary);}
 
-  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authorization } }
-  });
-
-  const { data: { user }, error: userError } = await authClient.auth.getUser();
-  if (userError || !user) throw new Error('Sessão inválida.');
-
-  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const { data: admin, error } = await adminClient
-    .from('socios')
-    .select('id,numero_socio,is_admin,ativo')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!admin || Number(admin.numero_socio) !== 9999 || admin.is_admin !== true || admin.ativo !== true) {
-    throw new Error('Acesso reservado ao administrador.');
-  }
-
-  return { user, adminClient };
-}
-
-function htmlEscape(value: string) {
-  return value.replace(/[&<>'"]/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  }[c]));
-}
-
-async function resendEmail(params: {
-  to: string;
-  subject: string;
-  html: string;
-  attachment?: { filename: string; content: string };
-}) {
-  if (!RESEND_API_KEY || !MAIL_FROM) {
-    throw new Error('Configure RESEND_API_KEY e MAIL_FROM nos secrets do Supabase.');
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: MAIL_FROM,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-      ...(params.attachment ? { attachments: [params.attachment] } : {})
-    })
-  });
-
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(result?.message || 'O fornecedor de email recusou o envio.');
-  }
-  return result;
-}
-
-async function sendToSocios(adminClient: any, socios: any[], subject: string, html: string, attachment?: { filename: string; content: string }) {
-  let enviados = 0;
-  const erros: string[] = [];
-
-  for (const socio of socios) {
-    if (!socio.email) continue;
-    try {
-      await resendEmail({
-        to: socio.email,
-        subject,
-        html,
-        attachment
-      });
-      enviados++;
-    } catch (error) {
-      erros.push(`${socio.numero_socio ?? socio.email}: ${error instanceof Error ? error.message : String(error)}`);
+Deno.serve(async req=>{
+  if(req.method==='OPTIONS')return new Response('ok',{headers:cors});
+  try{
+    const auth=req.headers.get('Authorization');
+    if(!auth?.startsWith('Bearer '))return json({error:'Não autenticado.'},401);
+    const url=Deno.env.get('SUPABASE_URL')||'';
+    const anon=Deno.env.get('SUPABASE_ANON_KEY')||Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||'';
+    const secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||Deno.env.get('SUPABASE_SECRET_KEY')||'';
+    const resend=Deno.env.get('RESEND_API_KEY')||'';
+    const from=Deno.env.get('MAIL_FROM')||'Núcleo Marques Bom <nucleomarquesbom@gmail.com>';
+    if(!url||!anon||!secret)return json({error:'Configuração Supabase incompleta.'},500);
+    if(!resend)return json({error:'RESEND_API_KEY não está configurada no Supabase.'},500);
+    const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}},auth:{persistSession:false,autoRefreshToken:false}});
+    const {data:u,error:ue}=await userClient.auth.getUser();
+    if(ue||!u.user)return json({error:'Sessão inválida.'},401);
+    const admin=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data:me,error:meError}=await admin.from('socios').select('id,is_admin,ativo').eq('user_id',u.user.id).eq('ativo',true).single();
+    if(meError||!me?.is_admin)return json({error:'Apenas administradores podem enviar emails.'},403);
+    let body:any={};let attachment:any=null;
+    if((req.headers.get('content-type')||'').includes('multipart/form-data')){
+      const form=await req.formData();body.action=String(form.get('action')||'');body.subject=String(form.get('subject')||'');body.message=String(form.get('message')||'');
+      const file=form.get('documento');if(file instanceof File){if(file.size>10*1024*1024)return json({error:'O PDF não pode ultrapassar 10 MB.'},400);attachment={filename:file.name,content:base64(new Uint8Array(await file.arrayBuffer()))};}
+    }else body=await req.json();
+    let recipients:any[]=[];
+    if(body.action==='individual'){
+      const {data:s,error}=await admin.from('socios').select('id,nome,email').eq('id',body.socio_id).eq('ativo',true).single();
+      if(error||!s?.email)return json({error:'Sócio sem email ou inexistente.'},400);
+      if(!String(body.message||'').trim())return json({error:'Escreve o conteúdo do email.'},400);
+      recipients=[s];
+    }else if(body.action==='quotas_em_atraso'){
+      const ids=Array.isArray(body.socio_ids)?body.socio_ids:[];if(!ids.length)return json({error:'Nenhum sócio selecionado.'},400);
+      const {data:socios,error:sErr}=await admin.from('socios').select('id,nome,email').in('id',ids).eq('ativo',true);if(sErr)return json({error:sErr.message},500);
+      const {data:q,error:qErr}=await admin.from('quotas').select('socio_id,ano,valor,estado').in('socio_id',ids).in('estado',['em_atraso','atrasada','atrasado','vencida','vencido']);if(qErr)return json({error:qErr.message},500);
+      recipients=(socios||[]).map(s=>({...s,quotas:(q||[]).filter(x=>x.socio_id===s.id)})).filter(s=>s.email&&s.quotas.length);
+    }else if(body.action==='documento_todos'){
+      if(!attachment)return json({error:'Seleciona um documento PDF.'},400);
+      const {data:socios,error:sErr}=await admin.from('socios').select('id,nome,email').eq('ativo',true).not('email','is',null);if(sErr)return json({error:sErr.message},500);recipients=socios||[];
+    }else return json({error:'Ação de email inválida.'},400);
+    let sent=0,failed=0;
+    for(const r of recipients){
+      let text=String(body.message||'').trim();
+      if(body.action==='quotas_em_atraso'){const total=(r.quotas||[]).reduce((a:number,x:any)=>a+Number(x.valor||0),0);const anos=[...new Set((r.quotas||[]).map((x:any)=>x.ano))].sort().join(', ');text=`Olá ${r.nome},\n\nVerificámos que existem quotas em atraso na sua conta de sócio.\n\nValor atualmente em atraso: ${total.toFixed(2)} €\nAnos em atraso: ${anos||'—'}\n\nSe já regularizou a situação, por favor envie o comprovativo através da Área de Sócios.\n\nCom os melhores cumprimentos,\nNúcleo de Árbitros de Futebol Marques Bom`;}
+      const payload:any={from,to:[r.email],subject:String(body.subject||'Núcleo Marques Bom — Comunicação').trim(),text};if(attachment)payload.attachments=[attachment];
+      const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json'},body:JSON.stringify(payload)});if(response.ok)sent++;else failed++;
     }
-  }
-
-  return { enviados, erros };
-}
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-
-  try {
-    const { adminClient } = await getAdmin(req);
-
-    const contentType = req.headers.get('content-type') || '';
-
-    if (contentType.includes('multipart/form-data')) {
-      const form = await req.formData();
-      const action = String(form.get('action') || '');
-
-      if (action !== 'documento_todos') {
-        return json({ error: 'Ação multipart inválida.' }, 400);
-      }
-
-      const file = form.get('documento');
-      if (!(file instanceof File) || !file.type.includes('pdf')) {
-        return json({ error: 'O documento deve ser um PDF.' }, 400);
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        return json({ error: 'O PDF não pode ultrapassar 10 MB.' }, 400);
-      }
-
-      const subject = String(form.get('subject') || 'Comunicação — Núcleo Marques Bom').trim();
-      const message = String(form.get('message') || '').trim();
-      if (!message) return json({ error: 'A mensagem não pode ficar vazia.' }, 400);
-
-      const { data: socios, error } = await adminClient
-        .from('socios')
-        .select('id,nome,numero_socio,email,ativo')
-        .eq('ativo', true)
-        .not('email', 'is', null)
-        .order('numero_socio', { ascending: true });
-
-      if (error) throw error;
-      if (!socios?.length) return json({ error: 'Não existem sócios ativos com email.' }, 400);
-
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      let binary = '';
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-      }
-
-      const attachment = {
-        filename: file.name,
-        content: btoa(binary)
-      };
-
-      const html = `<p>${htmlEscape(message).replace(/\n/g, '<br>')}</p><p>Com os melhores cumprimentos,<br>Núcleo de Árbitros de Futebol Marques Bom</p>`;
-      return json(await sendToSocios(adminClient, socios, subject, html, attachment));
-    }
-
-    const body = await req.json();
-
-    if (body.action === 'quotas_em_atraso') {
-      const ids = Array.isArray(body.socio_ids) ? body.socio_ids : [];
-      if (!ids.length) return json({ error: 'Nenhum sócio selecionado.' }, 400);
-
-      const { data: socios, error } = await adminClient
-        .from('socios')
-        .select('id,nome,numero_socio,email,quotas,ativo')
-        .in('id', ids)
-        .eq('ativo', true)
-        .not('email', 'is', null);
-
-      if (error) throw error;
-
-      const elegiveis = (socios || []).filter((s: any) => {
-        const status = String(s.quotas || '').trim().toLowerCase();
-        return status && !['em dia', 'pago', 'pagas', 'paga', 'liquidado', 'liquidadas', 'regularizado'].includes(status);
-      });
-
-      if (!elegiveis.length) return json({ enviados: 0, erros: [], mensagem: 'Não foram encontrados sócios com quotas em atraso.' });
-
-      const htmlFor = (socio: any) =>
-        `<p>Olá ${htmlEscape(socio.nome || '')},</p>` +
-        `<p>Verificámos que o seu registo apresenta quotas em atraso.</p>` +
-        `<p>Agradecemos a regularização da situação. Se o pagamento já foi efetuado, contacte o Núcleo para atualização do registo.</p>` +
-        `<p>Com os melhores cumprimentos,<br>Núcleo de Árbitros de Futebol Marques Bom</p>`;
-
-      let enviados = 0;
-      const erros: string[] = [];
-      for (const socio of elegiveis) {
-        try {
-          await resendEmail({
-            to: socio.email,
-            subject: 'Quotas em atraso — Núcleo Marques Bom',
-            html: htmlFor(socio)
-          });
-          enviados++;
-        } catch (error) {
-          erros.push(`${socio.numero_socio}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-
-      return json({ enviados, erros });
-    }
-
-    if (body.action === 'funlearn_pontos_retirados') {
-      const socioId = String(body.socio_id || '');
-      const pontos = Number(body.pontos);
-      const motivo = String(body.motivo || '').trim();
-
-      if (!socioId || !Number.isInteger(pontos) || pontos <= 0 || !motivo) {
-        return json({ error: 'Dados inválidos.' }, 400);
-      }
-
-      const { data: socio, error } = await adminClient
-        .from('socios')
-        .select('id,nome,email,numero_socio')
-        .eq('id', socioId)
-        .single();
-
-      if (error) throw error;
-      if (!socio.email) return json({ enviados: 0, mensagem: 'Sócio sem email.' });
-
-      const result = await resendEmail({
-        to: socio.email,
-        subject: 'Atualização de pontos Fun&Learn — Núcleo Marques Bom',
-        html:
-          `<p>Olá ${htmlEscape(socio.nome || '')},</p>` +
-          `<p>Informamos que foram retirados <strong>${pontos}</strong> ponto(s) do seu saldo Fun&amp;Learn.</p>` +
-          `<p><strong>Motivo:</strong> ${htmlEscape(motivo)}</p>` +
-          `<p>Se precisar de esclarecimentos, contacte o Núcleo.</p>` +
-          `<p>Com os melhores cumprimentos,<br>Núcleo de Árbitros de Futebol Marques Bom</p>`
-      });
-
-      return json({ enviados: 1, result });
-    }
-
-    return json({ error: 'Ação desconhecida.' }, 400);
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
-  }
+    return json({ok:true,sent,failed,total:recipients.length});
+  }catch(e){return json({error:e instanceof Error?e.message:String(e)},500)}
 });
