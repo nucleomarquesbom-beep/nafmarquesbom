@@ -855,20 +855,25 @@ async function loadAdminSocios() {
 
     $('#admin-socios-lista').innerHTML = rows.length
         ? rows.map(s => `
-            <div class="admin-socio-row" data-socio-id="${escapeHtml(s.id)}">
+            <div class="admin-socio-row" data-socio-id="${escapeHtml(s.id)}" data-numero-original="${escapeHtml(s.numero_socio)}">
                 <input
                     class="admin-socio-select"
                     type="checkbox"
                     value="${escapeHtml(s.id)}"
                     data-name="${escapeHtml(s.nome || '')}"
+                    aria-label="Selecionar ${escapeHtml(s.nome || 'sócio')}"
                 >
-                <input
-                    class="admin-socio-numero-input"
-                    type="number"
-                    min="1"
-                    value="${escapeHtml(s.numero_socio)}"
-                    aria-label="Número de sócio"
-                >
+                <div class="admin-socio-number-cell">
+                    <span class="admin-socio-number-display">${escapeHtml(s.numero_socio)}</span>
+                    <input class="admin-socio-numero-input" type="number" min="1"
+                           value="${escapeHtml(s.numero_socio)}"
+                           aria-label="Número de sócio" hidden>
+                    <button type="button" class="admin-small-btn admin-edit-numero">Alterar nº</button>
+                    <div class="admin-numero-confirm" hidden>
+                        <button type="button" class="admin-small-btn admin-confirm-numero">Confirmar</button>
+                        <button type="button" class="admin-small-btn admin-cancel-numero">Cancelar</button>
+                    </div>
+                </div>
                 <span class="admin-socio-main">
                     <strong>${escapeHtml(s.nome)}</strong>
                     <small>${escapeHtml(s.email || 'Sem email')} · ${escapeHtml(s.telemovel || 'Sem telemóvel')}</small>
@@ -880,8 +885,6 @@ async function loadAdminSocios() {
                     <input type="checkbox" class="admin-is-admin" ${s.is_admin ? 'checked' : ''}>
                     Admin
                 </label>
-                <button type="button" class="admin-small-btn admin-save-numero">Guardar nº</button>
-                <button type="button" class="admin-small-btn admin-email-individual">Email</button>
             </div>
         `).join('')
         : '<div class="vazio">Ainda não existem sócios.</div>';
@@ -909,14 +912,48 @@ function setupAdminSocioActions() {
     root.addEventListener('click', async (event) => {
         const row = event.target.closest('[data-socio-id]');
         if (!row) return;
-        const id = row.dataset.socioId;
 
-        if (event.target.classList.contains('admin-save-numero')) {
+        const id = row.dataset.socioId;
+        const input = row.querySelector('.admin-socio-numero-input');
+        const display = row.querySelector('.admin-socio-number-display');
+        const editBtn = row.querySelector('.admin-edit-numero');
+        const confirmBox = row.querySelector('.admin-numero-confirm');
+
+        if (event.target.classList.contains('admin-edit-numero')) {
+            input.hidden = false;
+            display.hidden = true;
+            editBtn.hidden = true;
+            confirmBox.hidden = false;
+            input.focus();
+            input.select();
+            return;
+        }
+
+        if (event.target.classList.contains('admin-cancel-numero')) {
+            input.value = row.dataset.numeroOriginal;
+            input.hidden = true;
+            display.hidden = false;
+            editBtn.hidden = false;
+            confirmBox.hidden = true;
+            return;
+        }
+
+        if (event.target.classList.contains('admin-confirm-numero')) {
             try {
                 event.target.disabled = true;
                 await assertAdmin();
-                const numero = Number(row.querySelector('.admin-socio-numero-input')?.value);
-                if (!Number.isInteger(numero) || numero <= 0) throw new Error('Número de sócio inválido.');
+                const numero = Number(input?.value);
+                if (!Number.isInteger(numero) || numero <= 0) {
+                    throw new Error('Número de sócio inválido.');
+                }
+                const original = Number(row.dataset.numeroOriginal);
+                if (numero === original) {
+                    row.querySelector('.admin-cancel-numero')?.click();
+                    return;
+                }
+                if (!window.confirm(`Confirmar alteração do número de sócio de ${original} para ${numero}?`)) {
+                    return;
+                }
                 const { error } = await supabase.rpc('admin_alterar_numero_socio', {
                     p_socio_id: id,
                     p_novo_numero: numero
@@ -930,34 +967,12 @@ function setupAdminSocioActions() {
                 event.target.disabled = false;
             }
         }
-
-        if (event.target.classList.contains('admin-email-individual')) {
-            const socio = state.adminSocios.find(s => s.id === id);
-            if (!socio?.email) return showMessage('Este sócio não tem email registado.', 'erro');
-
-            const subject = prompt('Assunto do email:', 'Comunicação — Núcleo Marques Bom');
-            if (subject === null) return;
-            const message = prompt(`Mensagem para ${socio.nome}:`, '');
-            if (message === null) return;
-            if (!message.trim()) return showMessage('A mensagem não pode ficar vazia.', 'erro');
-
-            try {
-                event.target.disabled = true;
-                await invokeAdminMail({ action: 'individual', socio_id: id, subject, message });
-                showMessage(`Email enviado para ${socio.email}.`, 'sucesso');
-            } catch (error) {
-                showMessage(error.message || 'Falha no envio do email.', 'erro');
-            } finally {
-                event.target.disabled = false;
-            }
-        }
     });
 
     root.addEventListener('change', async (event) => {
         if (!event.target.classList.contains('admin-is-admin')) return;
         const row = event.target.closest('[data-socio-id]');
         if (!row) return;
-
         try {
             event.target.disabled = true;
             await assertAdmin();
@@ -1010,6 +1025,56 @@ async function sendQuotasEmAtraso() {
         action: 'quotas_em_atraso',
         socio_ids: ids
     });
+}
+
+async function sendEmailSelecionados() {
+    const ids = selectedSocioIds();
+    if (!ids.length) throw new Error('Selecione pelo menos um sócio.');
+
+    const subject = $('#admin-documento-assunto')?.value?.trim();
+    const message = $('#admin-documento-mensagem')?.value?.trim();
+
+    if (!subject) throw new Error('Indique o assunto do email.');
+    if (!message) throw new Error('Escreva o conteúdo do email.');
+
+    return invokeAdminMail({
+        action: 'email_selecionados',
+        socio_ids: ids,
+        subject,
+        message
+    });
+}
+
+async function sendComunicacaoSelecionados(file) {
+    const ids = selectedSocioIds();
+    if (!ids.length) throw new Error('Selecione pelo menos um sócio.');
+
+    const subject = $('#admin-documento-assunto')?.value?.trim();
+    const message = $('#admin-documento-mensagem')?.value?.trim();
+    if (!subject) throw new Error('Indique o assunto do email.');
+    if (!message) throw new Error('Escreva o conteúdo do email.');
+
+    if (!(file instanceof File)) return sendEmailSelecionados();
+
+    const session = await assertAdmin();
+    const form = new FormData();
+    form.append('action', 'documento_selecionados');
+    ids.forEach(id => form.append('socio_ids[]', id));
+    form.append('subject', subject);
+    form.append('message', message);
+    form.append('documento', file);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-mail`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: SUPABASE_ANON_KEY
+        },
+        body: form
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Falha no envio da comunicação.');
+    return data;
 }
 
 async function sendDocumentoTodos(file) {
@@ -1431,8 +1496,11 @@ async function init() {
     $('#admin-quotas-atraso')?.addEventListener('click', async () => {
         try {
             $('#admin-quotas-atraso').disabled = true;
-            await sendQuotasEmAtraso();
-            showMessage('Email de quotas em atraso enviado aos sócios selecionados.', 'sucesso');
+            const result = await sendQuotasEmAtraso();
+            showMessage(
+                `${result?.sent || 0} email(s) de quotas em atraso enviado(s).`,
+                'sucesso'
+            );
         } catch (error) {
             showMessage(error.message || 'Não foi possível enviar os emails.', 'erro');
         } finally {
@@ -1440,16 +1508,59 @@ async function init() {
         }
     });
 
-    $('#admin-documento-form')?.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    $('#admin-enviar-email-selecionados')?.addEventListener('click', () => {
+        const form = $('#admin-comunicacao-form');
+        if (!form) return;
+        form.hidden = false;
+        form.dataset.mode = 'email';
+        const title = form.querySelector('.admin-comunicacao-heading h4');
+        if (title) title.textContent = 'Enviar email aos sócios selecionados';
+        const file = $('#admin-documento-file');
+        if (file) file.value = '';
+        const fileLabel = file?.closest('label');
+        if (fileLabel) fileLabel.hidden = true;
+        $('#admin-enviar-comunicacao').textContent = 'Enviar email aos selecionados';
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    $('#admin-enviar-documento-selecionados')?.addEventListener('click', () => {
+        const form = $('#admin-comunicacao-form');
+        if (!form) return;
+        form.hidden = false;
+        form.dataset.mode = 'documento';
+        const title = form.querySelector('.admin-comunicacao-heading h4');
+        if (title) title.textContent = 'Enviar comunicação aos sócios selecionados';
+        const fileLabel = $('#admin-documento-file')?.closest('label');
+        if (fileLabel) fileLabel.hidden = false;
+        $('#admin-enviar-comunicacao').textContent = 'Enviar comunicação';
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    $('#admin-cancelar-comunicacao')?.addEventListener('click', () => {
+        const form = $('#admin-comunicacao-form');
+        if (form) form.hidden = true;
+    });
+
+    $('#admin-enviar-comunicacao')?.addEventListener('click', async () => {
+        const form = $('#admin-comunicacao-form');
+        const mode = form?.dataset.mode || 'email';
         const file = $('#admin-documento-file')?.files?.[0];
 
         try {
-            await sendDocumentoTodos(file);
-            event.currentTarget.reset();
-            showMessage('Documento enviado para toda a lista de sócios.', 'sucesso');
+            $('#admin-enviar-comunicacao').disabled = true;
+            const result = mode === 'documento'
+                ? await sendComunicacaoSelecionados(file)
+                : await sendEmailSelecionados();
+
+            showMessage(
+                `${result?.sent || 0} comunicação(ões) enviada(s).`,
+                'sucesso'
+            );
+            if (form) form.hidden = true;
         } catch (error) {
-            showMessage(error.message || 'Não foi possível enviar o documento.', 'erro');
+            showMessage(error.message || 'Não foi possível enviar a comunicação.', 'erro');
+        } finally {
+            $('#admin-enviar-comunicacao').disabled = false;
         }
     });
 
