@@ -970,6 +970,56 @@
                 </div>
 
 
+                <!-- QUOTAS EM DÍVIDA — EXCEL -->
+
+                <div class="admin-subpanel admin-excel-panel" id="admin-excel-panel">
+                    <div class="admin-excel-heading">
+                        <div>
+                            <span class="admin-eyebrow">GESTÃO DE QUOTAS</span>
+                            <h3>Quotas em dívida — Excel</h3>
+                            <p>
+                                Importe a dívida anual dos sócios ou exporte a situação atual.
+                                A quota anual é de <strong>12 €</strong>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="admin-excel-card">
+                        <div class="admin-excel-column">
+                            <label class="admin-excel-label" for="quota-excel-file">
+                                Ficheiro Excel de dívida
+                            </label>
+                            <input
+                                id="quota-excel-file"
+                                class="admin-file-input"
+                                type="file"
+                                accept=".xlsx,.xls"
+                            >
+                            <small class="admin-help">
+                                Colunas: Nº Sócio, Nome, Valor em dívida total.
+                                O valor deve ser múltiplo de 12 €.
+                            </small>
+                        </div>
+
+                        <div class="admin-excel-actions">
+                            <button id="btn-quota-excel-preview" class="admin-small-btn admin-excel-primary" type="button">
+                                Validar ficheiro
+                            </button>
+                            <button id="btn-quota-excel-import" class="admin-small-btn" type="button" disabled>
+                                Importar dívida
+                            </button>
+                            <button id="btn-quota-excel-export" class="admin-small-btn admin-excel-export" type="button">
+                                Exportar Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="quota-excel-summary" class="admin-selected-count"></div>
+                    <div id="quota-excel-preview" class="admin-preview"></div>
+                    <div id="quota-excel-result" class="admin-result" hidden></div>
+                </div>
+
+
                 <!-- DOCUMENTO PARA TODOS -->
 
                 <div class="admin-subpanel">
@@ -1234,13 +1284,11 @@
     </div>
 
 </footer>
-
 <script
     type="module"
     src="js/socio.js?v=20260813-1"
 ></script>
 <script src="js/dr-arbitro.js?v=20260813-5" defer></script>
-<script src="js/admin-excel.js?v=20260815-3" defer></script>
-
+<script src="js/admin-excel.js?v=20260815-4" defer></script>
 </body>
 </html>
