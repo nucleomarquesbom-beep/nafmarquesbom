@@ -1,60 +1,245 @@
-/* Quotas Excel — integrado na Área do Administrador */
+/* NAF — Quotas por Excel
+   O painel existe diretamente no socio.html; este ficheiro apenas liga os controlos.
+*/
 (() => {
-  'use strict';
-  const $=id=>document.getElementById(id);
-  const client=()=>window.__NAF_SUPABASE;
-  let rows=[];
+    'use strict';
 
-  const xlsx=async()=>{if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Não foi possível carregar o leitor de Excel.'));document.head.appendChild(s);});};
+    const $ = id => document.getElementById(id);
+    const getClient = () => window.__NAF_SUPABASE;
+    let rows = [];
 
-  function panel(){
-    if(!$('admin-panel')||$('admin-excel-final-panel'))return;
-    const p=document.createElement('div');p.id='admin-excel-final-panel';p.className='admin-subpanel';
-    p.innerHTML=`<h3>Quotas em dívida — Excel</h3>
-      <p>Quota anual: 12 €. O valor importado tem de ser múltiplo de 12 €.</p>
-      <label>Ficheiro Excel <input id="quota-excel-file" type="file" accept=".xlsx,.xls"></label>
-      <div class="admin-selection-bar">
-        <button id="btn-quota-excel-preview" class="admin-small-btn" type="button">Validar Excel</button>
-        <button id="btn-quota-excel-import" class="admin-small-btn" type="button" disabled>Importar dívida</button>
-        <button id="btn-quota-excel-export" class="admin-small-btn" type="button">Exportar quotas em dívida</button>
-      </div>
-      <div id="quota-excel-summary" class="admin-selected-count"></div>
-      <div id="quota-excel-preview" class="admin-preview"></div>
-      <div id="quota-excel-result" class="admin-result" hidden></div>`;
-    $('admin-panel').appendChild(p);
-    $('btn-quota-excel-preview').onclick=()=>preview().catch(e=>result(e.message,'erro'));
-    $('btn-quota-excel-import').onclick=()=>doImport().catch(e=>result(e.message,'erro'));
-    $('btn-quota-excel-export').onclick=()=>doExport().catch(e=>result(e.message,'erro'));
-  }
-  function result(t,type='sucesso'){const e=$('quota-excel-result');if(e){e.textContent=t;e.className=`admin-result ${type}`;e.hidden=false;}}
-  const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  function head(h,aliases){const n=h.map(norm);for(const a of aliases){const i=n.indexOf(norm(a));if(i>=0)return h[i]}return null}
-  async function preview(){
-    const f=$('quota-excel-file')?.files?.[0];if(!f)throw new Error('Seleciona um ficheiro Excel.');
-    await xlsx();
-    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]};
-    const data=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});if(!data.length)throw new Error('A primeira folha está vazia.');
-    const h=Object.keys(data[0]), hn=head(h,['Nº Sócio','Nº Socio','Número Sócio','Numero Socio']), ho=head(h,['Nome']), hv=head(h,['Valor em dívida total','Valor Divida Total','Valor em divida total']);
-    if(!hn||!ho||!hv)throw new Error('O Excel precisa das colunas Nº Sócio, Nome e Valor em dívida total.');
-    const errors=[];rows=data.map((r,i)=>{const n=Number(String(r[hn]).trim()),nome=String(r[ho]).trim(),v=Number(String(r[hv]).trim().replace(/\s/g,'').replace(',','.'));if(!Number.isInteger(n)||n<=0)errors.push(`Linha ${i+2}: nº inválido`);if(!nome)errors.push(`Linha ${i+2}: nome vazio`);if(!Number.isFinite(v)||v<=0||Math.abs(v%12)>1e-6)errors.push(`Linha ${i+2}: valor tem de ser múltiplo de 12 €`);return {numero_socio:n,nome,valor_divida:v}}).filter(r=>r.numero_socio&&r.nome&&r.valor_divida>0&&Math.abs(r.valor_divida%12)<1e-6);
-    $('quota-excel-summary').textContent=`${data.length} linhas • ${rows.length} válidas • ${errors.length} erros`;
-    $('quota-excel-preview').innerHTML=rows.slice(0,100).map(r=>`<div>${r.numero_socio} — ${r.nome} — ${r.valor_divida.toFixed(2)} €</div>`).join('')+errors.map(e=>`<div>ERRO: ${e}</div>`).join('');
-    $('btn-quota-excel-import').disabled=!!errors.length||!rows.length;
-    if(errors.length)throw new Error('Corrige os erros indicados antes de importar.');
-    result('Excel validado.');
-  }
-  async function doImport(){
-    const c=client();if(!c)throw new Error('Supabase indisponível.');
-    const {data,error}=await c.rpc('admin_importar_divida_anual_excel',{p_rows:rows,p_ano_inicial:new Date().getFullYear()});if(error)throw error;
-    result(`Importação concluída: ${data.quotas_geradas} quotas processadas.`);
-    rows=[];
-  }
-  async function doExport(){
-    const c=client();if(!c)throw new Error('Supabase indisponível.');
-    await xlsx();const {data,error}=await c.rpc('admin_exportar_divida_anual_excel',{p_ano_inicial:new Date().getFullYear()});if(error)throw error;
-    const rows=(data||[]).map(r=>({'Nº Sócio':r.numero_socio,'Nome':r.nome,'Valor em dívida total':Number(r.valor_divida_total||0)}));
-    const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quotas em dívida');XLSX.writeFile(wb,'quotas-em-divida.xlsx');result(`Exportação concluída: ${rows.length} sócio(s).`);
-  }
-  const boot=()=>{panel();const a=$('admin-panel');if(a)new MutationObserver(panel).observe(a,{attributes:true,attributeFilter:['hidden']})};
-  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot,{once:true}):boot();
+    function show(message, type = 'sucesso') {
+        const box = $('quota-excel-result');
+        if (!box) return;
+        box.textContent = message;
+        box.className = `admin-result ${type}`;
+        box.hidden = false;
+    }
+
+    async function loadXLSX() {
+        if (window.XLSX) return;
+
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+            script.onload = resolve;
+            script.onerror = () => reject(
+                new Error('Não foi possível carregar o leitor de Excel.')
+            );
+            document.head.appendChild(script);
+        });
+    }
+
+    const normalize = value => String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+
+    function findHeader(headers, aliases) {
+        const normalized = headers.map(normalize);
+        for (const alias of aliases) {
+            const index = normalized.indexOf(normalize(alias));
+            if (index >= 0) return headers[index];
+        }
+        return null;
+    }
+
+    function bind() {
+        if (!$('admin-excel-panel') || $('admin-excel-panel').dataset.bound) return;
+        $('admin-excel-panel').dataset.bound = '1';
+
+        $('btn-quota-excel-preview')?.addEventListener('click', () => {
+            preview().catch(error => show(error.message, 'erro'));
+        });
+
+        $('btn-quota-excel-import')?.addEventListener('click', () => {
+            importDebt().catch(error => show(error.message, 'erro'));
+        });
+
+        $('btn-quota-excel-export')?.addEventListener('click', () => {
+            exportDebt().catch(error => show(error.message, 'erro'));
+        });
+    }
+
+    async function preview() {
+        const file = $('quota-excel-file')?.files?.[0];
+        if (!file) throw new Error('Seleciona um ficheiro Excel.');
+
+        await loadXLSX();
+
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(firstSheet, {
+            defval: '',
+            raw: false
+        });
+
+        if (!data.length) throw new Error('A primeira folha está vazia.');
+
+        const headers = Object.keys(data[0]);
+        const hNumero = findHeader(headers, [
+            'Nº Sócio', 'Nº Socio', 'Número Sócio', 'Numero Socio', 'numero_socio'
+        ]);
+        const hNome = findHeader(headers, ['Nome', 'Nome Completo']);
+        const hValor = findHeader(headers, [
+            'Valor em dívida total',
+            'Valor Divida Total',
+            'Valor em divida total',
+            'Valor Divida',
+            'Divida Total'
+        ]);
+
+        if (!hNumero || !hNome || !hValor) {
+            throw new Error(
+                'O Excel precisa das colunas Nº Sócio, Nome e Valor em dívida total.'
+            );
+        }
+
+        rows = [];
+        const errors = [];
+
+        data.forEach((record, index) => {
+            const line = index + 2;
+            const numero = Number(String(record[hNumero] ?? '').trim());
+            const nome = String(record[hNome] ?? '').trim();
+            const valor = Number(
+                String(record[hValor] ?? '')
+                    .trim()
+                    .replace(/\s/g, '')
+                    .replace(',', '.')
+            );
+
+            if (!Number.isInteger(numero) || numero <= 0) {
+                errors.push(`Linha ${line}: Nº Sócio inválido.`);
+                return;
+            }
+
+            if (!nome) {
+                errors.push(`Linha ${line}: Nome vazio.`);
+                return;
+            }
+
+            if (!Number.isFinite(valor) || valor <= 0) {
+                errors.push(`Linha ${line}: Valor em dívida inválido.`);
+                return;
+            }
+
+            if (Math.abs(valor % 12) > 0.000001) {
+                errors.push(`Linha ${line}: Valor em dívida tem de ser múltiplo de 12 €.`);
+                return;
+            }
+
+            rows.push({
+                numero_socio: numero,
+                nome,
+                valor_divida: Number(valor.toFixed(2))
+            });
+        });
+
+        $('quota-excel-summary').textContent =
+            `${data.length} linhas · ${rows.length} válidas · ${errors.length} erros`;
+
+        $('quota-excel-preview').innerHTML =
+            rows.slice(0, 100).map(row => `
+                <div class="admin-excel-preview-row">
+                    <strong>${row.numero_socio}</strong>
+                    <span>${escapeHtml(row.nome)}</span>
+                    <span>${row.valor_divida.toFixed(2)} €</span>
+                    <span>${Math.round(row.valor_divida / 12)} ano(s)</span>
+                </div>
+            `).join('') +
+            errors.slice(0, 50).map(error => `
+                <div class="admin-excel-preview-row admin-excel-error">
+                    <strong>ERRO</strong>
+                    <span>${escapeHtml(error)}</span>
+                </div>
+            `).join('');
+
+        $('btn-quota-excel-import').disabled = rows.length === 0 || errors.length > 0;
+
+        if (errors.length) {
+            throw new Error('Corrige os erros indicados antes de importar.');
+        }
+
+        show('Excel validado. Pode importar a dívida.');
+    }
+
+    async function importDebt() {
+        const client = getClient();
+        if (!client) throw new Error('Ligação à BD indisponível.');
+        if (!rows.length) throw new Error('Valida primeiro o Excel.');
+
+        const { data, error } = await client.rpc(
+            'admin_importar_divida_anual_excel',
+            {
+                p_rows: rows,
+                p_ano_inicial: new Date().getFullYear()
+            }
+        );
+
+        if (error) throw error;
+
+        show(
+            `Importação concluída: ${Number(data?.linhas_excel || rows.length)} sócio(s), ` +
+            `${Number(data?.quotas_geradas || 0)} quotas anuais processadas.`
+        );
+
+        rows = [];
+        $('btn-quota-excel-import').disabled = true;
+        $('quota-excel-file').value = '';
+    }
+
+    async function exportDebt() {
+        const client = getClient();
+        if (!client) throw new Error('Ligação à BD indisponível.');
+
+        await loadXLSX();
+
+        const { data, error } = await client.rpc(
+            'admin_exportar_divida_anual_excel',
+            { p_ano_inicial: new Date().getFullYear() }
+        );
+
+        if (error) throw error;
+
+        const rowsExport = (data || []).map(row => ({
+            'Nº Sócio': row.numero_socio,
+            'Nome': row.nome,
+            'Valor em dívida total': Number(row.valor_divida_total || 0)
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rowsExport);
+        const workbook = XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(
+            workbook,
+            worksheet,
+            'Quotas em dívida'
+        );
+
+        XLSX.writeFile(workbook, 'quotas-em-divida.xlsx');
+
+        show(`Exportação concluída: ${rowsExport.length} sócio(s).`);
+    }
+
+    function escapeHtml(value = '') {
+        return String(value).replace(/[&<>'"]/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[char]));
+    }
+
+    function boot() {
+        bind();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot, { once: true });
+    } else {
+        boot();
+    }
 })();
