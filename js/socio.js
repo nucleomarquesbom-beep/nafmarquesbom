@@ -864,15 +864,24 @@ async function loadAdminSocios() {
                     aria-label="Selecionar ${escapeHtml(s.nome || 'sócio')}"
                 >
                 <div class="admin-socio-number-cell">
-                    <span class="admin-socio-number-display">${escapeHtml(s.numero_socio)}</span>
-                    <input class="admin-socio-numero-input" type="number" min="1"
-                           value="${escapeHtml(s.numero_socio)}"
-                           aria-label="Número de sócio" hidden>
-                    <button type="button" class="admin-small-btn admin-edit-numero">Alterar nº</button>
-                    <div class="admin-numero-confirm" hidden>
-                        <button type="button" class="admin-small-btn admin-confirm-numero">Confirmar</button>
-                        <button type="button" class="admin-small-btn admin-cancel-numero">Cancelar</button>
-                    </div>
+                    <span
+                        class="admin-socio-number-display"
+                        role="button"
+                        tabindex="0"
+                        title="Clique para alterar o número de sócio"
+                        aria-label="Alterar número de sócio ${escapeHtml(s.numero_socio)}"
+                    >${escapeHtml(s.numero_socio)}</span>
+                    <input
+                        class="admin-socio-numero-input"
+                        type="number"
+                        min="1"
+                        value="${escapeHtml(s.numero_socio)}"
+                        aria-label="Novo número de sócio"
+                        hidden
+                    >
+                    <button type="button" class="admin-small-btn admin-confirm-numero" hidden>
+                        Confirmar
+                    </button>
                 </div>
                 <span class="admin-socio-main">
                     <strong>${escapeHtml(s.nome)}</strong>
@@ -916,25 +925,27 @@ function setupAdminSocioActions() {
         const id = row.dataset.socioId;
         const input = row.querySelector('.admin-socio-numero-input');
         const display = row.querySelector('.admin-socio-number-display');
-        const editBtn = row.querySelector('.admin-edit-numero');
-        const confirmBox = row.querySelector('.admin-numero-confirm');
+        if (event.target.classList.contains('admin-socio-number-display')) {
+            const input = row.querySelector('.admin-socio-numero-input');
+            const confirm = row.querySelector('.admin-confirm-numero');
+            if (!input || !confirm) return;
 
-        if (event.target.classList.contains('admin-edit-numero')) {
             input.hidden = false;
             display.hidden = true;
-            editBtn.hidden = true;
-            confirmBox.hidden = false;
+            confirm.hidden = true;
             input.focus();
             input.select();
-            return;
-        }
 
-        if (event.target.classList.contains('admin-cancel-numero')) {
-            input.value = row.dataset.numeroOriginal;
-            input.hidden = true;
-            display.hidden = false;
-            editBtn.hidden = false;
-            confirmBox.hidden = true;
+            const syncConfirm = () => {
+                const current = Number(input.value);
+                const original = Number(row.dataset.numeroOriginal);
+                confirm.hidden = !(Number.isInteger(current) && current > 0 && current !== original);
+            };
+            if (!input.dataset.bound) {
+                input.dataset.bound = '1';
+                input.addEventListener('input', syncConfirm);
+            }
+            syncConfirm();
             return;
         }
 
@@ -942,22 +953,25 @@ function setupAdminSocioActions() {
             try {
                 event.target.disabled = true;
                 await assertAdmin();
+
                 const numero = Number(input?.value);
                 if (!Number.isInteger(numero) || numero <= 0) {
                     throw new Error('Número de sócio inválido.');
                 }
+
                 const original = Number(row.dataset.numeroOriginal);
                 if (numero === original) {
-                    row.querySelector('.admin-cancel-numero')?.click();
+                    input.hidden = true;
+                    display.hidden = false;
+                    event.target.hidden = true;
                     return;
                 }
-                if (!window.confirm(`Confirmar alteração do número de sócio de ${original} para ${numero}?`)) {
-                    return;
-                }
+
                 const { error } = await supabase.rpc('admin_alterar_numero_socio', {
                     p_socio_id: id,
                     p_novo_numero: numero
                 });
+
                 if (error) throw error;
                 await loadAdminSocios();
                 showMessage('Número de sócio atualizado.', 'sucesso');
@@ -966,6 +980,14 @@ function setupAdminSocioActions() {
             } finally {
                 event.target.disabled = false;
             }
+        }
+    });
+
+    root.addEventListener('keydown', (event) => {
+        if (event.target.classList.contains('admin-socio-number-display') &&
+            (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            event.target.click();
         }
     });
 
@@ -1509,30 +1531,30 @@ async function init() {
     });
 
     $('#admin-enviar-email-selecionados')?.addEventListener('click', () => {
+        const ids = selectedSocioIds();
+        if (!ids.length) {
+            showMessage('Selecione pelo menos um sócio.', 'erro');
+            return;
+        }
+
         const form = $('#admin-comunicacao-form');
         if (!form) return;
+
         form.hidden = false;
         form.dataset.mode = 'email';
+
         const title = form.querySelector('.admin-comunicacao-heading h4');
         if (title) title.textContent = 'Enviar email aos sócios selecionados';
+
         const file = $('#admin-documento-file');
         if (file) file.value = '';
-        const fileLabel = file?.closest('label');
-        if (fileLabel) fileLabel.hidden = true;
-        $('#admin-enviar-comunicacao').textContent = 'Enviar email aos selecionados';
-        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
 
-    $('#admin-enviar-documento-selecionados')?.addEventListener('click', () => {
-        const form = $('#admin-comunicacao-form');
-        if (!form) return;
-        form.hidden = false;
-        form.dataset.mode = 'documento';
-        const title = form.querySelector('.admin-comunicacao-heading h4');
-        if (title) title.textContent = 'Enviar comunicação aos sócios selecionados';
-        const fileLabel = $('#admin-documento-file')?.closest('label');
+        const fileLabel = file?.closest('label');
         if (fileLabel) fileLabel.hidden = false;
-        $('#admin-enviar-comunicacao').textContent = 'Enviar comunicação';
+
+        const sendButton = $('#admin-enviar-comunicacao');
+        if (sendButton) sendButton.textContent = 'Enviar email aos selecionados';
+
         form.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
@@ -1543,22 +1565,25 @@ async function init() {
 
     $('#admin-enviar-comunicacao')?.addEventListener('click', async () => {
         const form = $('#admin-comunicacao-form');
-        const mode = form?.dataset.mode || 'email';
         const file = $('#admin-documento-file')?.files?.[0];
 
         try {
             $('#admin-enviar-comunicacao').disabled = true;
-            const result = mode === 'documento'
+
+            const result = file
                 ? await sendComunicacaoSelecionados(file)
                 : await sendEmailSelecionados();
 
             showMessage(
-                `${result?.sent || 0} comunicação(ões) enviada(s).`,
+                `${result?.sent || 0} email(s) enviado(s).`,
                 'sucesso'
             );
             if (form) form.hidden = true;
         } catch (error) {
-            showMessage(error.message || 'Não foi possível enviar a comunicação.', 'erro');
+            showMessage(
+                error.message || 'Não foi possível enviar os emails.',
+                'erro'
+            );
         } finally {
             $('#admin-enviar-comunicacao').disabled = false;
         }
