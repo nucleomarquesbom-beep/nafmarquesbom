@@ -9,12 +9,112 @@
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/socio.css?v=20260813-1">
+    <link rel="stylesheet" href="css/socio-excel.css?v=20260815-1">
 
 
     <link
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
+
+<style id="socio-admin-ui-20260815">
+.socio-edit-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:22px 28px;
+    align-items:start;
+}
+.socio-edit-grid > label {
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    min-width:0;
+    font-weight:700;
+    color:#3e3e3e;
+}
+.socio-edit-grid > label input,
+.socio-edit-grid > label select {
+    width:100% !important;
+    min-height:48px;
+    box-sizing:border-box;
+    padding:10px 14px;
+    border:1px solid #d8d8d8;
+    border-radius:10px;
+    background:#fff;
+    color:#333;
+    font:inherit;
+}
+.socio-edit-grid > label select {
+    appearance:auto;
+    cursor:pointer;
+}
+.socio-edit-grid > label input:focus,
+.socio-edit-grid > label select:focus {
+    outline:none;
+    border-color:#5b2a72;
+    box-shadow:0 0 0 3px rgba(91,42,114,.10);
+}
+.admin-socio-row {
+    display:grid !important;
+    grid-template-columns:36px 210px minmax(220px,1fr) 76px auto !important;
+    gap:14px !important;
+    align-items:center !important;
+    padding:14px 16px !important;
+}
+.admin-socio-number-cell {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+}
+.admin-socio-number-display {
+    min-width:62px;
+    font-size:18px;
+    font-weight:800;
+    color:#222;
+}
+.admin-socio-numero-input {
+    width:86px !important;
+    min-height:38px;
+    padding:7px 9px;
+    border:1px solid #cfcfcf;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+.admin-socio-number-cell .admin-small-btn {
+    white-space:nowrap;
+}
+.admin-numero-confirm {
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+}
+.admin-members-actions {
+    display:flex !important;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+.admin-members-actions .botao,
+.admin-members-actions .botao-secundario {
+    margin:0 !important;
+}
+#admin-comunicacao-form[hidden] { display:none !important; }
+@media (max-width:900px) {
+    .socio-edit-grid { grid-template-columns:1fr; }
+    .admin-socio-row {
+        grid-template-columns:30px minmax(150px,1fr) !important;
+    }
+    .admin-socio-main,
+    .admin-socio-status,
+    .admin-socio-admin-toggle {
+        grid-column:2;
+    }
+}
+</style>
+
 </head>
 <body>
 
@@ -902,16 +1002,101 @@
                     </div>
 
 
-                    <div class="admin-actions-row">
+                    <div class="admin-actions-row admin-members-actions">
 
                         <button
                             id="admin-quotas-atraso"
                             class="botao"
                             type="button"
                         >
-                            Enviar email de quotas em atraso aos selecionados
+                            Email quotas em atraso
                         </button>
 
+                        <button
+                            id="admin-enviar-email-selecionados"
+                            class="botao"
+                            type="button"
+                        >
+                            Enviar email aos selecionados
+                        </button>
+
+                        <button
+                            id="admin-enviar-documento-selecionados"
+                            class="botao-secundario"
+                            type="button"
+                        >
+                            Comunicação / PDF aos selecionados
+                        </button>
+
+                    </div>
+
+                    <div id="admin-comunicacao-form" class="admin-comunicacao-form" hidden>
+                        <div class="admin-comunicacao-heading">
+                            <div>
+                                <span class="admin-eyebrow">COMUNICAÇÃO</span>
+                                <h4>Enviar aos sócios selecionados</h4>
+                                <p>
+                                    Sem PDF, é enviado apenas um email. Com PDF, o ficheiro segue anexado.
+                                </p>
+                            </div>
+                            <button
+                                id="admin-cancelar-comunicacao"
+                                class="botao-secundario"
+                                type="button"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div class="admin-form-grid">
+                            <label class="wide">
+                                Assunto do email *
+                                <input
+                                    id="admin-documento-assunto"
+                                    type="text"
+                                    value="Comunicação — Núcleo Marques Bom"
+                                    required
+                                >
+                            </label>
+
+                            <label class="wide">
+                                Conteúdo do email *
+                                <textarea
+                                    id="admin-documento-mensagem"
+                                    rows="6"
+                                    placeholder="Escreva aqui o conteúdo do email..."
+                                    required
+                                ></textarea>
+                            </label>
+
+                            <label class="wide" hidden>
+                                Documento PDF (opcional)
+                                <input
+                                    id="admin-documento-file"
+                                    type="file"
+                                    accept="application/pdf"
+                                >
+                                <small class="admin-help">
+                                    Sem PDF: email normal. Com PDF: email com documento anexado.
+                                </small>
+                            </label>
+                        </div>
+
+                        <div class="admin-comunicacao-actions">
+                            <button
+                                id="admin-enviar-comunicacao"
+                                class="botao"
+                                type="button"
+                            >
+                                Enviar comunicação
+                            </button>
+                        </div>
+
+                        <div
+                            id="admin-comunicacao-result"
+                            class="admin-result"
+                            hidden
+                        ></div>
                     </div>
 
                 </div>
@@ -1018,78 +1203,6 @@
                     <div id="quota-excel-preview" class="admin-preview"></div>
                     <div id="quota-excel-result" class="admin-result" hidden></div>
                 </div>
-
-
-                <!-- DOCUMENTO PARA TODOS -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Enviar documento a todos
-                    </h3>
-
-                    <p>
-                        O documento é enviado pela função administrativa para todos os sócios ativos com email.
-                    </p>
-
-
-                    <form
-                        id="admin-documento-form"
-                        class="admin-form-grid"
-                    >
-
-                        <label class="wide">
-                            Assunto do email *
-                            <input
-                                id="admin-documento-assunto"
-                                type="text"
-                                value="Comunicação — Núcleo Marques Bom"
-                                required
-                            >
-                        </label>
-
-
-                        <label class="wide">
-                            Conteúdo do email *
-                            <textarea
-                                id="admin-documento-mensagem"
-                                rows="7"
-                                placeholder="Escreva aqui o conteúdo do email que será enviado aos sócios..."
-                                required
-                            ></textarea>
-                        </label>
-
-
-                        <label class="wide">
-                            Documento PDF *
-                            <input
-                                id="admin-documento-file"
-                                type="file"
-                                accept="application/pdf"
-                                required
-                            >
-                        </label>
-
-
-                        <button
-                            id="admin-documento-submit"
-                            class="botao"
-                            type="submit"
-                        >
-                            Enviar documento a todos
-                        </button>
-
-                    </form>
-
-
-                    <div
-                        id="admin-documento-result"
-                        class="admin-result"
-                        hidden
-                    ></div>
-
-                </div>
-
 
                 <!-- IMPORTAR PDF -->
 
