@@ -190,3 +190,25 @@
         grid-column: 2;
     }
 }
+
+/* Ajustes estéticos finais */
+.admin-socio-number-display{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:58px;min-height:40px;padding:5px 10px;
+    border:1px solid transparent;border-radius:9px;
+    font-size:18px;font-weight:800;color:#222;cursor:pointer;
+    transition:.15s ease;
+}
+.admin-socio-number-display:hover,.admin-socio-number-display:focus{
+    background:#faf7ff;border-color:#d8c6e1;outline:none;
+    box-shadow:0 0 0 2px rgba(91,42,114,.08);
+}
+.admin-socio-numero-input{width:92px!important;min-height:40px!important;padding:7px 10px!important;}
+.admin-confirm-numero{
+    margin:0!important;min-height:40px!important;border-radius:40px!important;
+    background:var(--dourado)!important;color:#111!important;font-weight:700!important;
+}
+.admin-comunicacao-heading .admin-eyebrow{display:none!important;}
+#admin-cancelar-comunicacao{
+    border-radius:40px!important;padding:11px 20px!important;
+}
