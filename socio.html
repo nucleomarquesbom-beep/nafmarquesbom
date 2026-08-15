@@ -16,13 +16,6 @@
         rel="stylesheet"
     >
 </head>
-    <script
-    type="module"
-    src="js/socio.js?v=20260813-1"
-></script>
-    
-<script src="js/dr-arbitro.js?v=20260813-5" defer></script>
-<script src="js/admin-excel.js?v=20260814-2" defer></script>
 <body>
 
 <header>
@@ -525,12 +518,47 @@
 
                         <label>
                             Associação de Futebol
-                            <input id="edit-af" type="text">
+                            <select id="edit-af" required>
+                                <option value="">Selecionar Associação de Futebol</option>
+                                <option value="AF Algarve">AF Algarve</option>
+                                <option value="AF Angra do Heroísmo">AF Angra do Heroísmo</option>
+                                <option value="AF Aveiro">AF Aveiro</option>
+                                <option value="AF Beja">AF Beja</option>
+                                <option value="AF Braga">AF Braga</option>
+                                <option value="AF Bragança">AF Bragança</option>
+                                <option value="AF Castelo Branco">AF Castelo Branco</option>
+                                <option value="AF Coimbra">AF Coimbra</option>
+                                <option value="AF Évora">AF Évora</option>
+                                <option value="AF Guarda">AF Guarda</option>
+                                <option value="AF Horta">AF Horta</option>
+                                <option value="AF Leiria">AF Leiria</option>
+                                <option value="AF Lisboa">AF Lisboa</option>
+                                <option value="AF Madeira">AF Madeira</option>
+                                <option value="AF Ponta Delgada">AF Ponta Delgada</option>
+                                <option value="AF Portalegre">AF Portalegre</option>
+                                <option value="AF Porto">AF Porto</option>
+                                <option value="AF Santarém">AF Santarém</option>
+                                <option value="AF Setúbal">AF Setúbal</option>
+                                <option value="AF Viana do Castelo">AF Viana do Castelo</option>
+                                <option value="AF Vila Real">AF Vila Real</option>
+                                <option value="AF Viseu">AF Viseu</option>
+                            </select>
                         </label>
 
                         <label>
                             Modalidade
-                            <input id="edit-modalidade" type="text">
+                            <select id="edit-modalidade" required>
+                                <option value="">Selecionar modalidade</option>
+                                <option value="Futebol">Futebol</option>
+                                <option value="Futsal">Futsal</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Categoria
+                            <select id="edit-categoria" required disabled>
+                                <option value="">Selecionar categoria</option>
+                            </select>
                         </label>
 
                     </div>
@@ -1207,12 +1235,12 @@
 
 </footer>
 
-
-
 <script
     type="module"
     src="js/socio.js?v=20260813-1"
 ></script>
+<script src="js/dr-arbitro.js?v=20260813-5" defer></script>
+<script src="js/admin-excel.js?v=20260815-3" defer></script>
 
 </body>
 </html>
