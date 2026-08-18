@@ -1128,7 +1128,14 @@
         display: none;
     }
 }
+/* Correção: não criar segunda argola quando a fotografia está escondida */
+.socio-foto-3d img[hidden] {
+    display: none !important;
+}
 
+.socio-foto-placeholder[hidden] {
+    display: none !important;
+}
 
 .socio-tab-select-wrap{display:none}.socio-tab-select{width:100%;border:2px solid var(--roxo);border-radius:12px;padding:12px 14px;background:#fff;color:var(--roxo);font:inherit;font-weight:700}
 @media(max-width:700px){.socio-tabs{display:block;padding:0;border:0;background:transparent}.socio-tab-select-wrap{display:block;width:100%;margin:0 0 18px}.socio-tabs>.socio-tab{display:none}}
