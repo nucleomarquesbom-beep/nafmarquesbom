@@ -1136,6 +1136,54 @@
 .socio-foto-placeholder[hidden] {
     display: none !important;
 }
+/* Centralização da área de sócio */
+.socio-area > .container {
+    width: min(1180px, calc(100% - 32px));
+    max-width: 1180px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.socio-perfil-card,
+.socio-tab-content,
+.admin-panel,
+.admin-subpanel {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+@media (max-width: 900px) {
+    .socio-perfil-card {
+        grid-template-columns: 1fr !important;
+        justify-items: center;
+    }
+
+    .socio-identidade {
+        width: 100%;
+        text-align: center;
+    }
+
+    .socio-identidade h2 {
+        text-align: center;
+    }
+
+    .funlearn-resumo {
+        justify-self: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .socio-area > .container {
+        width: calc(100% - 20px);
+    }
+
+    .socio-perfil-card {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+}
 
 .socio-tab-select-wrap{display:none}.socio-tab-select{width:100%;border:2px solid var(--roxo);border-radius:12px;padding:12px 14px;background:#fff;color:var(--roxo);font:inherit;font-weight:700}
 @media(max-width:700px){.socio-tabs{display:block;padding:0;border:0;background:transparent}.socio-tab-select-wrap{display:block;width:100%;margin:0 0 18px}.socio-tabs>.socio-tab{display:none}}
