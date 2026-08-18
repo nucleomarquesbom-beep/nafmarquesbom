@@ -1,0 +1,67 @@
+/* Estilos isolados do formulário de criação de sócios.
+   Não altera o restante desenho do painel. */
+#criar-socio-section {
+  margin-top: 24px;
+}
+
+#criar-socio-section .admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+#criar-socio-section label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+#criar-socio-section label span {
+  font-weight: 600;
+}
+
+#criar-socio-section input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d9d2dc;
+  border-radius: 9px;
+  background: #fff;
+  color: inherit;
+}
+
+#criar-socio-section .admin-primary-btn {
+  margin-top: 18px;
+  padding: 11px 17px;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#criar-socio-section .admin-primary-btn:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+#criar-socio-section .admin-result {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border-radius: 9px;
+}
+
+#criar-socio-section .admin-result.success {
+  background: #edf8f0;
+  color: #216c3a;
+}
+
+#criar-socio-section .admin-result.error {
+  background: #fff0f0;
+  color: #9d2525;
+}
+
+@media (max-width: 700px) {
+  #criar-socio-section .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
