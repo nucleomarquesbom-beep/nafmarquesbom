@@ -1,18 +1,27 @@
 {
-  "name":"Área de Sócio — Núcleo Marques Bom",
-  "short_name":"Núcleo Marques Bom",
-  "description":"Área reservada de sócios do Núcleo de Árbitros de Futebol Marques Bom.",
-  "lang":"pt-PT",
-  "id":"./socio-app.html",
-  "start_url":"./socio-app.html",
-  "scope":"./",
-  "display":"standalone",
-  "display_override":["standalone"],
-  "orientation":"portrait-primary",
-  "background_color":"#f7f5f8",
-  "theme_color":"#5b2a72",
-  "icons":[
-    {"src":"./icons/icon-192.svg","sizes":"192x192","type":"image/svg+xml","purpose":"any maskable"},
-    {"src":"./icons/icon-512.svg","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}
+  "name": "Área de Sócio — Núcleo Marques Bom",
+  "short_name": "Núcleo Marques Bom",
+  "description": "Aplicação da Área de Sócio do Núcleo de Árbitros de Futebol Marques Bom.",
+  "lang": "pt-PT",
+  "id": "./socio-app.html",
+  "start_url": "./socio-app.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f5f8",
+  "theme_color": "#5b2a72",
+  "icons": [
+    {
+      "src": "./icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
