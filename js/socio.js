@@ -1389,7 +1389,15 @@ async function init() {
     });
 
     $('#logout-btn')?.addEventListener('click', logout);
+    $('#photo-trigger')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
 
+    const input = $('#photo-input');
+    if (input) {
+        input.click();
+    }
+    });
     $('#photo-input')?.addEventListener('change', async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
