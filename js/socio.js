@@ -603,9 +603,25 @@ function fillEditForms() {
     if (!s) return;
 
     $('#edit-nome').value = s.nome || '';
-    $('#edit-numero').value = s.numero_socio ?? '';
-    $('#edit-numero').readOnly = true;
-    $('#edit-numero').disabled = true;
+   const numeroInput = $('#edit-numero');
+
+if (numeroInput) {
+    numeroInput.value = s.numero_socio ?? '';
+    numeroInput.type = 'hidden';
+    numeroInput.disabled = false;
+
+    let numeroTexto = $('#edit-numero-fixo');
+
+    if (!numeroTexto) {
+        numeroTexto = document.createElement('div');
+        numeroTexto.id = 'edit-numero-fixo';
+        numeroTexto.className = 'socio-numero-fixo';
+
+        numeroInput.insertAdjacentElement('afterend', numeroTexto);
+    }
+
+    numeroTexto.textContent = `N.º de sócio: ${s.numero_socio ?? '—'}`;
+}
     $('#edit-nascimento').value = s.data_nascimento || '';
     $('#edit-email').value = s.email || state.user?.email || '';
     $('#edit-morada').value = s.morada || '';
