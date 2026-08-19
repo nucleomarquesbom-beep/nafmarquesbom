@@ -1,0 +1,33 @@
+-- Hardening e alinhamento das integrações administrativas.
+revoke execute on function public.admin_funlearn_adicionar_pontos(uuid, integer, text, text) from anon;
+revoke execute on function public.admin_funlearn_importar_pontos(jsonb, integer, text, text) from anon;
+revoke execute on function public.admin_funlearn_retirar_pontos(uuid, integer, text) from anon;
+revoke execute on function public.funlearn_total_pontos(uuid) from public, anon;
+grant execute on function public.admin_funlearn_adicionar_pontos(uuid, integer, text, text) to authenticated;
+grant execute on function public.admin_funlearn_importar_pontos(jsonb, integer, text, text) to authenticated;
+grant execute on function public.admin_funlearn_retirar_pontos(uuid, integer, text) to authenticated;
+grant execute on function public.funlearn_total_pontos(uuid) to authenticated;
+revoke execute on function public.sync_dr_arbitro_estado_inscricoes() from public, anon, authenticated;
+revoke execute on function public.proteger_campos_identidade_socio() from public, anon, authenticated;
+revoke execute on function public.proteger_campos_privilegiados_socio() from public, anon, authenticated;
+revoke execute on function public.proteger_campos_socio() from public, anon, authenticated;
+revoke execute on function public.proteger_numero_socio() from public, anon, authenticated;
+revoke execute on function public.proteger_privilegios_admin() from public, anon, authenticated;
+revoke execute on function public.proteger_dados_socio() from public, anon, authenticated;
+
+drop policy if exists funlearn_nomes_delete_admin on public.funlearn_import_nomes;
+drop policy if exists funlearn_nomes_insert_admin on public.funlearn_import_nomes;
+drop policy if exists funlearn_nomes_select_admin on public.funlearn_import_nomes;
+drop policy if exists funlearn_nomes_update_admin on public.funlearn_import_nomes;
+drop policy if exists funlearn_importacoes_delete_admin on public.funlearn_importacoes;
+drop policy if exists funlearn_importacoes_insert_admin on public.funlearn_importacoes;
+drop policy if exists funlearn_importacoes_select_admin on public.funlearn_importacoes;
+drop policy if exists funlearn_importacoes_update_admin on public.funlearn_importacoes;
+drop policy if exists funlearn_pontos_delete_admin on public.funlearn_pontos;
+drop policy if exists funlearn_pontos_insert_admin on public.funlearn_pontos;
+drop policy if exists funlearn_pontos_update_admin on public.funlearn_pontos;
+create index if not exists idx_dr_arbitro_edicoes_criado_por on public.dr_arbitro_edicoes(criado_por);
+create index if not exists idx_dr_arbitro_respostas_pergunta_id on public.dr_arbitro_respostas(pergunta_id);
+create index if not exists idx_dr_arbitro_tentativas_inscricao_id on public.dr_arbitro_tentativas(inscricao_id);
+create index if not exists idx_funlearn_documentos_criado_por on public.funlearn_documentos(criado_por);
+create index if not exists idx_funlearn_importacoes_created_by on public.funlearn_importacoes(created_by);
