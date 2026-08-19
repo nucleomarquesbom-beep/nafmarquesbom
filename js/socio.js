@@ -2,1735 +2,1378 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.__NAF_SUPABASE = supabase;
+const ADMIN_NUMERO = 9999;
 
 const state = {
     user: null,
-    socio: null
+    socio: null,
+    admin: false,
+    adminSocios: [],
+    selectedSocios: new Set()
 };
 
-async function loadPublicMembers() {
-    const root = document.getElementById('public-members-list');
-    if (!root) return;
-
-    try {
-        const client = supabase;
-        const { data, error } = await client.rpc('socios_publicos_por_categoria');
-
-        if (error) throw error;
-
-        const groups = {
-            Futebol: [],
-            Futsal: []
-        };
-
-        (data || []).forEach(row => {
-            const modalidade =
-                String(row.modalidade || '').toLowerCase() === 'futsal'
-                    ? 'Futsal'
-                    : 'Futebol';
-
-            if (!row.categoria || !row.nome) return;
-
-            (groups[modalidade] ||= []).push({
-                categoria: String(row.categoria),
-                nome: String(row.nome)
-            });
-        });
-
-        const order = {
-            Futebol: [
-                'C1',
-                'C2',
-                'C3',
-                'C4',
-                'C4 Core',
-                'C5',
-                'C6',
-                'C7',
-                'Cj',
-                'CF1',
-                'CF2',
-                'CF3',
-                'CF4'
-            ],
-            Futsal: [
-                'C1',
-                'C2',
-                'C3',
-                'C4',
-                'C5',
-                'C6',
-                'C7',
-                'Cj',
-                'CFF1',
-                'CFF2'
-            ]
-        };
-
-        const norm = value =>
-            value.trim().toLowerCase();
-
-        root.innerHTML = '';
-
-        Object.entries(groups).forEach(([modalidade, rows]) => {
-            const cats = [
-                ...new Set(rows.map(row => row.categoria))
-            ].sort((a, b) => {
-                const ia = order[modalidade].findIndex(
-                    x => norm(x) === norm(a)
-                );
-
-                const ib = order[modalidade].findIndex(
-                    x => norm(x) === norm(b)
-                );
-
-                return (
-                    (ia < 0 ? 999 : ia) -
-                    (ib < 0 ? 999 : ib)
-                ) || a.localeCompare(b, 'pt');
-            });
-
-            if (!cats.length) return;
-
-            const group = document.createElement('section');
-            group.className = 'public-members-group';
-
-            group.innerHTML = `
-                <h3>${modalidade}</h3>
-                <div class="public-category-row"></div>
-            `;
-
-            const rowEl =
-                group.querySelector('.public-category-row');
-
-            cats.forEach(cat => {
-                const members = rows
-                    .filter(
-                        row =>
-                            norm(row.categoria) === norm(cat)
-                    )
-                    .sort(
-                        (a, b) =>
-                            a.nome.localeCompare(
-                                b.nome,
-                                'pt'
-                            )
-                    );
-
-                const wrap =
-                    document.createElement('div');
-
-                wrap.className = 'public-category';
-
-                const button =
-                    document.createElement('button');
-
-                button.type = 'button';
-                button.className =
-                    'public-category-trigger';
-                button.textContent = cat;
-                button.setAttribute(
-                    'aria-expanded',
-                    'false'
-                );
-
-                const panel =
-                    document.createElement('div');
-
-                panel.className =
-                    'public-category-members';
-
-                const ul =
-                    document.createElement('ul');
-
-                members.forEach(member => {
-                    const li =
-                        document.createElement('li');
-
-                    li.textContent = member.nome;
-
-                    ul.appendChild(li);
-                });
-
-                panel.appendChild(ul);
-
-                wrap.append(
-                    button,
-                    panel
-                );
-
-                rowEl.appendChild(wrap);
-
-                button.addEventListener(
-                    'click',
-                    () => {
-                        if (
-                            window.matchMedia(
-                                '(max-width: 700px)'
-                            ).matches
-                        ) {
-                            const open =
-                                !wrap.classList.contains(
-                                    'open'
-                                );
-
-                            document
-                                .querySelectorAll(
-                                    '.public-category.open'
-                                )
-                                .forEach(x => {
-                                    x.classList.remove(
-                                        'open'
-                                    );
-
-                                    x.querySelector(
-                                        'button'
-                                    )?.setAttribute(
-                                        'aria-expanded',
-                                        'false'
-                                    );
-                                });
-
-                            wrap.classList.toggle(
-                                'open',
-                                open
-                            );
-
-                            button.setAttribute(
-                                'aria-expanded',
-                                String(open)
-                            );
-                        }
-                    }
-                );
-            });
-
-            root.appendChild(group);
-        });
-
-        if (!root.children.length) {
-            root.innerHTML =
-                '<div class="vazio">Não existem categorias com sócios ativos.</div>';
-        }
-    } catch (error) {
-        console.error(
-            'Sócios públicos:',
-            error
-        );
-
-        root.innerHTML =
-            '<div class="vazio">Não foi possível carregar a lista de sócios.</div>';
-    }
-}
-
-const $ = selector =>
-    document.querySelector(selector);
-
-const $$ = selector =>
-    [...document.querySelectorAll(selector)];
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 function escapeHtml(value = '') {
-    return String(value).replace(
-        /[&<>'"]/g,
-        character => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[character])
-    );
+    return String(value).replace(/[&<>'"]/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[c]));
 }
 
-function showMessage(
-    text,
-    type = 'info'
-) {
+function showMessage(text, type = 'info') {
     const el = $('#socio-message');
-
     if (!el) return;
-
     el.textContent = text;
-    el.className =
-        `socio-message ${type}`;
+    el.className = `socio-message ${type}`;
     el.hidden = false;
 }
 
 function hideMessage() {
-    const el =
-        $('#socio-message');
-
-    if (el) {
-        el.hidden = true;
-    }
+    const el = $('#socio-message');
+    if (el) el.hidden = true;
 }
 
 /*
  * Regra importante:
- * nenhum dado privado é colocado no HTML antes
- * de existir uma sessão autenticada e um registo
- * válido na tabela socios.
+ * nenhum dado privado é colocado no HTML antes de existir uma sessão
+ * autenticada e um registo válido na tabela socios.
  */
 function clearPrivateUI() {
     state.user = null;
     state.socio = null;
+    state.admin = false;
 
-    if ($('#login-panel')) {
-        $('#login-panel').hidden = false;
-    }
-
-    if ($('#dashboard')) {
-        $('#dashboard').hidden = true;
+    if ($('#login-panel')) $('#login-panel').hidden = false;
+    if ($('#dashboard')) $('#dashboard').hidden = true;
+    if ($('#admin-panel')) $('#admin-panel').hidden = true;
+    const adminTab = $('#admin-tab');
+    if (adminTab) {
+        adminTab.hidden = true;
+        adminTab.classList.remove('admin-visible');
     }
 
     const clearIds = [
-        '#socio-name',
-        '#socio-number',
-        '#dados-nome',
-        '#dados-numero',
-        '#dados-nascimento',
-        '#dados-email',
-        '#dados-morada',
-        '#dados-telemovel',
-        '#dados-arbitro',
-        '#dados-af',
-        '#dados-modalidade',
-        '#dados-categoria',
-        '#funlearn-total',
-        '#funlearn-total-top'
+        '#socio-name', '#socio-number', '#dados-nome', '#dados-numero',
+        '#dados-nascimento', '#dados-email', '#dados-morada',
+        '#dados-telemovel', '#dados-arbitro', '#dados-af',
+        '#dados-modalidade', '#funlearn-total', '#funlearn-total-top'
     ];
 
-    clearIds.forEach(id => {
+    clearIds.forEach((id) => {
         const el = $(id);
-
-        if (el) {
-            el.textContent = '—';
-        }
+        if (el) el.textContent = '—';
     });
 
-    if ($('#funlearn-total')) {
-        $('#funlearn-total').textContent = '0';
-    }
+    if ($('#funlearn-total')) $('#funlearn-total').textContent = '0';
+    if ($('#funlearn-total-top')) $('#funlearn-total-top').textContent = '0';
 
-    if ($('#funlearn-total-top')) {
-        $('#funlearn-total-top').textContent = '0';
-    }
+    if ($('#docs-list')) $('#docs-list').innerHTML = '';
+    if ($('#funlearn-history')) $('#funlearn-history').innerHTML = '';
+    if ($('#admin-socios-lista')) $('#admin-socios-lista').innerHTML = '';
 
-    if ($('#docs-list')) {
-        $('#docs-list').innerHTML = '';
-    }
-
-    if ($('#funlearn-history')) {
-        $('#funlearn-history').innerHTML = '';
-    }
-
-    const photo =
-        $('#socio-photo');
-
-    const placeholder =
-        $('#socio-photo-placeholder');
-
+    const photo = $('#socio-photo');
+    const placeholder = $('#socio-photo-placeholder');
     if (photo) {
         photo.removeAttribute('src');
         photo.hidden = true;
     }
-
-    if (placeholder) {
-        placeholder.hidden = false;
-    }
+    if (placeholder) placeholder.hidden = false;
 }
 
 async function getSession() {
-    const {
-        data,
-        error
-    } = await supabase.auth.getSession();
-
-    if (error) {
-        throw error;
-    }
-
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
     return data.session || null;
 }
 
-async function login(
-    email,
-    password
-) {
-    const {
-        error
-    } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
-
-    if (error) {
-        throw error;
-    }
+async function login(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
 }
 
 async function resetPassword(email) {
-    const {
-        error
-    } =
-        await supabase.auth.resetPasswordForEmail(
-            email,
-            {
-                redirectTo:
-                    `${window.location.origin}${window.location.pathname}`
-            }
-        );
-
-    if (error) {
-        throw error;
-    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}${window.location.pathname}`
+    });
+    if (error) throw error;
 }
 
 async function logout() {
     await supabase.auth.signOut();
-
     clearPrivateUI();
-
     window.location.reload();
 }
 
 async function loadProfile(user) {
-    if (!user?.id) {
-        throw new Error(
-            'Utilizador autenticado inválido.'
-        );
-    }
+    if (!user?.id) throw new Error('Utilizador autenticado inválido.');
 
-    let data;
+    const { data, error } = await supabase
+        .from('socios')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('ativo', true)
+        .single();
 
-    const {
-        data: acesso,
-        error: acessoError
-    } = await supabase.rpc(
-        'validar_acesso_socio'
-    );
-
-    if (!acessoError) {
-        const resultado =
-            Array.isArray(acesso)
-                ? acesso[0]
-                : acesso;
-
-        if (!resultado?.permitido) {
-            throw new Error(
-                resultado?.motivo ||
-                'O acesso ao espaço de sócio está inativo.'
-            );
-        }
-    } else {
-        /*
-         * Compatibilidade durante a transição:
-         * a migration da regra pode ainda não ter
-         * sido aplicada.
-         */
-        const fallback =
-            await supabase
-                .from('socios')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('ativo', true)
-                .single();
-
-        if (fallback.error) {
-            throw fallback.error;
-        }
-
-        data = fallback.data;
-    }
-
-    const result = data
-        ? {
-              data,
-              error: null
-          }
-        : await supabase
-              .from('socios')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('ativo', true)
-              .single();
-
-    if (result.error) {
-        throw result.error;
-    }
-
-    data = result.data;
-
-    if (!data) {
-        throw new Error(
-            'A conta autenticada não está associada a um sócio ativo.'
-        );
-    }
+    if (error) throw error;
+    if (!data) throw new Error('A conta autenticada não está associada a um sócio ativo.');
 
     state.user = user;
     state.socio = data;
 
     /*
-     * ADMINISTRAÇÃO CENTRALIZADA
+     * ADMINISTRACAO
      *
-     * A partir daqui um administrador NÃO usa
-     * mais o painel administrativo antigo que
-     * existia dentro de socio.html.
-     *
-     * Existe uma única área administrativa:
-     *
-     *       admin.html
+     * Qualquer socio marcado como is_admin pode usar a area
+     * administrativa. O socio 9999 continua a ser o administrador
+     * principal e a regra de permissoes sensiveis e tratada
+     * separadamente por assertPrincipalAdmin().
      */
-    if (
+    state.admin =
         data.is_admin === true &&
-        data.ativo === true
-    ) {
-        window.location.replace(
-            'admin.html'
-        );
+        data.ativo === true;
 
-        return;
+    updateAdminVisibility();
+}
+
+function updateAdminVisibility() {
+    const adminTab = $('#admin-tab');
+    const adminPanel = $('#admin-panel');
+    const adminSection = $('#administracao');
+
+    if (adminTab) {
+        adminTab.hidden = !state.admin;
+        adminTab.classList.toggle('admin-visible', state.admin);
+        adminTab.setAttribute('aria-hidden', String(!state.admin));
     }
+
+    if (adminPanel) {
+        adminPanel.hidden = !state.admin;
+    }
+
+    if (adminSection && !state.admin) {
+        adminSection.hidden = true;
+        adminSection.classList.remove('active');
+    }
+
+    syncMobileTabSelector();
+}
+
+function isPrincipalAdmin() {
+    return state.admin &&
+        Number(state.socio?.numero_socio) === ADMIN_NUMERO;
+}
+
+async function assertPrincipalAdmin() {
+    const session = await getSession();
+    if (!session) throw new Error('Sessao nao autenticada.');
+
+    const { data, error } = await supabase
+        .from('socios')
+        .select('id,numero_socio,is_admin,ativo')
+        .eq('user_id', session.user.id)
+        .eq('ativo', true)
+        .single();
+
+    if (error) throw error;
+
+    if (
+        data.is_admin !== true ||
+        Number(data.numero_socio) !== ADMIN_NUMERO
+    ) {
+        throw new Error('Esta operacao esta reservada ao administrador principal.');
+    }
+
+    return session;
+}
+
+function setupEmbeddedAdminFrame() {
+    const frame = $('#embedded-admin-frame');
+    const loading = $('#embedded-admin-loading');
+    const errorBox = $('#embedded-admin-error');
+
+    if (!frame || frame.dataset.bound) return;
+    frame.dataset.bound = '1';
+
+    frame.addEventListener('load', () => {
+        if (loading) loading.hidden = true;
+        if (errorBox) errorBox.hidden = true;
+
+        try {
+            const height = frame.contentDocument?.documentElement?.scrollHeight;
+            if (height && height > 900) {
+                frame.style.minHeight = `${height + 60}px`;
+            }
+        } catch (_) {
+            /* O iframe pode ainda estar a terminar a sua inicializacao. */
+        }
+    });
+
+    frame.addEventListener('error', () => {
+        if (loading) loading.hidden = true;
+        if (errorBox) {
+            errorBox.textContent = 'Nao foi possivel carregar a area administrativa.';
+            errorBox.hidden = false;
+        }
+    });
 }
 
 function renderProfile() {
     const s = state.socio;
-
-    if (!s) {
-        return;
-    }
+    if (!s) return;
 
     $('#login-panel').hidden = true;
     $('#dashboard').hidden = false;
+    updateAdminVisibility();
 
-    $('#socio-name').textContent =
-        s.nome || 'Sócio';
+    $('#socio-name').textContent = s.nome || 'Sócio';
+    $('#socio-number').textContent = s.numero_socio ?? '—';
 
-    $('#socio-number').textContent =
-        s.numero_socio ?? '—';
-
-    $('#dados-nome').textContent =
-        s.nome || '—';
-
-    $('#dados-numero').textContent =
-        s.numero_socio ?? '—';
-
-    $('#dados-nascimento').textContent =
-        s.data_nascimento
-            ? new Date(
-                  `${s.data_nascimento}T00:00:00`
-              ).toLocaleDateString('pt-PT')
-            : '—';
-
-    $('#dados-morada').textContent =
-        s.morada || '—';
-
-    $('#dados-email').textContent =
-        s.email ||
-        state.user?.email ||
-        '—';
-
-    $('#dados-telemovel').textContent =
-        s.telemovel || '—';
-
-    $('#dados-arbitro').textContent =
-        s.numero_arbitro || '—';
-
-    $('#dados-af').textContent =
-        s.associacao_futebol || '—';
-
-    $('#dados-modalidade').textContent =
-        s.modalidade || '—';
-
-    const categoriaView =
-        $('#dados-categoria');
-
-    if (categoriaView) {
-        categoriaView.textContent =
-            s.categoria || '—';
-    }
+    $('#dados-nome').textContent = s.nome || '—';
+    $('#dados-numero').textContent = s.numero_socio ?? '—';
+    $('#dados-nascimento').textContent = s.data_nascimento
+        ? new Date(`${s.data_nascimento}T00:00:00`).toLocaleDateString('pt-PT')
+        : '—';
+    $('#dados-morada').textContent = s.morada || '—';
+    $('#dados-email').textContent = s.email || state.user?.email || '—';
+    $('#dados-telemovel').textContent = s.telemovel || '—';
+    $('#dados-arbitro').textContent = s.numero_arbitro || '—';
+    $('#dados-af').textContent = s.associacao_futebol || '—';
+    $('#dados-modalidade').textContent = s.modalidade || '—';
 
     fillEditForms();
-    setupArbitragemSelectors();
     loadPhoto();
     loadQuotas();
     loadDocuments();
     loadFunlearn();
 
-    window.NAF_DR_ARBITRO_START?.();
+    if (state.admin) {
+        loadAdminSocios();
+        setupEmbeddedAdminFrame();
+    }
 }
 
 async function loadPhoto() {
-    const image =
-        $('#socio-photo');
+    const image = $('#socio-photo');
+    const placeholder = $('#socio-photo-placeholder');
+    if (!image || !placeholder || !state.socio) return;
 
-    const placeholder =
-        $('#socio-photo-placeholder');
+    const path = state.socio.fotografia_path || state.socio.fotografia_url || null;
 
-    if (
-        !image ||
-        !placeholder ||
-        !state.socio
-    ) {
-        return;
-    }
-
-    const numero =
-        state.socio.numero_socio;
-
-    if (!numero) {
+    if (!path) {
+        image.removeAttribute('src');
         image.hidden = true;
         placeholder.hidden = false;
         return;
     }
 
-    try {
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .storage
-                .from('fotos_socios')
-                .list(
-                    String(numero),
-                    {
-                        limit: 100
-                    }
-                );
-
-        if (error) {
-            throw error;
-        }
-
-        const files =
-            data || [];
-
-        const imageFile =
-            files.find(file =>
-                /\.(jpg|jpeg|png|webp)$/i.test(
-                    file.name
-                )
-            );
-
-        if (!imageFile) {
-            image.hidden = true;
-            placeholder.hidden = false;
-            return;
-        }
-
-        const path =
-            `${numero}/${imageFile.name}`;
-
-        const {
-            data: publicData
-        } =
-            supabase
-                .storage
-                .from('fotos_socios')
-                .getPublicUrl(path);
-
-        if (!publicData?.publicUrl) {
-            image.hidden = true;
-            placeholder.hidden = false;
-            return;
-        }
-
-        image.src =
-            `${publicData.publicUrl}?v=${Date.now()}`;
-
+    if (/^https?:\/\//i.test(path)) {
+        image.src = path;
         image.hidden = false;
         placeholder.hidden = true;
-    } catch (error) {
-        console.error(
-            'Erro ao carregar fotografia:',
-            error
-        );
+        return;
+    }
 
+    const { data, error } = await supabase.storage
+        .from('fotografias-socios')
+        .createSignedUrl(path, 3600);
+
+    if (error || !data?.signedUrl) {
+        image.removeAttribute('src');
         image.hidden = true;
         placeholder.hidden = false;
-    }
-}
-
-function fillEditForms() {
-    const s = state.socio;
-
-    if (!s) {
         return;
     }
 
-    const fields = {
-        '#edit-nome': s.nome || '',
-        '#edit-nascimento': s.data_nascimento || '',
-        '#edit-morada': s.morada || '',
-        '#edit-telemovel': s.telemovel || '',
-        '#edit-email': s.email || state.user?.email || '',
-        '#edit-associacao-futebol': s.associacao_futebol || '',
-        '#edit-numero-arbitro': s.numero_arbitro || '',
-        '#edit-modalidade': s.modalidade || '',
-        '#edit-categoria': s.categoria || ''
-    };
-
-    Object.entries(fields).forEach(
-        ([selector, value]) => {
-            const element =
-                $(selector);
-
-            if (element) {
-                element.value = value;
-            }
-        }
-    );
+    image.src = data.signedUrl;
+    image.hidden = false;
+    placeholder.hidden = true;
 }
 
-async function saveProfileChanges() {
-    if (!state.socio) {
-        throw new Error(
-            'Não existe uma sessão de sócio ativa.'
-        );
+async function uploadPhoto(file) {
+    if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        throw new Error('A fotografia deve ser JPG, PNG ou WEBP.');
     }
 
-    const updates = {
-        nome:
-            $('#edit-nome')?.value.trim() ||
-            null,
+    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+    const path = `${state.socio.id}/fotografia.${ext}`;
 
-        data_nascimento:
-            $('#edit-nascimento')?.value ||
-            null,
+    const { error: uploadError } = await supabase.storage
+        .from('fotografias-socios')
+        .upload(path, file, { contentType: file.type, upsert: true });
 
-        morada:
-            $('#edit-morada')?.value.trim() ||
-            null,
+    if (uploadError) throw uploadError;
 
-        telemovel:
-            $('#edit-telemovel')?.value.trim() ||
-            null,
+    const { error: dbError } = await supabase
+        .from('socios')
+        .update({ fotografia_path: path })
+        .eq('id', state.socio.id)
+        .eq('user_id', state.user.id);
 
-        email:
-            $('#edit-email')?.value.trim() ||
-            null,
+    if (dbError) throw dbError;
 
-        associacao_futebol:
-            $('#edit-associacao-futebol')
-                ?.value.trim() ||
-            null,
-
-        numero_arbitro:
-            $('#edit-numero-arbitro')
-                ?.value.trim() ||
-            null,
-
-        modalidade:
-            $('#edit-modalidade')
-                ?.value.trim() ||
-            null,
-
-        categoria:
-            $('#edit-categoria')
-                ?.value.trim() ||
-            null
-    };
-
-    const {
-        data,
-        error
-    } =
-        await supabase
-            .from('socios')
-            .update(updates)
-            .eq(
-                'id',
-                state.socio.id
-            )
-            .select('*')
-            .single();
-
-    if (error) {
-        throw error;
-    }
-
-    state.socio = data;
-
-    renderProfile();
-
-    showMessage(
-        'Os teus dados foram atualizados.',
-        'sucesso'
-    );
+    state.socio.fotografia_path = path;
+    state.socio.fotografia_url = path;
+    await loadPhoto();
 }
 
-function setupProfileForm() {
-    const form =
-        $('#dados-form');
-
-    if (!form || form.dataset.bound) {
-        return;
+function cleanupDuplicateQuotaMarkup() {
+    // O HTML publicado chegou a conter mais do que uma secção de quotas.
+    // Mantemos apenas a primeira secção com id="quotas" para evitar IDs duplicados.
+    const sections = [...document.querySelectorAll('section#quotas')];
+    if (sections.length > 1) {
+        sections.slice(1).forEach(section => section.remove());
     }
 
-    form.dataset.bound = '1';
-
-    form.addEventListener(
-        'submit',
-        async event => {
-            event.preventDefault();
-
-            try {
-                await saveProfileChanges();
-            } catch (error) {
-                console.error(
-                    'Erro ao guardar dados:',
-                    error
-                );
-
-                showMessage(
-                    error.message ||
-                        'Não foi possível guardar os dados.',
-                    'erro'
-                );
-            }
-        }
-    );
+    // Também pode existir mais do que um elemento #quotas-list.
+    // O primeiro pertence à secção oficial; os restantes são removidos.
+    const lists = [...document.querySelectorAll('#quotas-list')];
+    if (lists.length > 1) {
+        lists.slice(1).forEach(list => list.remove());
+    }
 }
 
-function setupArbitragemSelectors() {
-    /*
-     * A função Drº Árbitro trata da sua própria
-     * inicialização. Esta função existe para
-     * compatibilidade com o HTML atual.
-     */
+function quotaStatusLabel(status) {
+    const normalized = String(status || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    if (['paga', 'pago', 'regularizada', 'regularizado', 'liquidada', 'liquidado'].includes(normalized)) {
+        return 'Paga';
+    }
+    if (['em_atraso', 'em atraso', 'atrasada', 'atrasado', 'vencida', 'vencido'].includes(normalized)) {
+        return 'Em atraso';
+    }
+    if (['pendente', 'por_pagar', 'por pagar'].includes(normalized)) {
+        return 'Pendente';
+    }
+    return status ? String(status) : 'Por regularizar';
+}
+
+function quotaStatusClass(status) {
+    const label = quotaStatusLabel(status).toLowerCase();
+    if (label === 'paga') return 'quota-paga';
+    if (label === 'em atraso') return 'quota-atraso';
+    return 'quota-pendente';
+}
+
+function formatQuotaMonth(year, month) {
+    if (!year || !month) return '';
+    const date = new Date(Number(year), Number(month) - 1, 1);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 }
 
 async function loadQuotas() {
-    const totalElement =
-        $('#quotas-total');
+    cleanupDuplicateQuotaMarkup();
 
-    const estadoElement =
-        $('#quotas-estado');
+    const el = $('#quotas-list');
+    if (!el || !state.socio?.id) return;
 
-    const historicoElement =
-        $('#quotas-historico');
-
-    if (
-        !state.socio ||
-        !totalElement &&
-        !estadoElement &&
-        !historicoElement
-    ) {
-        return;
-    }
+    // Nunca deixamos o texto estático "A carregar…" se a consulta falhar.
+    el.innerHTML = '<div class="vazio">A carregar quotas…</div>';
 
     try {
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from('quotas')
-                .select('*')
-                .eq(
-                    'socio_id',
-                    state.socio.id
-                )
-                .order(
-                    'ano',
-                    {
-                        ascending: false
-                    }
-                );
+        const { data, error } = await supabase
+            .from('quotas')
+            .select('ano,mes,valor,estado')
+            .eq('socio_id', state.socio.id)
+            .order('ano', { ascending: false })
+            .order('mes', { ascending: false });
 
         if (error) {
+            console.error('Erro ao carregar quotas:', error);
             throw error;
         }
 
-        const quotas =
-            data || [];
+        const quotas = Array.isArray(data) ? data : [];
 
         if (!quotas.length) {
-            if (estadoElement) {
-                estadoElement.textContent =
-                    'Sem registos de quotas.';
-            }
-
-            if (historicoElement) {
-                historicoElement.innerHTML =
-                    '<div class="vazio">Não existem registos de quotas.</div>';
-            }
-
+            el.innerHTML = `<div class="vazio">${escapeHtml(
+                state.socio.quotas || 'Não existem quotas registadas.'
+            )}</div>`;
             return;
         }
 
-        const emDivida =
-            quotas.filter(
-                quota =>
-                    !(
-                        quota.pago === true ||
-                        quota.estado === 'pago' ||
-                        quota.estado === 'regularizada'
-                    )
-            );
+        const atrasadas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Em atraso');
+        const pagas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Paga');
+        const pendentes = quotas.filter(q => quotaStatusLabel(q.estado) === 'Pendente');
 
-        if (estadoElement) {
-            estadoElement.textContent =
-                emDivida.length
-                    ? `${emDivida.length} quota(s) em dívida`
-                    : 'Quotas regularizadas';
-        }
+        const resumo = `
+            <div class="vazio">
+                ${atrasadas.length ? `<strong>Quotas em atraso: ${atrasadas.length}</strong>` : 'Quotas regularizadas.'}
+                ${pagas.length ? ` • ${pagas.length} pagas` : ''}
+                ${pendentes.length ? ` • ${pendentes.length} pendentes` : ''}
+            </div>`;
 
-        if (totalElement) {
-            const total =
-                emDivida.reduce(
-                    (sum, quota) =>
-                        sum +
-                        Number(
-                            quota.valor_em_divida ??
-                                quota.valor ??
-                                0
-                        ),
-                    0
-                );
+        const linhas = quotas.map(q => {
+            const periodo = formatQuotaMonth(q.ano, q.mes) ||
+                [q.ano, q.mes].filter(Boolean).join('/');
+            const valor = q.valor !== null && q.valor !== undefined && q.valor !== ''
+                ? `${Number(q.valor).toFixed(2).replace('.', ',')} €`
+                : '';
+            const estado = quotaStatusLabel(q.estado);
 
-            totalElement.textContent =
-                `${total.toFixed(2)} €`;
-        }
+            return `
+                <div class="quota-row">
+                    <div>
+                        <strong>${escapeHtml(periodo || 'Quota')}</strong>
+                        ${valor ? `<small>${escapeHtml(valor)}</small>` : ''}
+                    </div>
+                    <span class="${quotaStatusClass(q.estado)}">${escapeHtml(estado)}</span>
+                </div>`;
+        }).join('');
 
-        if (historicoElement) {
-            historicoElement.innerHTML =
-                quotas
-                    .map(quota => {
-                        const pago =
-                            quota.pago === true ||
-                            quota.estado === 'pago' ||
-                            quota.estado === 'regularizada';
-
-                        const valor =
-                            Number(
-                                quota.valor ??
-                                    quota.valor_total ??
-                                    0
-                            );
-
-                        return `
-                            <div class="quota-row">
-                                <div>
-                                    <strong>${escapeHtml(quota.ano ?? '')}</strong>
-                                </div>
-
-                                <div>
-                                    ${valor.toFixed(2)} €
-                                </div>
-
-                                <div class="${pago ? 'quota-paga' : 'quota-divida'}">
-                                    ${pago ? 'Regularizada' : 'Em dívida'}
-                                </div>
-                            </div>
-                        `;
-                    })
-                    .join('');
-        }
+        el.innerHTML = resumo + `<div class="quotas-tabela">${linhas}</div>`;
     } catch (error) {
-        console.error(
-            'Erro ao carregar quotas:',
-            error
-        );
-
-        if (estadoElement) {
-            estadoElement.textContent =
-                'Não foi possível carregar as quotas.';
-        }
+        // Se a tabela ainda não existir ou as políticas RLS impedirem a leitura,
+        // mostramos uma mensagem útil em vez de deixar "A carregar…" para sempre.
+        const fallback = state.socio.quotas
+            ? escapeHtml(state.socio.quotas)
+            : 'Não foi possível carregar as quotas neste momento.';
+        el.innerHTML = `<div class="vazio">${fallback}</div>`;
     }
 }
 
 async function loadDocuments() {
-    const root =
-        $('#docs-list');
+    const list = $('#docs-list');
+    if (!list || !state.socio) return;
 
-    if (!root || !state.socio) {
+    const { data, error } = await supabase
+        .from('documentos_socios')
+        .select('*')
+        .eq('socio_id', state.socio.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        list.innerHTML = '<div class="vazio">Não foi possível carregar os documentos.</div>';
         return;
     }
 
-    try {
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from('documentos_socios')
-                .select('*')
-                .eq(
-                    'socio_id',
-                    state.socio.id
-                )
-                .order(
-                    'created_at',
-                    {
-                        ascending: false
-                    }
-                );
+    const documents = data || [];
+    $('#docs-count').textContent = `${documents.length} / 12`;
 
-        if (error) {
-            throw error;
+    if (!documents.length) {
+        list.innerHTML = '<div class="vazio">Ainda não existem documentos.</div>';
+        return;
+    }
+
+    list.innerHTML = '';
+
+    for (const record of documents) {
+        let signedUrl = null;
+
+        if (record.storage_path) {
+            const result = await supabase.storage
+                .from('documentos-socios')
+                .createSignedUrl(record.storage_path, 3600);
+
+            if (!result.error) signedUrl = result.data?.signedUrl || null;
         }
 
-        const documents =
-            data || [];
+        const item = document.createElement('div');
+        item.className = 'documento-socio-item';
 
-        if (!documents.length) {
-            root.innerHTML =
-                '<div class="vazio">Não existem documentos disponíveis.</div>';
+        item.innerHTML = `
+            <div>
+                <strong>📄 ${escapeHtml(record.nome_ficheiro || 'Documento PDF')}</strong>
+                <small>${record.created_at
+                    ? new Date(record.created_at).toLocaleDateString('pt-PT')
+                    : ''}</small>
+            </div>
+            ${signedUrl ? `<a class="botao" href="${signedUrl}" target="_blank" rel="noopener">Abrir</a>` : ''}
+        `;
 
-            return;
-        }
+        list.appendChild(item);
+    }
+}
 
-        root.innerHTML =
-            documents
-                .map(document => `
-                    <div class="documento-row">
-                        <div>
-                            <strong>
-                                ${escapeHtml(
-                                    document.nome ||
-                                    document.titulo ||
-                                    'Documento'
-                                )}
-                            </strong>
+async function uploadSocioPdf(file) {
+    if (!file || file.type !== 'application/pdf') {
+        throw new Error('Só são permitidos ficheiros PDF.');
+    }
 
-                            ${
-                                document.created_at
-                                    ? `
-                                        <small>
-                                            ${new Date(
-                                                document.created_at
-                                            ).toLocaleDateString(
-                                                'pt-PT'
-                                            )}
-                                        </small>
-                                    `
-                                    : ''
-                            }
-                        </div>
+    const { count, error: countError } = await supabase
+        .from('documentos_socios')
+        .select('id', { count: 'exact', head: true })
+        .eq('socio_id', state.socio.id);
 
-                        <button
-                            type="button"
-                            class="botao-secundario documento-download"
-                            data-url="${escapeHtml(
-                                document.url ||
-                                document.storage_path ||
-                                ''
-                            )}"
-                        >
-                            Abrir
-                        </button>
-                    </div>
-                `)
-                .join('');
+    if (countError) throw countError;
+    if ((count || 0) >= 12) throw new Error('Já atingiu o limite máximo de 12 documentos.');
 
-        root
-            .querySelectorAll(
-                '.documento-download'
-            )
-            .forEach(button => {
-                button.addEventListener(
-                    'click',
-                    () => {
-                        const url =
-                            button.dataset.url;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${state.socio.id}/${crypto.randomUUID()}-${safeName}`;
 
-                        if (url) {
-                            window.open(
-                                url,
-                                '_blank',
-                                'noopener'
-                            );
-                        }
-                    }
-                );
-            });
-    } catch (error) {
-        console.error(
-            'Erro ao carregar documentos:',
-            error
-        );
+    const { error: uploadError } = await supabase.storage
+        .from('documentos-socios')
+        .upload(path, file, {
+            contentType: 'application/pdf',
+            upsert: false
+        });
 
-        root.innerHTML =
-            '<div class="vazio">Não foi possível carregar os documentos.</div>';
+    if (uploadError) throw uploadError;
+
+    const { error: dbError } = await supabase
+        .from('documentos_socios')
+        .insert({
+            socio_id: state.socio.id,
+            nome_ficheiro: file.name,
+            storage_path: path,
+            tamanho_bytes: file.size,
+            tipo_mime: 'application/pdf'
+        });
+
+    if (dbError) {
+        await supabase.storage.from('documentos-socios').remove([path]);
+        throw dbError;
     }
 }
 
 async function loadFunlearn() {
-    const totalElements = [
-        $('#funlearn-total'),
-        $('#funlearn-total-top')
-    ].filter(Boolean);
+    const history = $('#funlearn-history');
+    if (!history || !state.socio) return;
 
-    const history =
-        $('#funlearn-history');
-
-    if (
-        !state.socio ||
-        (
-            !totalElements.length &&
-            !history
-        )
-    ) {
-        return;
-    }
-
-    try {
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from('funlearn_pontos')
-                .select('*')
-                .eq(
-                    'socio_id',
-                    state.socio.id
-                )
-                .order(
-                    'created_at',
-                    {
-                        ascending: false
-                    }
-                );
-
-        if (error) {
-            throw error;
-        }
-
-        const entries =
-            data || [];
-
-        const total =
-            entries.reduce(
-                (sum, entry) =>
-                    sum +
-                    Number(
-                        entry.pontos || 0
-                    ),
-                0
-            );
-
-        totalElements.forEach(
-            element => {
-                element.textContent =
-                    String(total);
-            }
-        );
-
-        if (!history) {
-            return;
-        }
-
-        if (!entries.length) {
-            history.innerHTML =
-                '<div class="vazio">Ainda não existem movimentos Fun&Learn.</div>';
-
-            return;
-        }
-
-        history.innerHTML =
-            entries
-                .map(entry => `
-                    <div class="funlearn-row">
-                        <div>
-                            <strong>
-                                ${escapeHtml(
-                                    entry.atividade ||
-                                    'Fun&Learn'
-                                )}
-                            </strong>
-
-                            ${
-                                entry.descricao
-                                    ? `
-                                        <small>
-                                            ${escapeHtml(
-                                                entry.descricao
-                                            )}
-                                        </small>
-                                    `
-                                    : ''
-                            }
-
-                            ${
-                                entry.created_at
-                                    ? `
-                                        <small>
-                                            ${new Date(
-                                                entry.created_at
-                                            ).toLocaleDateString(
-                                                'pt-PT'
-                                            )}
-                                        </small>
-                                    `
-                                    : ''
-                            }
-                        </div>
-
-                        <strong>
-                            ${
-                                Number(
-                                    entry.pontos || 0
-                                ) > 0
-                                    ? '+'
-                                    : ''
-                            }${Number(
-                                entry.pontos || 0
-                            )}
-                        </strong>
-                    </div>
-                `)
-                .join('');
-    } catch (error) {
-        console.error(
-            'Erro ao carregar Fun&Learn:',
-            error
-        );
-
-        totalElements.forEach(
-            element => {
-                element.textContent = '0';
-            }
-        );
-
-        if (history) {
-            history.innerHTML =
-                '<div class="vazio">Não foi possível carregar o histórico Fun&Learn.</div>';
-        }
-    }
-}
-
-async function uploadPhoto(file) {
-    if (
-        !file ||
-        !state.socio?.numero_socio
-    ) {
-        throw new Error(
-            'Não foi possível identificar o sócio.'
-        );
-    }
-
-    const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp'
-    ];
-
-    if (
-        !allowedTypes.includes(
-            file.type
-        )
-    ) {
-        throw new Error(
-            'A fotografia deve estar em JPG, PNG ou WEBP.'
-        );
-    }
-
-    const maxSize =
-        5 * 1024 * 1024;
-
-    if (file.size > maxSize) {
-        throw new Error(
-            'A fotografia não pode ultrapassar 5 MB.'
-        );
-    }
-
-    const extension =
-        file.name
-            .split('.')
-            .pop()
-            .toLowerCase();
-
-    const path =
-        `${state.socio.numero_socio}/foto.${extension}`;
-
-    const {
-        error
-    } =
-        await supabase
-            .storage
-            .from('fotos_socios')
-            .upload(
-                path,
-                file,
-                {
-                    upsert: true,
-                    contentType:
-                        file.type
-                }
-            );
+    const { data, error } = await supabase
+        .from('funlearn_pontos')
+        .select('id,pontos,descricao,created_at')
+        .eq('socio_id', state.socio.id)
+        .order('created_at', { ascending: false });
 
     if (error) {
-        throw error;
-    }
-
-    await loadPhoto();
-}
-
-function setupPhotoUpload() {
-    const input =
-        $('#photo-input');
-
-    const trigger =
-        $('#photo-trigger');
-
-    if (
-        !input ||
-        !trigger ||
-        input.dataset.bound
-    ) {
+        console.error(error);
+        history.innerHTML = '<div class="vazio">Não foi possível carregar o histórico.</div>';
         return;
     }
 
-    input.dataset.bound = '1';
+    const rows = data || [];
+    const total = rows.reduce((sum, row) => sum + Number(row.pontos || 0), 0);
 
-    trigger.addEventListener(
-        'click',
-        event => {
-            event.preventDefault();
-            input.click();
+    $('#funlearn-total').textContent = total;
+    $('#funlearn-total-top').textContent = total;
+
+    history.innerHTML = rows.length
+        ? rows.map(row => `
+            <div class="fun-row">
+                <div>
+                    <strong>Fun&amp;Learn</strong>
+                    <small>${escapeHtml(row.descricao || '')}${
+                        row.created_at
+                            ? ` • ${new Date(row.created_at).toLocaleDateString('pt-PT')}`
+                            : ''
+                    }</small>
+                </div>
+                <b>+${Number(row.pontos || 0)}</b>
+            </div>
+        `).join('')
+        : '<div class="vazio">Ainda não existem movimentos de pontos.</div>';
+}
+
+function fillEditForms() {
+    const s = state.socio;
+    if (!s) return;
+
+    $('#edit-nome').value = s.nome || '';
+    $('#edit-numero').value = s.numero_socio ?? '';
+    $('#edit-nascimento').value = s.data_nascimento || '';
+    $('#edit-email').value = s.email || state.user?.email || '';
+    $('#edit-morada').value = s.morada || '';
+    $('#edit-telemovel').value = s.telemovel || '';
+    $('#edit-arbitro').value = s.numero_arbitro || '';
+    $('#edit-af').value = s.associacao_futebol || '';
+    $('#edit-modalidade').value = s.modalidade || '';
+}
+
+function closeEditForms() {
+    $('#dados-edit-form').hidden = true;
+    $('#dados-view').hidden = false;
+    $('#editar-dados-btn').hidden = false;
+
+    $('#arbitragem-edit-form').hidden = true;
+    $('#arbitragem-view').hidden = false;
+    $('#editar-arbitragem-btn').hidden = false;
+}
+
+async function saveProfileFields(fields) {
+    const { data, error } = await supabase
+        .from('socios')
+        .update(fields)
+        .eq('id', state.socio.id)
+        .eq('user_id', state.user.id)
+        .select('*')
+        .single();
+
+    if (error) throw error;
+
+    state.socio = data;
+    renderProfile();
+    closeEditForms();
+}
+
+async function savePersonalData() {
+    const email = $('#edit-email').value.trim();
+    if (!email || !email.includes('@')) throw new Error('Indica um email válido.');
+
+    const oldEmail = (state.user?.email || '').toLowerCase();
+
+    if (email.toLowerCase() !== oldEmail) {
+        const { error } = await supabase.auth.updateUser({ email });
+        if (error) throw error;
+    }
+
+    await saveProfileFields({
+        data_nascimento: $('#edit-nascimento').value || null,
+        morada: $('#edit-morada').value || null,
+        email,
+        telemovel: $('#edit-telemovel').value || null
+    });
+}
+
+async function saveArbitragemData() {
+    await saveProfileFields({
+        data_nascimento: state.socio.data_nascimento,
+        morada: state.socio.morada,
+        email: state.socio.email || state.user.email,
+        telemovel: state.socio.telemovel,
+        numero_arbitro: $('#edit-arbitro').value || null,
+        associacao_futebol: $('#edit-af').value || null,
+        modalidade: $('#edit-modalidade').value || null
+    });
+}
+
+/* ---------------- ADMIN ---------------- */
+
+async function assertAdmin() {
+    const session = await getSession();
+    if (!session) throw new Error('Sessão não autenticada.');
+
+    const { data, error } = await supabase
+        .from('socios')
+        .select('id,numero_socio,is_admin,ativo')
+        .eq('user_id', session.user.id)
+        .eq('ativo', true)
+        .single();
+
+    if (error) throw error;
+
+    if (
+        data.is_admin !== true ||
+        data.ativo !== true
+    ) {
+        throw new Error('Acesso reservado a administradores autorizados.');
+    }
+
+    return session;
+}
+
+async function createSocioFromAdmin() {
+    await assertAdmin();
+
+    const body = {
+        nome: $('#novo-socio-nome').value.trim(),
+        numero_socio: Number($('#novo-socio-numero').value),
+        email: $('#novo-socio-email').value.trim(),
+        telemovel: $('#novo-socio-telemovel').value.trim()
+    };
+
+    const { data, error } = await supabase.functions.invoke('criar-socio', { body });
+
+    if (error) throw new Error(await functionError(error, 'Não foi possível criar o sócio.'));
+    if (data?.error) throw new Error(data.error);
+
+    return data?.socio || data;
+}
+
+async function functionError(error, fallback) {
+    if (!error) return fallback;
+
+    if (error.context) {
+        try {
+            const payload = await error.context.json();
+            if (payload?.error) return payload.error;
+            if (payload?.message) return payload.message;
+        } catch (_) {}
+    }
+
+    return error.message || fallback;
+}
+
+async function loadAdminSocios() {
+    if (!state.admin || !$('#admin-socios-lista')) return;
+
+    const { data, error } = await supabase
+        .from('socios')
+        .select('id,numero_socio,nome,email,telemovel,ativo,user_id')
+        .order('numero_socio', { ascending: true });
+
+    if (error) {
+        $('#admin-socios-lista').innerHTML =
+            `<div class="vazio">${escapeHtml(error.message)}</div>`;
+        return;
+    }
+
+    const rows = data || [];
+    state.adminSocios = rows;
+
+    $('#admin-socios-lista').innerHTML = rows.length
+        ? rows.map(s => `
+            <label class="admin-socio-row">
+                <input
+                    class="admin-socio-select"
+                    type="checkbox"
+                    value="${escapeHtml(s.id)}"
+                    data-name="${escapeHtml(s.nome || '')}"
+                >
+                <span class="admin-socio-numero">${escapeHtml(s.numero_socio)}</span>
+                <span class="admin-socio-main">
+                    <strong>${escapeHtml(s.nome)}</strong>
+                    <small>${escapeHtml(s.email || 'Sem email')} · ${escapeHtml(s.telemovel || 'Sem telemóvel')}</small>
+                </span>
+                <span class="admin-socio-status ${s.ativo ? 'ativo' : 'inativo'}">
+                    ${s.ativo ? 'Ativo' : 'Inativo'}
+                </span>
+            </label>
+        `).join('')
+        : '<div class="vazio">Ainda não existem sócios.</div>';
+
+    const select = $('#admin-remove-socio');
+    if (select) {
+        select.innerHTML = rows
+            .filter(s => s.ativo)
+            .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.numero_socio)} — ${escapeHtml(s.nome)}</option>`)
+            .join('');
+    }
+}
+
+function selectedSocioIds() {
+    return $$('.admin-socio-select:checked').map(el => el.value);
+}
+
+function updateAdminSelectionUI() {
+    const ids = selectedSocioIds();
+    const count = $('#admin-selected-count');
+    if (count) count.textContent = `${ids.length} selecionado${ids.length === 1 ? '' : 's'}`;
+    const selectAll = $('#admin-select-all');
+    const checks = $$('.admin-socio-select');
+    if (selectAll) {
+        selectAll.checked = checks.length > 0 && ids.length === checks.length;
+        selectAll.indeterminate = ids.length > 0 && ids.length < checks.length;
+    }
+}
+
+function selectAllAdminSocios(checked) {
+    $$('.admin-socio-select').forEach(cb => { cb.checked = checked; });
+    updateAdminSelectionUI();
+}
+
+async function invokeAdminMail(payload) {
+    await assertAdmin();
+    const { data, error } = await supabase.functions.invoke('admin-mail', { body: payload });
+    if (error) throw new Error(await functionError(error, 'Falha no envio do email.'));
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+async function sendQuotasEmAtraso() {
+    const ids = selectedSocioIds();
+    if (!ids.length) throw new Error('Selecione pelo menos um sócio.');
+
+    return invokeAdminMail({
+        action: 'quotas_em_atraso',
+        socio_ids: ids
+    });
+}
+
+async function sendDocumentoTodos(file) {
+    if (!(file instanceof File)) throw new Error('Selecione um documento válido.');
+
+    const session = await assertAdmin();
+    const form = new FormData();
+    form.append('action', 'documento_todos');
+    form.append('documento', file);
+    form.append('subject', $('#admin-documento-assunto')?.value?.trim() || 'Comunicação do Núcleo de Árbitros de Futebol Marques Bom');
+    form.append('message', $('#admin-documento-mensagem')?.value?.trim() || '');
+
+    const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin-mail`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: SUPABASE_ANON_KEY
+            },
+            body: form
         }
     );
 
-    input.addEventListener(
-        'change',
-        async () => {
-            const file =
-                input.files?.[0];
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Falha no envio do documento.');
+    return data;
+}
 
-            if (!file) {
-                return;
-            }
+async function importarPDF(file) {
+    if (!(file instanceof File) || file.type !== 'application/pdf') {
+        throw new Error('Selecione um ficheiro PDF.');
+    }
 
-            try {
-                await uploadPhoto(file);
+    const session = await assertAdmin();
+    const form = new FormData();
+    form.append('action', 'importar_pdf');
+    form.append('pdf', file);
 
-                showMessage(
-                    'Fotografia atualizada com sucesso.',
-                    'sucesso'
-                );
-            } catch (error) {
-                console.error(
-                    'Erro ao atualizar fotografia:',
-                    error
-                );
-
-                showMessage(
-                    error.message ||
-                        'Não foi possível atualizar a fotografia.',
-                    'erro'
-                );
-            } finally {
-                input.value = '';
-            }
+    const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin-import-pdf`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: SUPABASE_ANON_KEY
+            },
+            body: form
         }
     );
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Falha na importação do PDF.');
+    return data;
+}
+
+async function retirarPontos(socioId, pontos, motivo) {
+    const valor = Number(pontos);
+    if (!Number.isFinite(valor) || valor <= 0) {
+        throw new Error('Indique um número de pontos superior a zero.');
+    }
+    if (!motivo.trim()) throw new Error('Indique o motivo da retirada de pontos.');
+
+    await assertAdmin();
+
+    const { data, error } = await supabase.functions.invoke('admin-funlearn', {
+        body: {
+            action: 'retirar_pontos',
+            socio_id: socioId,
+            pontos: valor,
+            motivo: motivo.trim(),
+            notificar: true
+        }
+    });
+
+    if (error) throw new Error(await functionError(error, 'Não foi possível retirar os pontos.'));
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+async function processFunlearnPdf(file, pontos, atividade, descricao) {
+    if (!state.admin) throw new Error('Apenas o administrador pode processar documentos Fun&Learn.');
+    if (!file || file.type !== 'application/pdf') throw new Error('O ficheiro deve ser PDF.');
+
+    const value = Number(pontos);
+    if (!Number.isInteger(value) || value <= 0) {
+        throw new Error('Indica um número de pontos superior a 0.');
+    }
+
+    if (!window.pdfjsLib) {
+        try {
+            window.pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+        } catch (_) {
+            throw new Error('Não foi possível carregar o leitor de PDF.');
+        }
+    }
+
+    const path = `admin/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('funlearn')
+        .upload(path, file, { contentType: 'application/pdf', upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data: importacao, error: importError } = await supabase
+        .from('funlearn_importacoes')
+        .insert({
+            nome_ficheiro: file.name,
+            storage_path: path,
+            pontos: value,
+            estado: 'processando',
+            created_by: state.user.id
+        })
+        .select()
+        .single();
+
+    if (importError) throw importError;
+
+    try {
+        const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        let text = '';
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+            const page = await pdf.getPage(pageNumber);
+            const content = await page.getTextContent();
+            text += ' ' + content.items.map(item => item.str).join(' ');
+        }
+
+        const normalizedText = normalizeName(text);
+
+        const { data: socios, error: sociosError } = await supabase
+            .from('socios')
+            .select('id,nome,numero_socio')
+            .eq('ativo', true);
+
+        if (sociosError) throw sociosError;
+
+        const encontrados = (socios || []).filter(s => {
+            const nome = normalizeName(s.nome);
+            return nome.length >= 4 && normalizedText.includes(nome);
+        });
+
+        if (encontrados.length) {
+            const importRows = encontrados.map(s => ({
+                importacao_id: importacao.id,
+                nome_original: s.nome,
+                nome_normalizado: normalizeName(s.nome),
+                numero_socio: s.numero_socio,
+                socio_id: s.id,
+                correspondencia_encontrada: true,
+                pontos_atribuidos: false
+            }));
+
+            const { error: nomesError } = await supabase
+                .from('funlearn_import_nomes')
+                .insert(importRows);
+
+            if (nomesError) throw nomesError;
+
+            const descricaoFinal = atividade
+                ? `${atividade}${descricao ? ` — ${descricao}` : ''}`
+                : (descricao || 'Pontuação atribuída automaticamente');
+
+            const { error: pontosError } = await supabase
+                .from('funlearn_pontos')
+                .insert(encontrados.map(s => ({
+                    socio_id: s.id,
+                    importacao_id: importacao.id,
+                    pontos: value,
+                    descricao: descricaoFinal
+                })));
+
+            if (pontosError) throw pontosError;
+
+            await supabase
+                .from('funlearn_import_nomes')
+                .update({ pontos_atribuidos: true })
+                .eq('importacao_id', importacao.id);
+        }
+
+        await supabase
+            .from('funlearn_importacoes')
+            .update({
+                estado: 'processado',
+                total_nomes: encontrados.length,
+                total_socios_encontrados: encontrados.length,
+                total_pontos_atribuidos: encontrados.length * value,
+                processado_at: new Date().toISOString()
+            })
+            .eq('id', importacao.id);
+
+        return {
+            count: encontrados.length,
+            names: encontrados.map(s => `${s.numero_socio} — ${s.nome}`)
+        };
+    } catch (error) {
+        await supabase
+            .from('funlearn_importacoes')
+            .update({
+                estado: 'erro',
+                erro: error.message || String(error)
+            })
+            .eq('id', importacao.id);
+
+        throw error;
+    }
 }
 
 function normalizeName(value = '') {
     return String(value)
         .normalize('NFD')
-        .replace(
-            /[\u0300-\u036f]/g,
-            ''
-        )
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
-        .replace(
-            /\s+/g,
-            ' '
-        )
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
 function syncMobileTabSelector() {
-    const select =
-        $('#socio-tab-select');
+    const select = $('#socio-tab-select');
+    if (!select) return;
 
-    if (!select) {
-        return;
-    }
+    const buttons = $$('.socio-tab').filter(button => !button.hidden);
+    const active = buttons.find(button => button.classList.contains('active'))?.dataset.tab;
+    const current = select.value;
 
-    const buttons =
-        $$('.socio-tab');
+    select.innerHTML = buttons.map(button =>
+        `<option value="${escapeHtml(button.dataset.tab || '')}">${escapeHtml(button.textContent.trim())}</option>`
+    ).join('');
 
-    const active =
-        buttons.find(
-            button =>
-                button.classList.contains(
-                    'active'
-                )
-        )?.dataset.tab;
-
-    const previous =
-        select.value;
-
-    select.innerHTML =
-        buttons
-            .map(
-                button =>
-                    `<option value="${escapeHtml(
-                        button.dataset.tab || ''
-                    )}">${escapeHtml(
-                        button.textContent.trim()
-                    )}</option>`
-            )
-            .join('');
-
-    select.value =
-        buttons.some(
-            button =>
-                button.dataset.tab ===
-                previous
-        )
-            ? previous
-            : (
-                  active ||
-                  buttons[0]?.dataset.tab ||
-                  ''
-              );
+    select.value = buttons.some(button => button.dataset.tab === current)
+        ? current
+        : (active || buttons[0]?.dataset.tab || '');
 }
 
-function activateSocioTab(
-    tabName
-) {
-    const button =
-        $$('.socio-tab').find(
-            button =>
-                button.dataset.tab ===
-                tabName
-        );
+function activateSocioTab(tabName) {
+    const button = $$('.socio-tab').find(item =>
+        item.dataset.tab === tabName && !item.hidden
+    );
 
-    if (!button) {
-        return;
+    if (!button) return;
+
+    $$('.socio-tab').forEach(item => item.classList.remove('active'));
+    $$('.socio-tab-content').forEach(panel => {
+        panel.classList.remove('active');
+        if (panel.id === 'administracao') panel.hidden = true;
+    });
+
+    button.classList.add('active');
+
+    const panel = document.getElementById(tabName);
+    if (panel) {
+        panel.classList.add('active');
+        if (panel.id === 'administracao') panel.hidden = false;
     }
 
-    $$('.socio-tab').forEach(
-        button =>
-            button.classList.remove(
-                'active'
-            )
-    );
+    const select = $('#socio-tab-select');
+    if (select) select.value = tabName;
 
-    $$('.socio-tab-content').forEach(
-        panel =>
-            panel.classList.remove(
-                'active'
-            )
-    );
-
-    button.classList.add(
-        'active'
-    );
-
-    document
-        .getElementById(tabName)
-        ?.classList.add('active');
-
-    const select =
-        $('#socio-tab-select');
-
-    if (select) {
-        select.value =
-            tabName;
+    if (tabName === 'administracao' && state.admin) {
+        setupEmbeddedAdminFrame();
     }
 }
 
 function setupTabs() {
-    $$('.socio-tab').forEach(
-        button => {
-            button.addEventListener(
-                'click',
-                () =>
-                    activateSocioTab(
-                        button.dataset.tab
-                    )
-            );
-        }
-    );
+    $$('.socio-tab').forEach(button => {
+        if (button.dataset.bound === '1') return;
+        button.dataset.bound = '1';
+        button.addEventListener('click', () => activateSocioTab(button.dataset.tab));
+    });
 
-    $('#socio-tab-select')
-        ?.addEventListener(
-            'change',
-            event =>
-                activateSocioTab(
-                    event.target.value
-                )
-        );
+    const select = $('#socio-tab-select');
+    if (select && !select.dataset.bound) {
+        select.dataset.bound = '1';
+        select.addEventListener('change', event => activateSocioTab(event.target.value));
+    }
 
     syncMobileTabSelector();
-
-    const tabs =
-        $('.socio-tabs');
-
-    if (
-        tabs &&
-        !tabs.dataset.mobileObserver
-    ) {
-        const observer =
-            new MutationObserver(
-                () => {
-                    syncMobileTabSelector();
-
-                    $$('.socio-tab')
-                        .forEach(
-                            button => {
-                                if (
-                                    !button.dataset.bound
-                                ) {
-                                    button.dataset.bound =
-                                        '1';
-
-                                    button.addEventListener(
-                                        'click',
-                                        () =>
-                                            activateSocioTab(
-                                                button.dataset.tab
-                                            )
-                                    );
-                                }
-                            }
-                        );
-                }
-            );
-
-        observer.observe(
-            tabs,
-            {
-                childList: true
-            }
-        );
-
-        tabs.dataset.mobileObserver =
-            '1';
-    }
+    updateAdminVisibility();
+    setupEmbeddedAdminFrame();
 }
 
-function cleanupDuplicateQuotaMarkup() {
-    /*
-     * Mantém compatibilidade com versões antigas
-     * do HTML que possam ter duplicado algum bloco
-     * visual de quotas.
-     *
-     * Não executa qualquer operação administrativa.
-     */
-}
 
 async function init() {
-    await loadPublicMembers();
-
-    /*
-     * Nunca mostrar dados privados por defeito.
-     */
+    // Nunca mostrar dados privados por defeito.
     clearPrivateUI();
-
     cleanupDuplicateQuotaMarkup();
-
     setupTabs();
-    setupProfileForm();
-    setupPhotoUpload();
 
-    $('#login-form')
-        ?.addEventListener(
-            'submit',
-            async event => {
-                event.preventDefault();
+    $('#login-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        hideMessage();
 
-                hideMessage();
+        try {
+            await login(
+                $('#login-email').value.trim(),
+                $('#login-password').value
+            );
 
-                try {
-                    await login(
-                        $('#login-email')
-                            .value
-                            .trim(),
+            const session = await getSession();
+            if (!session) throw new Error('O login não criou uma sessão.');
 
-                        $('#login-password')
-                            .value
-                    );
+            await loadProfile(session.user);
+            renderProfile();
+        } catch (error) {
+            console.error('Erro no login:', error);
+            clearPrivateUI();
+            showMessage(error.message || 'Não foi possível iniciar sessão.', 'erro');
+        }
+    });
 
-                    const session =
-                        await getSession();
+    $('#reset-password')?.addEventListener('click', async () => {
+        const email = $('#login-email')?.value.trim();
 
-                    if (!session) {
-                        throw new Error(
-                            'O login não criou uma sessão.'
-                        );
-                    }
+        if (!email) {
+            showMessage('Introduz primeiro o teu email.', 'info');
+            $('#login-email')?.focus();
+            return;
+        }
 
-                    await loadProfile(
-                        session.user
-                    );
+        try {
+            await resetPassword(email);
+            showMessage('Foi enviado um email para redefinir a palavra-passe.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível enviar o email.', 'erro');
+        }
+    });
 
-                    /*
-                     * Se for administrador,
-                     * loadProfile já iniciou a
-                     * navegação para admin.html.
-                     */
-                    if (
-                        !state.socio ||
-                        state.socio.is_admin === true
-                    ) {
-                        return;
-                    }
+    $('#logout-btn')?.addEventListener('click', logout);
 
-                    renderProfile();
-                } catch (error) {
-                    console.error(
-                        'Erro no login:',
-                        error
-                    );
+    $('#photo-input')?.addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
 
-                    clearPrivateUI();
+        try {
+            await uploadPhoto(file);
+            showMessage('Fotografia atualizada.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível atualizar a fotografia.', 'erro');
+        } finally {
+            event.target.value = '';
+        }
+    });
 
-                    showMessage(
-                        error.message ||
-                            'Não foi possível iniciar sessão.',
-                        'erro'
-                    );
-                }
-            }
-        );
+    $('#doc-input')?.addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
 
-    $('#reset-password')
-        ?.addEventListener(
-            'click',
-            async () => {
-                const email =
-                    $('#login-email')
-                        ?.value
-                        .trim();
+        try {
+            await uploadSocioPdf(file);
+            await loadDocuments();
+            showMessage('Documento carregado.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível carregar o documento.', 'erro');
+        } finally {
+            event.target.value = '';
+        }
+    });
 
-                if (!email) {
-                    showMessage(
-                        'Introduz primeiro o teu email.',
-                        'info'
-                    );
+    $('#editar-dados-btn')?.addEventListener('click', () => {
+        fillEditForms();
+        $('#dados-view').hidden = true;
+        $('#dados-edit-form').hidden = false;
+        $('#editar-dados-btn').hidden = true;
+    });
 
-                    $('#login-email')
-                        ?.focus();
+    $('#cancelar-dados-btn')?.addEventListener('click', closeEditForms);
 
-                    return;
-                }
+    $('#dados-edit-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
-                try {
-                    await resetPassword(
-                        email
-                    );
+        try {
+            $('#guardar-dados-btn').disabled = true;
+            await savePersonalData();
+            showMessage('Dados pessoais atualizados.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível guardar os dados.', 'erro');
+        } finally {
+            $('#guardar-dados-btn').disabled = false;
+        }
+    });
 
-                    showMessage(
-                        'Foi enviado um email para redefinir a palavra-passe.',
-                        'sucesso'
-                    );
-                } catch (error) {
-                    showMessage(
-                        error.message ||
-                            'Não foi possível enviar o email.',
-                        'erro'
-                    );
-                }
-            }
-        );
+    $('#editar-arbitragem-btn')?.addEventListener('click', () => {
+        fillEditForms();
+        $('#arbitragem-view').hidden = true;
+        $('#arbitragem-edit-form').hidden = false;
+        $('#editar-arbitragem-btn').hidden = true;
+    });
 
-    $('#logout-btn')
-        ?.addEventListener(
-            'click',
-            logout
-        );
+    $('#cancelar-arbitragem-btn')?.addEventListener('click', closeEditForms);
 
-    const session =
-        await getSession();
+    $('#arbitragem-edit-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+
+        try {
+            button.disabled = true;
+            await saveArbitragemData();
+            showMessage('Dados de arbitragem atualizados.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível guardar os dados.', 'erro');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    $('#novo-socio-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        try {
+            $('#novo-socio-submit').disabled = true;
+            const socio = await createSocioFromAdmin();
+
+            $('#novo-socio-form').reset();
+            $('#novo-socio-resultado').hidden = false;
+            $('#novo-socio-resultado').textContent =
+                `Sócio ${socio.numero_socio} — ${socio.nome} criado. Foi enviado um convite para ${socio.email}.`;
+
+            await loadAdminSocios();
+            showMessage('Sócio criado e convite enviado por email.', 'sucesso');
+        } catch (error) {
+            $('#novo-socio-resultado').hidden = false;
+            $('#novo-socio-resultado').textContent = error.message || 'Não foi possível criar o sócio.';
+            showMessage(error.message || 'Não foi possível criar o sócio.', 'erro');
+        } finally {
+            $('#novo-socio-submit').disabled = false;
+        }
+    });
+
+    $('#admin-select-all')?.addEventListener('change', (event) => {
+        selectAllAdminSocios(event.currentTarget.checked);
+    });
+
+    $('#admin-socios-lista')?.addEventListener('change', (event) => {
+        if (event.target?.classList?.contains('admin-socio-select')) {
+            updateAdminSelectionUI();
+        }
+    });
+
+    $('#admin-refresh-socios')?.addEventListener('click', async () => {
+        try {
+            await assertAdmin();
+            await loadAdminSocios();
+            showMessage('Lista de sócios atualizada.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível atualizar a lista.', 'erro');
+        }
+    });
+
+    $('#admin-quotas-atraso')?.addEventListener('click', async () => {
+        try {
+            $('#admin-quotas-atraso').disabled = true;
+            await sendQuotasEmAtraso();
+            showMessage('Email de quotas em atraso enviado aos sócios selecionados.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível enviar os emails.', 'erro');
+        } finally {
+            $('#admin-quotas-atraso').disabled = false;
+        }
+    });
+
+    $('#admin-documento-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = $('#admin-documento-file')?.files?.[0];
+
+        try {
+            await sendDocumentoTodos(file);
+            event.currentTarget.reset();
+            showMessage('Documento enviado para toda a lista de sócios.', 'sucesso');
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível enviar o documento.', 'erro');
+        }
+    });
+
+    $('#admin-import-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = $('#admin-import-file')?.files?.[0];
+
+        try {
+            const result = await importarPDF(file);
+            $('#admin-import-result').hidden = false;
+            $('#admin-import-result').textContent =
+                result?.message || 'Importação concluída.';
+            event.currentTarget.reset();
+            showMessage('PDF importado com sucesso.', 'sucesso');
+            await loadAdminSocios();
+        } catch (error) {
+            $('#admin-import-result').hidden = false;
+            $('#admin-import-result').textContent =
+                error.message || 'Falha na importação do PDF.';
+            showMessage(error.message || 'Falha na importação do PDF.', 'erro');
+        }
+    });
+
+    $('#admin-remove-points-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        try {
+            const result = await retirarPontos(
+                $('#admin-remove-socio').value,
+                Number($('#admin-remove-pontos').value),
+                $('#admin-remove-motivo').value
+            );
+
+            event.currentTarget.reset();
+            showMessage(
+                result?.message || 'Pontos retirados e email de notificação enviado.',
+                'sucesso'
+            );
+
+            if (state.socio) await loadFunlearn();
+        } catch (error) {
+            showMessage(error.message || 'Não foi possível retirar os pontos.', 'erro');
+        }
+    });
+
+    $('#funlearn-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        try {
+            $('#funlearn-submit').disabled = true;
+
+            const result = await processFunlearnPdf(
+                $('#funlearn-file').files?.[0],
+                Number($('#funlearn-pontos').value),
+                $('#funlearn-atividade').value.trim(),
+                $('#funlearn-descricao').value.trim()
+            );
+
+            event.currentTarget.reset();
+
+            showMessage(
+                result.count
+                    ? `Processamento concluído: ${result.count} sócio(s) recebeu(ram) pontos.`
+                    : 'O PDF foi processado, mas não foi encontrado nenhum nome correspondente.',
+                result.count ? 'sucesso' : 'info'
+            );
+        } catch (error) {
+            showMessage(error.message || 'Erro ao processar o PDF.', 'erro');
+        } finally {
+            $('#funlearn-submit').disabled = false;
+        }
+    });
+
+    // Só depois de verificar a sessão é que tentamos ler dados privados.
+    const session = await getSession();
 
     if (!session) {
         return;
     }
 
     try {
-        await loadProfile(
-            session.user
-        );
-
-        /*
-         * Administradores já foram enviados
-         * para admin.html por loadProfile().
-         */
-        if (
-            !state.socio ||
-            state.socio.is_admin === true
-        ) {
-            return;
-        }
-
+        await loadProfile(session.user);
         renderProfile();
     } catch (error) {
-        console.error(
-            'Erro ao restaurar sessão:',
-            error
-        );
-
+        console.error('Erro ao carregar perfil:', error);
         clearPrivateUI();
-
         showMessage(
-            error.message ||
-                'A sessão não pôde ser restaurada.',
+            'A conta autenticada ainda não está associada a um registo de sócio ativo.',
             'erro'
         );
     }
 }
 
-supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-        if (!session?.user) {
-            clearPrivateUI();
-            return;
-        }
-
-        try {
-            await loadProfile(
-                session.user
-            );
-
-            /*
-             * Se for administrador,
-             * loadProfile já trata do redirect.
-             */
-            if (
-                !state.socio ||
-                state.socio.is_admin === true
-            ) {
-                return;
-            }
-
-            renderProfile();
-        } catch (error) {
-            console.error(
-                'Erro na sessão:',
-                error
-            );
-
-            clearPrivateUI();
-
-            showMessage(
-                error.message ||
-                    'Não foi possível validar o acesso.',
-                'erro'
-            );
-        }
+supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (!session) {
+        clearPrivateUI();
+        return;
     }
-);
 
-init().catch(error => {
-    console.error(
-        'Erro ao iniciar área de sócio:',
-        error
-    );
+    /*
+     * O evento auth pode disparar antes do init terminar.
+     * Revalidamos o perfil e atualizamos a interface sem
+     * redirecionar administradores.
+     */
+    try {
+        await loadProfile(session.user);
+        renderProfile();
+    } catch (error) {
+        console.error('Erro ao validar a sessao:', error);
+    }
+});
 
+init().catch((error) => {
+    console.error('Erro de inicialização:', error);
     clearPrivateUI();
-
-    showMessage(
-        error.message ||
-            'Não foi possível iniciar a área de sócio.',
-        'erro'
-    );
+    showMessage('Não foi possível inicializar a área de sócios.', 'erro');
 });
