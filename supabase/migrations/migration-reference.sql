@@ -1,0 +1,4 @@
+-- Já aplicada no projeto Supabase.
+-- Esta cópia é apenas para referência/auditoria.
+-- Migration: pagamentos_manuais_recibos_quotas
+-- Cria metodo_pagamento em quotas, recibos_quotas e registar_pagamento_manual().
