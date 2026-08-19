@@ -1,14 +1,1 @@
-/* Módulo de pagamentos de quotas — visual neutro para preservar admin.css */
-.quotas-pagamento-manual {
-  margin-top: 24px;
-}
-
-.quotas-pagamento-manual .admin-form-grid {
-  align-items: end;
-}
-
-.quotas-pagamento-manual select,
-.quotas-pagamento-manual input {
-  width: 100%;
-  box-sizing: border-box;
-}
+.manual-quota{margin-top:24px}.manual-quota-result{margin-top:14px}
