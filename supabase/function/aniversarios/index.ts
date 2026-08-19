@@ -1,37 +1,187 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,x-client-info,apikey,content-type","Content-Type":"application/json"};
-const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
-const esc=(v:string)=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]??c));
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "apikey, authorization, x-client-info, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json"
+};
 
-Deno.serve(async req=>{
- if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
- try{
-  const cronSecret=Deno.env.get("CRON_SECRET");
-  const auth=req.headers.get("Authorization")||"";
-  if(cronSecret && auth!==`Bearer ${cronSecret}`) return reply({error:"Não autorizado."},401);
-  if(!cronSecret && req.method!=="POST") return reply({error:"Método não permitido."},405);
-  const url=Deno.env.get("SUPABASE_URL")!, secret=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const resend=Deno.env.get("RESEND_API_KEY"), from=Deno.env.get("MAIL_FROM");
-  if(!resend||!from) return reply({error:"Configure RESEND_API_KEY e MAIL_FROM."},500);
-  const db=createClient(url,secret);
-  const today=new Date(), month=today.getUTCMonth()+1, day=today.getUTCDate(), year=today.getUTCFullYear();
-  const {data:socios,error}=await db.from("socios").select("id,nome,email,data_nascimento,ativo").eq("ativo",true).not("email","is",null);
-  if(error) throw error;
-  let enviados=0,ignorados=0,erros:string[]=[];
-  for(const s of socios||[]){
-   if(!s.data_nascimento) {ignorados++;continue;}
-   const d=new Date(`${String(s.data_nascimento).slice(0,10)}T00:00:00Z`);
-   if(d.getUTCMonth()+1!==month||d.getUTCDate()!==day) {ignorados++;continue;}
-   const {data:claim,error:claimError}=await db.from("aniversarios_enviados").insert({socio_id:s.id,ano:year}).select("id").maybeSingle();
-   if(claimError||!claim){ignorados++;continue;}
-   const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:`Bearer ${resend}`,"Content-Type":"application/json"},body:JSON.stringify({
-    from,to:[s.email],subject:"Parabéns pelo seu aniversário! — Núcleo Marques Bom",
-    html:`<p>Olá ${esc(s.nome||"Sócio")},</p><p>O Núcleo de Árbitros de Futebol Marques Bom deseja-lhe um <strong>feliz aniversário</strong>!</p><p>Que tenha um excelente dia e um novo ano cheio de saúde, alegria e grandes momentos.</p><p>Com os melhores cumprimentos,<br>Núcleo de Árbitros de Futebol Marques Bom</p>`
-   })});
-   if(!response.ok){erros.push(`${s.id}: ${await response.text()}`);continue;}
-   enviados++;
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: CORS });
+
+function key(name: "publishable" | "secret") {
+  const raw = Deno.env.get(
+    name === "publishable" ? "SUPABASE_PUBLISHABLE_KEYS" : "SUPABASE_SECRET_KEYS"
+  ) || "{}";
+
+  try {
+    return JSON.parse(raw).default || "";
+  } catch {
+    return "";
   }
-  return reply({ok:true,enviados,ignorados,erros});
- }catch(e){console.error(e);return reply({error:e instanceof Error?e.message:String(e)},500);}
+}
+
+function todayLisbon() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day"))
+  };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
+
+  try {
+    const supplied = req.headers.get("apikey") || "";
+    const publishable = key("publishable");
+
+    if (!publishable || supplied !== publishable) {
+      return json({ error: "Não autorizado." }, 401);
+    }
+
+    const url = Deno.env.get("SUPABASE_URL") || "";
+    const secret =
+      key("secret") ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      "";
+
+    const resend = Deno.env.get("RESEND_API_KEY") || "";
+    const from =
+      Deno.env.get("MAIL_FROM") ||
+      "Núcleo Marques Bom <nucleomarquesbom@gmail.com>";
+
+    if (!url || !secret) {
+      return json({ error: "Configuração Supabase incompleta." }, 500);
+    }
+
+    if (!resend) {
+      return json({
+        error: "RESEND_API_KEY não está configurada no Supabase."
+      }, 500);
+    }
+
+    const admin = createClient(url, secret, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    const date = todayLisbon();
+
+    const { data: socios, error } = await admin
+      .from("socios")
+      .select("id,nome,email,data_nascimento")
+      .eq("ativo", true)
+      .not("email", "is", null)
+      .not("data_nascimento", "is", null);
+
+    if (error) throw error;
+
+    const birthdays = (socios || []).filter((s) => {
+      const value = String(s.data_nascimento || "");
+      return (
+        value.length >= 10 &&
+        Number(value.slice(5, 7)) === date.month &&
+        Number(value.slice(8, 10)) === date.day
+      );
+    });
+
+    let sent = 0;
+    let skipped = 0;
+    const failures = [];
+
+    for (const socio of birthdays) {
+      const { data: already, error: logError } = await admin
+        .from("aniversarios_enviados")
+        .select("id")
+        .eq("socio_id", socio.id)
+        .eq("ano", date.year)
+        .maybeSingle();
+
+      if (logError) throw logError;
+
+      if (already) {
+        skipped++;
+        continue;
+      }
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resend}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from,
+          to: [socio.email],
+          subject: "🎉 Parabéns! — Núcleo Marques Bom",
+          text:
+`Olá ${socio.nome},
+
+Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não podia deixar passar em branco.
+
+🎂 Muitos parabéns pelo seu aniversário!
+
+Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.
+
+Um forte abraço,
+Núcleo de Árbitros de Futebol Marques Bom`
+        })
+      });
+
+      if (!response.ok) {
+        failures.push({
+          socio_id: socio.id,
+          email: socio.email,
+          status: response.status
+        });
+        continue;
+      }
+
+      const { error: insertError } = await admin
+        .from("aniversarios_enviados")
+        .insert({
+          socio_id: socio.id,
+          ano: date.year
+        });
+
+      if (insertError) {
+        failures.push({
+          socio_id: socio.id,
+          email: socio.email,
+          status: 500,
+          error: insertError.message
+        });
+        continue;
+      }
+
+      sent++;
+    }
+
+    return json({
+      ok: true,
+      sent,
+      skipped,
+      birthdays: birthdays.length,
+      failed: failures.length,
+      failures
+    });
+  } catch (error) {
+    console.error(error);
+    return json({
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
 });
