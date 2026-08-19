@@ -7,228 +7,63 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="css/admin-criar-socio.css">
+  <link rel="stylesheet" href="css/admin-funlearn.css">
+  <link rel="stylesheet" href="css/admin-quotas-manual.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
   <script src="js/admin-excel.js"></script>
 </head>
 <body>
-<header>
-  <div class="container">
-    <a class="logo" href="index.html"><img src="imagens/logo.png" alt="Logo"></a>
-    <nav>
-      <a href="index.html">Início</a>
-      <a href="socio.html">Sócio</a>
-      <a href="admin.html" aria-current="page">Administração</a>
-    </nav>
-  </div>
-</header>
-
+<header><div class="container">
+  <a class="logo" href="index.html"><img src="imagens/logo.png" alt="Logo"></a>
+  <nav><a href="index.html">Início</a><a href="socio.html">Sócio</a><a href="admin.html" aria-current="page">Administração</a></nav>
+</div></header>
 <main class="pagina admin-modern">
-  <div class="admin-page-head">
-    <div>
-      <span class="admin-badge">Área reservada</span>
-      <h1>Administração</h1>
-      <p class="admin-help">Gestão de sócios, quotas, Fun&Learn, importação de PDF e comunicações.</p>
-    </div>
-    <button id="btn-refresh" class="admin-small-btn primary">Atualizar</button>
-  </div>
-
+  <div class="admin-page-head"><div><span class="admin-badge">Área reservada</span><h1>Administração</h1><p class="admin-help">Gestão de sócios, quotas, Fun&Learn, importação de PDF e comunicações.</p></div><button id="btn-refresh" class="admin-small-btn primary">Atualizar</button></div>
   <div id="admin-result" class="admin-result" hidden></div>
-
-  <section id="admin-login-warning" class="admin-card" hidden>
-    <h3>Acesso não autorizado</h3>
-    <p>É necessário iniciar sessão com uma conta de administrador.</p>
-  </section>
-
+  <section id="admin-login-warning" class="admin-card" hidden><h3>Acesso não autorizado</h3><p>É necessário iniciar sessão com uma conta de administrador.</p></section>
   <section id="admin-app" hidden>
-    <div class="admin-kpis">
-      <div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div>
-      <div class="admin-kpi"><span>Ativos</span><strong id="kpi-ativos">—</strong></div>
-      <div class="admin-kpi"><span>Quotas em atraso</span><strong id="kpi-atrasos">—</strong></div>
-      <div class="admin-kpi"><span>Pontos Fun&Learn</span><strong id="kpi-pontos">—</strong></div>
-    </div>
-
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-panel="socios">Sócios</button>
-      <button class="admin-tab" data-panel="pdf">Importar PDF</button>
-      <button id="tab-admins" class="admin-tab" data-panel="admins" hidden>Administradores</button>
-      <button class="admin-tab" data-panel="quotas">Quotas</button>
-      <button class="admin-tab" data-panel="email">Email geral</button>
-      <button class="admin-tab" data-panel="funlearn">Fun&Learn</button>
-      <button class="admin-tab" data-panel="dr-arbitro">Drº Árbitro</button>
-    </div>
+    <div class="admin-kpis"><div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div><div class="admin-kpi"><span>Ativos</span><strong id="kpi-ativos">—</strong></div><div class="admin-kpi"><span>Quotas em atraso</span><strong id="kpi-atrasos">—</strong></div><div class="admin-kpi"><span>Pontos Fun&Learn</span><strong id="kpi-pontos">—</strong></div></div>
+    <div class="admin-tabs"><button class="admin-tab active" data-panel="socios">Sócios</button><button class="admin-tab" data-panel="pdf">Importar PDF</button><button id="tab-admins" class="admin-tab" data-panel="admins" hidden>Administradores</button><button class="admin-tab" data-panel="quotas">Quotas</button><button class="admin-tab" data-panel="email">Email geral</button><button class="admin-tab" data-panel="funlearn">Fun&Learn</button><button class="admin-tab" data-panel="dr-arbitro">Drº Árbitro</button></div>
 
     <section id="panel-socios" class="admin-tab-panel active">
-
-      <section id="criar-socio-section" class="admin-card" aria-labelledby="criar-socio-title">
-        <div class="admin-card-header">
-          <div>
-            <h2 id="criar-socio-title">Adicionar sócio</h2>
-            <p class="admin-help">Cria a conta e envia ao sócio um email para definir a própria palavra-passe.</p>
-          </div>
-        </div>
-
-        <form id="form-criar-socio" class="admin-form" novalidate>
-          <div class="admin-form-grid">
-            <label>
-              <span>Nome completo</span>
-              <input id="novo-socio-nome" name="nome" type="text" autocomplete="name" required>
-            </label>
-
-            <label>
-              <span>N.º de sócio</span>
-              <input id="novo-socio-numero" name="numero_socio" type="number" min="1" step="1" required>
-            </label>
-
-            <label>
-              <span>Email</span>
-              <input id="novo-socio-email" name="email" type="email" autocomplete="email" required>
-            </label>
-
-            <label>
-              <span>Telemóvel</span>
-              <input id="novo-socio-telemovel" name="telemovel" type="tel" autocomplete="tel">
-            </label>
-          </div>
-
-          <button id="btn-criar-socio" type="submit" class="admin-small-btn primary">
-            Criar sócio e enviar convite
-          </button>
-
-          <div id="admin-create-socio-result" class="admin-result" hidden aria-live="polite"></div>
-        </form>
+      <section id="criar-socio-section" class="admin-card" aria-labelledby="criar-socio-title"><div class="admin-card-header"><div><h2 id="criar-socio-title">Adicionar sócio</h2><p class="admin-help">Cria a conta e envia ao sócio um email para definir a própria palavra-passe.</p></div></div>
+        <form id="form-criar-socio" class="admin-form" novalidate><div class="admin-form-grid">
+          <label><span>Nome completo</span><input id="novo-socio-nome" name="nome" type="text" autocomplete="name" required></label>
+          <label><span>N.º de sócio</span><input id="novo-socio-numero" name="numero_socio" type="number" min="1" step="1" required></label>
+          <label><span>Email</span><input id="novo-socio-email" name="email" type="email" autocomplete="email" required></label>
+          <label><span>Telemóvel</span><input id="novo-socio-telemovel" name="telemovel" type="tel" autocomplete="tel"></label>
+        </div><button id="btn-criar-socio" type="submit" class="admin-small-btn primary">Criar sócio e enviar convite</button><div id="admin-create-socio-result" class="admin-result" hidden aria-live="polite"></div></form>
       </section>
-
-      <div class="admin-card">
-        <h3>Lista de sócios</h3>
-        <div class="admin-toolbar">
-          <input id="member-search" class="admin-search" placeholder="Pesquisar nome, nº de sócio ou email">
-          <select id="member-status" class="admin-filter">
-            <option value="">Todos</option>
-            <option value="ativo">Ativos</option>
-            <option value="inativo">Inativos</option>
-          </select>
-          <button id="btn-select-all" class="admin-small-btn">Selecionar todos</button>
-          <button id="btn-clear-selection" class="admin-small-btn">Limpar</button>
-        </div>
-        <div id="selected-count" class="admin-selected-count">0 selecionados</div>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr>
-              <th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th>
-            </tr></thead>
-            <tbody id="members-body">
-              <tr><td colspan="7" class="admin-loading">A carregar…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div class="admin-card"><h3>Lista de sócios</h3><div class="admin-toolbar"><input id="member-search" class="admin-search" placeholder="Pesquisar nome, nº de sócio ou email"><select id="member-status" class="admin-filter"><option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option></select><button id="btn-select-all" class="admin-small-btn">Selecionar todos</button><button id="btn-clear-selection" class="admin-small-btn">Limpar</button></div><div id="selected-count" class="admin-selected-count">0 selecionados</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th></tr></thead><tbody id="members-body"><tr><td colspan="7" class="admin-loading">A carregar…</td></tr></tbody></table></div></div>
     </section>
 
-    <section id="panel-admins" class="admin-tab-panel" hidden>
-      <div class="admin-card">
-        <h3>Administradores</h3>
-        <p id="admin-permissions-help" class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p>
-        <div id="admin-permissions-list" class="admin-preview"></div>
-      </div>
-    </section>
+    <section id="panel-admins" class="admin-tab-panel" hidden><div class="admin-card"><h3>Administradores</h3><p class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p><div id="admin-permissions-list" class="admin-preview"></div></div></section>
 
-    <section id="panel-pdf" class="admin-tab-panel">
-      <div class="admin-card">
-        <h3>Carregar dados a partir de PDF</h3>
-        <p class="admin-help">O PDF é lido no navegador. Antes de gravar, os dados são mostrados numa pré-visualização.</p>
-        <div class="admin-file">
-          <label>PDF de origem<input id="pdf-file" type="file" accept="application/pdf"></label>
-          <div id="pdf-progress" class="admin-progress"><span></span></div>
-          <p class="admin-import-note">Formato esperado: linhas contendo número de sócio, nome e, quando disponível, email.</p>
-        </div>
-        <div class="admin-actions">
-          <button id="btn-parse-pdf" class="admin-small-btn primary">Ler PDF</button>
-          <button id="btn-import-pdf" class="admin-small-btn" disabled>Confirmar importação</button>
-        </div>
-        <div id="pdf-preview" class="admin-preview"></div>
-      </div>
-    </section>
+    <section id="panel-pdf" class="admin-tab-panel"><div class="admin-card"><h3>Carregar dados a partir de PDF</h3><p class="admin-help">O PDF é lido no navegador. Antes de gravar, os dados são mostrados numa pré-visualização.</p><div class="admin-file"><label>PDF de origem<input id="pdf-file" type="file" accept="application/pdf"></label><div id="pdf-progress" class="admin-progress"><span></span></div><p class="admin-import-note">Formato esperado: linhas contendo número de sócio, nome e, quando disponível, email.</p></div><div class="admin-actions"><button id="btn-parse-pdf" class="admin-small-btn primary">Ler PDF</button><button id="btn-import-pdf" class="admin-small-btn" disabled>Confirmar importação</button></div><div id="pdf-preview" class="admin-preview"></div></div></section>
 
-    <section id="panel-quotas" class="admin-tab-panel">
-      <div class="admin-card">
-        <h3>Quotas em atraso</h3>
-        <p class="admin-help">Seleciona os sócios a notificar. O envio é delegado à função segura configurada no backend.</p>
-        <div class="admin-selection-bar">
-          <button id="btn-overdue-select-all" type="button" class="admin-small-btn">Selecionar todos</button>
-          <button id="btn-overdue-clear" type="button" class="admin-small-btn">Limpar seleção</button>
-          <span id="overdue-selected-count" class="admin-selected-count">0 selecionados</span>
-        </div>
-        <div id="overdue-list" class="admin-preview"></div>
-        <div class="admin-form-grid">
-          <label class="wide">Assunto<input id="quota-subject" value="Quotas em atraso — Núcleo de Árbitros de Futebol Marques Bom"></label>
-          <label class="wide">Mensagem<textarea id="quota-message">Caro(a) sócio(a),
+    <section id="panel-quotas" class="admin-tab-panel"><div class="admin-card"><h3>Quotas em atraso</h3><p class="admin-help">Seleciona os sócios a notificar. O envio é delegado à função segura configurada no backend.</p><div class="admin-selection-bar"><button id="btn-overdue-select-all" type="button" class="admin-small-btn">Selecionar todos</button><button id="btn-overdue-clear" type="button" class="admin-small-btn">Limpar seleção</button><span id="overdue-selected-count" class="admin-selected-count">0 selecionados</span></div><div id="overdue-list" class="admin-preview"></div><div class="admin-form-grid"><label class="wide">Assunto<input id="quota-subject" value="Quotas em atraso — Núcleo de Árbitros de Futebol Marques Bom"></label><label class="wide">Mensagem<textarea id="quota-message">Caro(a) sócio(a),
 
 Verificámos que existem quotas em atraso associadas ao seu registo. Pedimos que proceda à regularização assim que possível.
 
 Obrigado,
-Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
-        </div>
-        <button id="btn-send-overdue" class="admin-small-btn primary">Enviar avisos</button>
-      </div>
-    </section>
+Núcleo de Árbitros de Futebol Marques Bom</textarea></label></div><button id="btn-send-overdue" class="admin-small-btn primary">Enviar avisos</button>
+      <div class="funlearn-divider"></div><h3>Pagamento manual de quotas</h3><p class="admin-help">Regista um pagamento feito ao Núcleo por transferência, MB WAY ou numerário e envia automaticamente o recibo em PDF ao sócio, com o Núcleo em CC.</p><div class="admin-form-grid"><label>Sócio<select id="manual-quota-socio"></select></label><label>Montante (€)<input id="manual-quota-valor" type="number" min="12" step="12" value="12"></label><label>Método<select id="manual-quota-metodo"><option value="transferencia">Transferência bancária</option><option value="mbway">MB WAY</option><option value="numerario">Numerário</option></select></label></div><button id="btn-manual-quota" type="button" class="admin-small-btn primary">Registar pagamento e enviar recibo</button><div id="manual-quota-result" class="admin-result" hidden aria-live="polite"></div>
+    </div></section>
 
-    <section id="panel-email" class="admin-tab-panel">
-      <div class="admin-card">
-        <h3>Enviar documento para a lista de sócios</h3>
-        <div class="admin-form-grid">
-          <label class="wide">Assunto<input id="mail-subject" placeholder="Assunto do email"></label>
-          <label class="wide">Mensagem<textarea id="mail-message" placeholder="Mensagem"></textarea></label>
-          <label class="wide">Documento<input id="mail-file" type="file"></label>
-        </div>
-        <p class="admin-inline-note">O anexo é enviado para a função segura de email; não são expostas credenciais SMTP no navegador.</p>
-        <button id="btn-send-document" class="admin-small-btn primary">Enviar para todos</button>
-      </div>
-    </section>
+    <section id="panel-email" class="admin-tab-panel"><div class="admin-card"><h3>Enviar documento para a lista de sócios</h3><div class="admin-form-grid"><label class="wide">Assunto<input id="mail-subject" placeholder="Assunto do email"></label><label class="wide">Mensagem<textarea id="mail-message" placeholder="Mensagem"></textarea></label><label class="wide">Documento<input id="mail-file" type="file"></label></div><p class="admin-inline-note">O anexo é enviado para a função segura de email; não são expostas credenciais SMTP no navegador.</p><button id="btn-send-document" class="admin-small-btn primary">Enviar para todos</button></div></section>
 
-    <section id="panel-funlearn" class="admin-tab-panel">
-      <div class="admin-card">
-        <h3>Fun&Learn — retirar pontos</h3>
-        <div class="admin-form-grid">
-          <label>Valor a retirar<input id="points-amount" type="number" min="1" step="1" value="1"></label>
-          <label>Sócio<select id="points-member"></select></label>
-          <label class="wide">Motivo<textarea id="points-reason" placeholder="Motivo obrigatório para a retirada de pontos"></textarea></label>
-        </div>
-        <div class="admin-danger-box">A retirada fica registada e a função segura de email envia a notificação ao sócio.</div>
-        <button id="btn-remove-points" class="admin-small-btn danger">Retirar pontos e notificar</button>
-      </div>
-    </section>
+    <section id="panel-funlearn" class="admin-tab-panel"><div class="admin-card funlearn-unified-card"><div class="admin-card-header"><div><span class="admin-badge">Fun&Learn</span><h2>Gestão de pontos</h2><p class="admin-help">Importar pontos por PDF, adicionar pontos individualmente e retirar pontos, tudo no mesmo bloco.</p></div></div>
+      <div class="funlearn-section"><h3>Carregar pontos através de PDF</h3><div class="admin-form-grid"><label>Pontos por sócio<input id="funlearn-pdf-points" type="number" min="1" step="1" value="1"></label><label>PDF<input id="funlearn-pdf" type="file" accept="application/pdf"></label><label class="wide">Descrição<input id="funlearn-pdf-description" placeholder="Ex.: Participação na atividade X"></label></div><button id="btn-funlearn-pdf" type="button" class="admin-small-btn primary">Ler PDF e atribuir pontos</button><div id="funlearn-pdf-preview" class="funlearn-preview"></div></div>
+      <div class="funlearn-divider"></div>
+      <div class="funlearn-section"><h3>Adicionar pontos individualmente</h3><div class="admin-form-grid"><label>Sócio<select id="funlearn-add-member"></select></label><label>Pontos<input id="funlearn-add-points" type="number" min="1" step="1" value="1"></label><label>Atividade<input id="funlearn-add-activity" value="Fun&Learn"></label><label>Motivo<input id="funlearn-add-description" placeholder="Motivo da atribuição"></label></div><button id="btn-funlearn-add" type="button" class="admin-small-btn primary">Adicionar pontos</button></div>
+      <div class="funlearn-divider"></div>
+      <div class="funlearn-section"><h3>Retirar pontos individualmente</h3><div class="admin-form-grid"><label>Sócio<select id="funlearn-remove-member"></select></label><label>Pontos<input id="funlearn-remove-points" type="number" min="1" step="1" value="1"></label><label class="wide">Motivo<textarea id="funlearn-remove-reason" placeholder="Motivo obrigatório"></textarea></label></div><div class="admin-danger-box">A retirada fica registada como movimento negativo. O histórico não é apagado.</div><button id="btn-funlearn-remove" type="button" class="admin-small-btn danger">Retirar pontos</button></div>
+    </div></section>
 
-    <section id="panel-dr-arbitro" class="admin-tab-panel">
-      <div class="admin-card dr-card">
-        <div class="dr-page-head">
-          <div>
-            <h3>Drº Árbitro</h3>
-            <p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p>
-          </div>
-        </div>
-        <div class="dr-grid">
-          <div id="dr-futebol" class="dr-modalidade"></div>
-          <div id="dr-futsal" class="dr-modalidade"></div>
-        </div>
-      </div>
-    </section>
+    <section id="panel-dr-arbitro" class="admin-tab-panel"><div class="admin-card dr-card"><div class="dr-page-head"><div><h3>Drº Árbitro</h3><p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p></div></div><div class="dr-grid"><div id="dr-futebol" class="dr-modalidade"></div><div id="dr-futsal" class="dr-modalidade"></div></div></div></section>
   </section>
 </main>
-
-<footer>
-  <div class="container">
-    <h3>Núcleo de Árbitros de Futebol Marques Bom</h3>
-    <p>Coimbra • Portugal</p>
-    <p>Fundado em 1987</p>
-    <p class="rgpd-footer-link"><a href="rgpd.html">Proteção de Dados</a></p>
-  </div>
-</footer>
-
-<script src="js/admin-config.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/admin-criar-socio.js" defer></script>
-<script src="js/dr-arbitro.js" defer></script>
-</body>
-</html>
+<footer><div class="container"><h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Portugal</p><p>Fundado em 1987</p><p class="rgpd-footer-link"><a href="rgpd.html">Proteção de Dados</a></p></div></footer>
+<script src="js/admin-config.js"></script><script src="js/admin.js"></script><script src="js/admin-criar-socio.js" defer></script><script src="js/admin-quotas-manual.js" defer></script><script src="js/dr-arbitro.js" defer></script>
+</body></html>
