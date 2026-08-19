@@ -4,49 +4,105 @@
   const cfg = window.NAF_ADMIN_CONFIG || {};
   const state = { supabase: null, user: null, members: [], pdfRows: [] };
   const $ = (id) => document.getElementById(id);
-  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[c]));
+
+  const money = (v) => `${Number(v || 0).toFixed(2).replace('.', ',')} €`;
 
   function show(message, type = 'success') {
-    const el = $('admin-result'); if (!el) return;
-    el.textContent = message; el.className = `admin-result ${type}`; el.hidden = false;
+    const el = $('admin-result');
+    if (!el) return;
+    el.textContent = message;
+    el.className = `admin-result ${type}`;
+    el.hidden = false;
   }
-  function fail(error) { console.error(error); show(error?.message || String(error), 'error'); }
+
+  function fail(error) {
+    console.error(error);
+    show(error?.message || String(error), 'error');
+  }
+
   function assertConfig() {
-    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) throw new Error('Configuração Supabase incompleta.');
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+      throw new Error('Configuração Supabase incompleta.');
+    }
   }
-  function getClient() { return state.supabase; }
 
   function normalizeMember(m, points = 0) {
-    return { id:m.id, numero:m.numero_socio ?? '', nome:m.nome ?? '', email:m.email ?? '', ativo:m.ativo === true, is_admin:m.is_admin === true, pontos:Number(points)||0, quotas:false, meses_atraso:0, valor_atraso:0, raw:m };
+    return {
+      id: m.id,
+      numero: m.numero_socio ?? '',
+      nome: m.nome ?? '',
+      email: m.email ?? '',
+      ativo: m.ativo === true,
+      is_admin: m.is_admin === true,
+      pontos: Number(points) || 0,
+      quotas: false,
+      meses_atraso: 0,
+      valor_atraso: 0,
+      raw: m
+    };
   }
 
   async function loadMembers() {
-    const body = $('members-body'); if (body) body.innerHTML = '<tr><td colspan="7" class="admin-loading">A carregar…</td></tr>';
+    const body = $('members-body');
+    if (body) body.innerHTML = '<tr><td colspan="8" class="admin-loading">A carregar…</td></tr>';
+
     const { data, error } = await state.supabase.rpc('admin_listar_socios');
     if (error) throw error;
+
     const members = (data || []).map(m => normalizeMember(m));
     const ids = members.map(m => m.id);
+
     if (ids.length) {
-      const [{data: points, error: pe}, {data: quotas, error: qe}] = await Promise.all([
+      const [{ data: points, error: pe }, { data: quotas, error: qe }] = await Promise.all([
         state.supabase.from('funlearn_pontos').select('socio_id,pontos').in('socio_id', ids),
         state.supabase.from('quotas').select('socio_id,ano,mes,valor,pago,estado').in('socio_id', ids)
       ]);
-      if (pe) throw pe; if (qe) throw qe;
+
+      if (pe) throw pe;
+      if (qe) throw qe;
+
       const totals = new Map();
-      for (const p of points || []) totals.set(String(p.socio_id), (totals.get(String(p.socio_id)) || 0) + Number(p.pontos || 0));
-      const current = new Date(); const currentMonth = new Date(current.getFullYear(), current.getMonth(), 1); const overdue = new Map();
+      for (const p of points || []) {
+        const key = String(p.socio_id);
+        totals.set(key, (totals.get(key) || 0) + Number(p.pontos || 0));
+      }
+
+      const current = new Date();
+      const currentMonth = new Date(current.getFullYear(), current.getMonth(), 1);
+      const overdue = new Map();
+
       for (const q of quotas || []) {
         if (!q.mes) continue;
-        const d = new Date(Number(q.ano), Number(q.mes)-1, 1);
-        const unpaid = q.pago !== true && !['pago','paga','isento','anulado'].includes(String(q.estado || 'pendente').toLowerCase());
+        const d = new Date(Number(q.ano), Number(q.mes) - 1, 1);
+        const estado = String(q.estado || 'pendente').toLowerCase();
+        const unpaid = q.pago !== true && !['pago', 'paga', 'isento', 'anulado'].includes(estado);
+
         if (unpaid && d < currentMonth) {
-          const x = overdue.get(String(q.socio_id)) || { months:0, value:0 }; x.months++; x.value += Number(q.valor || 0); overdue.set(String(q.socio_id), x);
+          const key = String(q.socio_id);
+          const x = overdue.get(key) || { months: 0, value: 0 };
+          x.months += 1;
+          x.value += Number(q.valor || 0);
+          overdue.set(key, x);
         }
       }
-      for (const m of members) { const x = overdue.get(String(m.id)) || {months:0,value:0}; m.pontos = totals.get(String(m.id)) || 0; m.quotas = x.months > 0; m.meses_atraso=x.months; m.valor_atraso=x.value; }
+
+      for (const m of members) {
+        const x = overdue.get(String(m.id)) || { months: 0, value: 0 };
+        m.pontos = totals.get(String(m.id)) || 0;
+        m.quotas = x.months > 0;
+        m.meses_atraso = x.months;
+        m.valor_atraso = x.value;
+      }
     }
+
     state.members = members;
-    renderMembers(); renderOverdue(); renderFunlearnSelects(); updateKpis();
+    renderMembers();
+    renderFunlearnSelects();
+    updateKpis();
+
     if (typeof window.initCriarSocio === 'function') window.initCriarSocio();
     await loadAdminPermissions();
   }
@@ -57,73 +113,503 @@
     const q = ($('member-search')?.value || '').trim().toLowerCase();
     const status = $('member-status')?.value || '';
     const selected = new Set([...document.querySelectorAll('.member-check:checked')].map(x => x.value));
-    const rows = state.members.filter(m => (!q || `${m.numero} ${m.nome} ${m.email}`.toLowerCase().includes(q)) && (!status || (status === 'ativo' ? m.ativo : !m.ativo)));
-    $('members-body').innerHTML = rows.length ? rows.map(m => `<tr>
-      <td><input class="admin-check member-check" type="checkbox" value="${esc(m.id)}" ${selected.has(String(m.id))?'checked':''}></td>
-      <td>${esc(m.numero)}</td><td>${esc(m.nome)}</td><td>${esc(m.email)}</td>
-      <td>${m.ativo ? 'Ativo' : 'Inativo'}${m.is_admin ? ' · Admin' : ''}</td>
-      <td>${m.quotas ? `<span class="admin-badge">${m.meses_atraso} em atraso</span>` : 'Regular'}</td>
-      <td>${m.pontos}</td></tr>`).join('') : '<tr><td colspan="7" class="admin-loading">Nenhum sócio encontrado.</td></tr>';
+
+    const rows = state.members.filter(m => {
+      const matchesText = !q || `${m.numero} ${m.nome} ${m.email}`.toLowerCase().includes(q);
+      const matchesStatus = !status || (status === 'ativo' ? m.ativo : !m.ativo);
+      return matchesText && matchesStatus;
+    });
+
+    $('members-body').innerHTML = rows.length ? rows.map(m => {
+      const quotaHtml = m.quotas
+        ? `<div class="quota-debt"><strong>${money(m.valor_atraso)}</strong><span>${m.meses_atraso} ${m.meses_atraso === 1 ? 'mês' : 'meses'} em atraso</span></div>`
+        : '<span class="quota-ok">Em dia</span>';
+
+      return `<tr>
+        <td><input class="admin-check member-check" type="checkbox" value="${esc(m.id)}" ${selected.has(String(m.id)) ? 'checked' : ''}></td>
+        <td><strong>${esc(m.numero)}</strong></td>
+        <td><strong>${esc(m.nome)}</strong></td>
+        <td>${esc(m.email || 'Sem email')}</td>
+        <td>${m.ativo ? '<span class="status-ok">Ativo</span>' : '<span class="status-off">Inativo</span>'}${m.is_admin ? ' <span class="admin-badge">Admin</span>' : ''}</td>
+        <td>${quotaHtml}</td>
+        <td><strong>${m.pontos}</strong></td>
+        <td class="member-actions">
+          <button type="button" class="admin-small-btn primary manual-quota-open" data-id="${esc(m.id)}">Pagamento</button>
+          <button type="button" class="admin-small-btn member-number-open" data-id="${esc(m.id)}" data-number="${esc(m.numero)}">Editar nº</button>
+        </td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="8" class="admin-loading">Nenhum sócio encontrado.</td></tr>';
+
     updateSelectedCount();
   }
-  function renderOverdue() {
-    const rows = state.members.filter(m => m.quotas && m.email);
-    $('overdue-list').innerHTML = rows.length ? rows.map(m => `<label class="admin-preview-row"><input class="admin-check overdue-check" type="checkbox" value="${esc(m.id)}" checked><strong>${esc(m.numero)}</strong><span>${esc(m.nome)}</span><span>${esc(m.email)}</span><span>${Number(m.valor_atraso).toFixed(2)} €</span></label>`).join('') : '<div class="admin-loading">Não existem quotas em atraso.</div>';
-    updateOverdueSelectedCount();
-  }
+
   function renderFunlearnSelects() {
-    for (const id of ['funlearn-add-member','funlearn-remove-member']) {
-      const select = $(id); if (!select) continue;
-      select.innerHTML = state.members.filter(m => m.ativo).map(m => `<option value="${esc(m.id)}">${esc(m.numero)} — ${esc(m.nome)} (${m.pontos} pts)</option>`).join('');
+    for (const id of ['funlearn-add-member', 'funlearn-remove-member']) {
+      const select = $(id);
+      if (!select) continue;
+      const current = select.value;
+      select.innerHTML = state.members
+        .filter(m => m.ativo)
+        .map(m => `<option value="${esc(m.id)}">${esc(m.numero)} — ${esc(m.nome)} (${m.pontos} pts)</option>`)
+        .join('');
+      if (current && [...select.options].some(o => o.value === current)) select.value = current;
     }
   }
-  function updateSelectedCount() { const el=$('selected-count'); if(el) el.textContent=`${document.querySelectorAll('.member-check:checked').length} selecionados`; }
-  function updateOverdueSelectedCount() { const el=$('overdue-selected-count'); if(el) el.textContent=`${document.querySelectorAll('.overdue-check:checked').length} selecionados`; }
-  function updateKpis() { $('kpi-total').textContent=state.members.length; $('kpi-ativos').textContent=state.members.filter(m=>m.ativo).length; $('kpi-atrasos').textContent=state.members.filter(m=>m.quotas).length; $('kpi-pontos').textContent=state.members.reduce((s,m)=>s+m.pontos,0); }
+
+  function updateSelectedCount() {
+    const el = $('selected-count');
+    if (el) el.textContent = `${document.querySelectorAll('.member-check:checked').length} selecionados`;
+  }
+
+  function updateKpis() {
+    $('kpi-total').textContent = state.members.length;
+    $('kpi-ativos').textContent = state.members.filter(m => m.ativo).length;
+    $('kpi-atrasos').textContent = state.members.filter(m => m.quotas).length;
+    $('kpi-pontos').textContent = state.members.reduce((s, m) => s + m.pontos, 0);
+  }
 
   async function parsePdf() {
-    const file = $('pdf-file')?.files?.[0]; if (!file) throw new Error('Seleciona primeiro um PDF.');
+    const file = $('pdf-file')?.files?.[0];
+    if (!file) throw new Error('Seleciona primeiro um PDF.');
     if (file.type !== 'application/pdf') throw new Error('O ficheiro tem de ser PDF.');
+
     const pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-    const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise; const rows=[];
-    for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p); const text=await page.getTextContent(); const lines=new Map();
-      for(const item of text.items){const value=String(item.str||'').trim();if(!value)continue;const y=Math.round(item.transform?.[5]||0);if(!lines.has(y))lines.set(y,[]);lines.get(y).push(value);}
-      for(const parts of [...lines.entries()].sort((a,b)=>b[0]-a[0]).map(x=>x[1].join(' ').replace(/\s+/g,' ').trim())){
-        const m=parts.match(/^\s*(\d{1,6})\s+(.+)$/); if(!m)continue; const n=Number(m[1]),name=m[2].trim(); if(Number.isInteger(n)&&n>0&&name.length>=3)rows.push({numero_socio:n,nome:name});
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const rows = [];
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const text = await page.getTextContent();
+      const lines = new Map();
+
+      for (const item of text.items) {
+        const value = String(item.str || '').trim();
+        if (!value) continue;
+        const y = Math.round(item.transform?.[5] || 0);
+        if (!lines.has(y)) lines.set(y, []);
+        lines.get(y).push(value);
       }
-      $('pdf-progress').querySelector('span').style.width=`${Math.round(p/pdf.numPages*100)}%`;
+
+      for (const parts of [...lines.entries()]
+        .sort((a, b) => b[0] - a[0])
+        .map(x => x[1].join(' ').replace(/\s+/g, ' ').trim())) {
+        const m = parts.match(/^\s*(\d{1,6})\s+(.+)$/);
+        if (!m) continue;
+        const numero = Number(m[1]);
+        const nome = m[2].trim();
+        if (Number.isInteger(numero) && numero > 0 && numero !== 9999 && nome.length >= 3) {
+          rows.push({ numero_socio: numero, nome });
+        }
+      }
+
+      const progress = $('pdf-progress')?.querySelector('span');
+      if (progress) progress.style.width = `${Math.round((p / pdf.numPages) * 100)}%`;
     }
-    state.pdfRows=[...new Map(rows.map(r=>[`${r.numero_socio}|${r.nome.toLowerCase()}`,r])).values()];
-    $('pdf-preview').innerHTML=state.pdfRows.length?state.pdfRows.map((r,i)=>`<div class="admin-preview-row"><span>${i+1}</span><strong>${r.numero_socio}</strong><span>${esc(r.nome)}</span></div>`).join(''):'<div class="admin-loading">Não foi possível extrair dados.</div>';
-    $('btn-import-pdf').disabled=!state.pdfRows.length;
-  }
-  async function importPdfRows(){ if(!state.pdfRows.length)throw new Error('Não existem dados para importar.'); const {error}=await state.supabase.from('socios').upsert(state.pdfRows,{onConflict:'numero_socio',ignoreDuplicates:false}); if(error)throw error; show(`${state.pdfRows.length} registos importados/atualizados.`); state.pdfRows=[]; $('btn-import-pdf').disabled=true; await loadMembers(); }
 
-  async function fileToBase64(file){const bytes=new Uint8Array(await file.arrayBuffer());let b='';for(let i=0;i<bytes.length;i+=0x8000)b+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));return btoa(b);}
-  async function invokeEdge(name,payload){const {data,error}=await state.supabase.functions.invoke(name,{body:payload});if(error){let msg=error.message||'Erro na função.';try{const body=await error.context?.json();if(body?.error)msg=body.error;}catch{}throw new Error(msg);}if(data?.error)throw new Error(data.error);return data;}
-  async function sendOverdue(){const ids=[...document.querySelectorAll('.overdue-check:checked')].map(x=>x.value);if(!ids.length)throw new Error('Seleciona pelo menos um sócio.');const members=state.members.filter(m=>ids.includes(String(m.id)));const result=await invokeEdge(cfg.EMAIL_FUNCTION,{action:'quotas_atraso',subject:$('quota-subject').value.trim(),message:$('quota-message').value.trim(),socio_ids:ids});show(`Avisos processados: ${result.sent ?? members.length} enviados.`);}
-  async function sendDocument(){const file=$('mail-file')?.files?.[0];if(!file)throw new Error('Seleciona o documento.');if(file.size>10*1024*1024)throw new Error('O documento não pode ultrapassar 10 MB.');const members=state.members.filter(m=>m.email);if(!members.length)throw new Error('Não existem sócios com email.');const subject=$('mail-subject').value.trim(),message=$('mail-message').value.trim();if(!subject||!message)throw new Error('Indica o assunto e escreve a mensagem.');const result=await invokeEdge(cfg.EMAIL_FUNCTION,{action:'documento_todos',subject,message,attachment:{name:file.name,mime:file.type||'application/pdf',base64:await fileToBase64(file)}});show(`Documento processado para ${result.sent ?? members.length} sócio(s).`);}
+    state.pdfRows = [...new Map(rows.map(r => [String(r.numero_socio), r])).values()];
 
-  async function importFunlearnPdf(){const file=$('funlearn-pdf')?.files?.[0];const points=Number($('funlearn-pdf-points')?.value);const desc=$('funlearn-pdf-description')?.value.trim();if(!file)throw new Error('Seleciona um PDF.');if(file.type!=='application/pdf')throw new Error('O ficheiro tem de ser PDF.');if(!Number.isInteger(points)||points<=0)throw new Error('Os pontos por sócio têm de ser positivos.');const rows=[];const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;for(let p=1;p<=pdf.numPages;p++){const page=await pdf.getPage(p),text=await page.getTextContent(),lines=new Map();for(const item of text.items){const value=String(item.str||'').trim();if(!value)continue;const y=Math.round(item.transform?.[5]||0);if(!lines.has(y))lines.set(y,[]);lines.get(y).push(value);}for(const parts of [...lines.entries()].sort((a,b)=>b[0]-a[0]).map(x=>x[1].join(' ').replace(/\s+/g,' ').trim())){const m=parts.match(/^\s*(\d{1,6})\s+(.+)$/);if(m)rows.push({numero_socio:Number(m[1]),nome:m[2].trim()});}}const unique=[...new Map(rows.map(r=>[r.numero_socio,r])).values()];if(!unique.length)throw new Error('Não foram encontrados sócios no PDF.');const result=await state.supabase.rpc('admin_funlearn_importar_pontos',{p_nomes:unique,p_pontos:points,p_nome_ficheiro:file.name,p_descricao:desc||null});if(result.error)throw result.error;show(`${result.data.socios_encontrados} sócio(s) encontrados; ${result.data.pontos_atribuidos} ponto(s) atribuídos.`);await loadMembers();}
-  async function addFunlearnPoints(){const socioId=$('funlearn-add-member').value,points=Number($('funlearn-add-points').value),activity=$('funlearn-add-activity').value.trim()||'Fun&Learn',desc=$('funlearn-add-description').value.trim();const m=state.members.find(x=>String(x.id)===String(socioId));if(!m)throw new Error('Seleciona um sócio.');if(!Number.isInteger(points)||points<=0)throw new Error('Os pontos têm de ser positivos.');if(!desc)throw new Error('Indica o motivo.');const total=await state.supabase.rpc('admin_funlearn_adicionar_pontos',{p_socio_id:socioId,p_pontos:points,p_atividade:activity,p_descricao:desc});if(total.error)throw total.error;await sendPointsMail(m,'pontos_adicionados',{pontos_adicionados:points,atividade:activity,descricao:desc});show(`Foram adicionados ${points} ponto(s) a ${m.nome}. Novo total: ${total.data}.`);$('funlearn-add-description').value='';await loadMembers();}
-  async function removeFunlearnPoints(){const socioId=$('funlearn-remove-member').value,points=Number($('funlearn-remove-points').value),reason=$('funlearn-remove-reason').value.trim();const m=state.members.find(x=>String(x.id)===String(socioId));if(!m)throw new Error('Seleciona um sócio.');if(!Number.isInteger(points)||points<=0)throw new Error('Os pontos têm de ser positivos.');if(!reason)throw new Error('O motivo é obrigatório.');const total=await state.supabase.rpc('admin_funlearn_retirar_pontos',{p_socio_id:socioId,p_pontos:points,p_motivo:reason});if(total.error)throw total.error;await sendPointsMail(m,'pontos_retirados',{pontos_retirados:points,motivo:reason});show(`Foram retirados ${points} ponto(s) a ${m.nome}. Novo total: ${total.data}.`);$('funlearn-remove-reason').value='';await loadMembers();}
-  async function sendPointsMail(m,action,extra){if(!m.email)return;await invokeEdge(cfg.EMAIL_FUNCTION,{action,socio:{id:m.id,nome:m.nome,email:m.email},...extra});}
+    $('pdf-preview').innerHTML = state.pdfRows.length
+      ? state.pdfRows.map((r, i) => `<div class="admin-preview-row"><span>${i + 1}</span><strong>${r.numero_socio}</strong><span>${esc(r.nome)}</span></div>`).join('')
+      : '<div class="admin-loading">Não foi possível extrair dados.</div>';
 
-  async function editMemberNumber(id,current){const m=state.members.find(x=>String(x.id)===String(id));if(!m)return;const value=window.prompt(`Novo nº de sócio para ${m.nome}:`,String(current));if(value===null)return;const numero=Number(value.trim());if(!Number.isInteger(numero)||numero<=0||numero===9999)throw new Error('Número inválido.');const duplicate=state.members.find(x=>Number(x.numero)===numero&&String(x.id)!==String(id));if(duplicate)throw new Error(`O nº ${numero} já pertence a ${duplicate.nome}.`);const {error}=await state.supabase.rpc('admin_alterar_numero_socio',{p_socio_id:id,p_novo_numero:numero});if(error)throw error;show(`Nº de sócio alterado para ${numero}.`);await loadMembers();}
-  async function loadAdminPermissions(){const tab=$('tab-admins'),panel=$('panel-admins');if(!tab||!panel)return;let root=false;try{const {data,error}=await state.supabase.rpc('is_root_admin');root=!error&&data===true;}catch{}if(!root){tab.hidden=true;panel.hidden=true;return;}tab.hidden=false;panel.hidden=false;const {data,error}=await state.supabase.rpc('admin_listar_permissoes_admin');if(error)throw error;const box=$('admin-permissions-list');box.innerHTML=(data||[]).map(m=>`<div class="admin-preview-row admin-permission-row"><strong>${esc(m.numero_socio)}</strong><span>${esc(m.nome)}</span><span>${esc(m.email||'')}</span><span>${m.is_admin?'Administrador':'Sócio'}</span><button type="button" class="admin-small-btn ${m.is_admin?'danger':'primary'}" data-admin-toggle="${esc(m.id)}" data-admin-value="${m.is_admin?'false':'true'}">${m.is_admin?'Retirar admin':'Dar admin'}</button></div>`).join('')||'<div class="admin-loading">Não existem outros sócios.</div>';box.querySelectorAll('[data-admin-toggle]').forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{const {error}=await state.supabase.rpc('admin_definir_admin',{p_socio_id:btn.dataset.adminToggle,p_is_admin:btn.dataset.adminValue==='true'});if(error)throw error;await loadMembers();show('Permissões de administrador atualizadas.');}catch(e){fail(e);}finally{btn.disabled=false;}});}
-
-  function bind(){
-    $('btn-refresh').onclick=()=>loadMembers().catch(fail); $('member-search').oninput=renderMembers; $('member-status').onchange=renderMembers;
-    $('btn-select-all').onclick=()=>{document.querySelectorAll('.member-check').forEach(x=>x.checked=true);updateSelectedCount();}; $('btn-clear-selection').onclick=()=>{document.querySelectorAll('.member-check').forEach(x=>x.checked=false);updateSelectedCount();};
-    $('members-body').addEventListener('change',updateSelectedCount); $('members-body').addEventListener('click',e=>{const b=e.target.closest('.edit-member-number');if(b)editMemberNumber(b.dataset.id,b.dataset.number).catch(fail);});
-    $('btn-overdue-select-all').onclick=()=>{document.querySelectorAll('.overdue-check').forEach(x=>x.checked=true);updateOverdueSelectedCount();}; $('btn-overdue-clear').onclick=()=>{document.querySelectorAll('.overdue-check').forEach(x=>x.checked=false);updateOverdueSelectedCount();}; $('overdue-list').addEventListener('change',updateOverdueSelectedCount);
-    $('btn-parse-pdf').onclick=()=>parsePdf().catch(fail); $('btn-import-pdf').onclick=()=>importPdfRows().catch(fail); $('btn-send-overdue').onclick=()=>sendOverdue().catch(fail); $('btn-send-document').onclick=()=>sendDocument().catch(fail);
-    $('btn-funlearn-pdf').onclick=()=>importFunlearnPdf().catch(fail); $('btn-funlearn-add').onclick=()=>addFunlearnPoints().catch(fail); $('btn-funlearn-remove').onclick=()=>removeFunlearnPoints().catch(fail);
-    document.querySelectorAll('.admin-tab').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.admin-tab-panel').forEach(x=>x.classList.remove('active'));btn.classList.add('active');$(`panel-${btn.dataset.panel}`).classList.add('active');});
+    $('btn-import-pdf').disabled = !state.pdfRows.length;
   }
 
-  async function init(){try{assertConfig();if(!window.supabase)throw new Error('Biblioteca Supabase não carregada.');state.supabase=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);window.supabaseClient=state.supabase;window.__NAF_SUPABASE=state.supabase;const {data:{session}}=await state.supabase.auth.getSession();state.user=session?.user||null;if(!state.user){$('admin-login-warning').hidden=false;return;}const {data:isAdmin,error}=await state.supabase.rpc('is_admin');if(error)throw error;if(isAdmin!==true){$('admin-login-warning').hidden=false;return;}$('admin-app').hidden=false;bind();await loadMembers();}catch(e){fail(e);}}
+  async function importPdfRows() {
+    if (!state.pdfRows.length) throw new Error('Não existem dados para importar.');
+
+    const { data, error } = await state.supabase.rpc('admin_importar_socios_pdf', {
+      p_rows: state.pdfRows
+    });
+
+    if (error) throw error;
+
+    show(`${data?.importados ?? state.pdfRows.length} sócio(s) importado(s)/atualizado(s).`);
+    state.pdfRows = [];
+    $('btn-import-pdf').disabled = true;
+    $('pdf-preview').innerHTML = '';
+    $('pdf-file').value = '';
+    const progress = $('pdf-progress')?.querySelector('span');
+    if (progress) progress.style.width = '0%';
+    await loadMembers();
+  }
+
+  async function parseFunlearnPdf() {
+    const file = $('funlearn-pdf')?.files?.[0];
+    if (!file) throw new Error('Seleciona um PDF.');
+    if (file.type !== 'application/pdf') throw new Error('O ficheiro tem de ser PDF.');
+
+    const pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const rows = [];
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const text = await page.getTextContent();
+      const lines = new Map();
+
+      for (const item of text.items) {
+        const value = String(item.str || '').trim();
+        if (!value) continue;
+        const y = Math.round(item.transform?.[5] || 0);
+        if (!lines.has(y)) lines.set(y, []);
+        lines.get(y).push(value);
+      }
+
+      for (const parts of [...lines.entries()]
+        .sort((a, b) => b[0] - a[0])
+        .map(x => x[1].join(' ').replace(/\s+/g, ' ').trim())) {
+        const m = parts.match(/^\s*(\d{1,6})\s+(.+)$/);
+        if (m) rows.push({ numero_socio: Number(m[1]), nome: m[2].trim() });
+      }
+    }
+
+    return [...new Map(rows.filter(r => Number.isInteger(r.numero_socio) && r.numero_socio > 0 && r.numero_socio !== 9999).map(r => [r.numero_socio, r])).values()];
+  }
+
+  async function importFunlearnPdf() {
+    const points = Number($('funlearn-pdf-points')?.value);
+    const desc = $('funlearn-pdf-description')?.value.trim();
+    if (!Number.isInteger(points) || points <= 0) throw new Error('Os pontos por sócio têm de ser positivos.');
+
+    const unique = await parseFunlearnPdf();
+    if (!unique.length) throw new Error('Não foram encontrados sócios no PDF.');
+
+    const result = await state.supabase.rpc('admin_funlearn_importar_pontos', {
+      p_nomes: unique,
+      p_pontos: points,
+      p_nome_ficheiro: $('funlearn-pdf')?.files?.[0]?.name || 'importacao.pdf',
+      p_descricao: desc || null
+    });
+
+    if (result.error) throw result.error;
+
+    const data = result.data || {};
+    show(`${data.socios_encontrados ?? 0} sócio(s) encontrados; ${data.pontos_atribuidos ?? 0} ponto(s) atribuídos.`);
+    $('funlearn-pdf').value = '';
+    $('funlearn-pdf-description').value = '';
+    await loadMembers();
+  }
+
+  async function sendPointsMail(member, action, extra) {
+    if (!member.email) return;
+    await invokeEdge(cfg.EMAIL_FUNCTION, {
+      action,
+      socio: { id: member.id, nome: member.nome, email: member.email },
+      ...extra
+    });
+  }
+
+  async function addFunlearnPoints() {
+    const socioId = $('funlearn-add-member').value;
+    const points = Number($('funlearn-add-points').value);
+    const activity = $('funlearn-add-activity').value.trim() || 'Fun&Learn';
+    const desc = $('funlearn-add-description').value.trim();
+    const member = state.members.find(x => String(x.id) === String(socioId));
+
+    if (!member) throw new Error('Seleciona um sócio.');
+    if (!Number.isInteger(points) || points <= 0) throw new Error('Os pontos têm de ser positivos.');
+    if (!desc) throw new Error('Indica o motivo.');
+
+    const result = await state.supabase.rpc('admin_funlearn_adicionar_pontos', {
+      p_socio_id: socioId,
+      p_pontos: points,
+      p_atividade: activity,
+      p_descricao: desc
+    });
+
+    if (result.error) throw result.error;
+
+    await sendPointsMail(member, 'pontos_adicionados', {
+      pontos_adicionados: points,
+      atividade: activity,
+      descricao: desc
+    });
+
+    show(`Foram adicionados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.`);
+    $('funlearn-add-description').value = '';
+    await loadMembers();
+  }
+
+  async function removeFunlearnPoints() {
+    const socioId = $('funlearn-remove-member').value;
+    const points = Number($('funlearn-remove-points').value);
+    const reason = $('funlearn-remove-reason').value.trim();
+    const member = state.members.find(x => String(x.id) === String(socioId));
+
+    if (!member) throw new Error('Seleciona um sócio.');
+    if (!Number.isInteger(points) || points <= 0) throw new Error('Os pontos têm de ser positivos.');
+    if (!reason) throw new Error('O motivo é obrigatório.');
+
+    const result = await state.supabase.rpc('admin_funlearn_retirar_pontos', {
+      p_socio_id: socioId,
+      p_pontos: points,
+      p_motivo: reason
+    });
+
+    if (result.error) throw result.error;
+
+    await sendPointsMail(member, 'pontos_retirados', {
+      pontos_retirados: points,
+      motivo: reason
+    });
+
+    show(`Foram retirados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.`);
+    $('funlearn-remove-reason').value = '';
+    await loadMembers();
+  }
+
+  async function editMemberNumber(id, current) {
+    const member = state.members.find(x => String(x.id) === String(id));
+    if (!member) return;
+
+    const value = window.prompt(`Novo nº de sócio para ${member.nome}:`, String(current));
+    if (value === null) return;
+
+    const numero = Number(value.trim());
+    if (!Number.isInteger(numero) || numero <= 0 || numero === 9999) {
+      throw new Error('Número inválido.');
+    }
+
+    const duplicate = state.members.find(x => Number(x.numero) === numero && String(x.id) !== String(id));
+    if (duplicate) throw new Error(`O nº ${numero} já pertence a ${duplicate.nome}.`);
+
+    const { error } = await state.supabase.rpc('admin_alterar_numero_socio', {
+      p_socio_id: id,
+      p_novo_numero: numero
+    });
+
+    if (error) throw error;
+    show(`Nº de sócio alterado para ${numero}.`);
+    await loadMembers();
+  }
+
+  function openManualQuota(id) {
+    const select = $('manual-quota-socio');
+    if (select) {
+      select.value = String(id);
+      if (select.value !== String(id)) {
+        const member = state.members.find(m => String(m.id) === String(id));
+        if (member) {
+          const option = document.createElement('option');
+          option.value = member.id;
+          option.textContent = `${member.numero} — ${member.nome}${member.email ? ` — ${member.email}` : ''}`;
+          select.appendChild(option);
+          select.value = member.id;
+        }
+      }
+    }
+
+    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
+    const tab = document.querySelector('.admin-tab[data-panel="quotas"]');
+    if (tab) tab.classList.add('active');
+    $('panel-quotas')?.classList.add('active');
+    $('manual-quota-valor')?.focus();
+    $('manual-quota-valor')?.select();
+  }
+
+  function selectedOverdueIds() {
+    return [...document.querySelectorAll('.member-check:checked')]
+      .map(x => String(x.value))
+      .filter(id => state.members.some(m => String(m.id) === id && m.quotas && m.email));
+  }
+
+  async function sendOverdueSelected() {
+    const ids = selectedOverdueIds();
+    if (!ids.length) throw new Error('Seleciona pelo menos um sócio com quotas em atraso e email.');
+
+    const result = await invokeEdge(cfg.EMAIL_FUNCTION, {
+      action: 'quotas_em_atraso',
+      subject: $('quota-subject').value.trim(),
+      message: $('quota-message').value.trim(),
+      socio_ids: ids
+    });
+
+    show(`Avisos processados: ${result.sent ?? ids.length} enviados.`);
+  }
+
+  async function fileToBase64(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
+    }
+    return btoa(binary);
+  }
+
+  async function invokeEdge(name, payload) {
+    const { data, error } = await state.supabase.functions.invoke(name, { body: payload });
+    if (error) {
+      let message = error.message || 'Erro na função.';
+      try {
+        const body = await error.context?.json();
+        if (body?.error) message = body.error;
+      } catch {}
+      throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function sendDocument() {
+    const file = $('mail-file')?.files?.[0];
+    if (!file) throw new Error('Seleciona o documento.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('O documento não pode ultrapassar 10 MB.');
+
+    const subject = $('mail-subject').value.trim();
+    const message = $('mail-message').value.trim();
+    if (!subject || !message) throw new Error('Indica o assunto e escreve a mensagem.');
+
+    const result = await invokeEdge(cfg.EMAIL_FUNCTION, {
+      action: 'documento_todos',
+      subject,
+      message,
+      attachment: {
+        name: file.name,
+        mime: file.type || 'application/pdf',
+        base64: await fileToBase64(file)
+      }
+    });
+
+    show(`Documento processado para ${result.sent ?? 0} sócio(s).`);
+  }
+
+  async function loadAdminPermissions() {
+    const tab = $('tab-admins');
+    const panel = $('panel-admins');
+    if (!tab || !panel) return;
+
+    let root = false;
+    try {
+      const { data, error } = await state.supabase.rpc('is_root_admin');
+      root = !error && data === true;
+    } catch {}
+
+    if (!root) {
+      tab.hidden = true;
+      panel.hidden = true;
+      return;
+    }
+
+    tab.hidden = false;
+    panel.hidden = false;
+
+    const { data, error } = await state.supabase.rpc('admin_listar_permissoes_admin');
+    if (error) throw error;
+
+    const box = $('admin-permissions-list');
+    box.innerHTML = (data || []).map(m =>
+      `<div class="admin-preview-row admin-permission-row">
+        <strong>${esc(m.numero_socio)}</strong>
+        <span>${esc(m.nome)}</span>
+        <span>${esc(m.email || '')}</span>
+        <span>${m.is_admin ? 'Administrador' : 'Sócio'}</span>
+        <button type="button" class="admin-small-btn ${m.is_admin ? 'danger' : 'primary'}" data-admin-toggle="${esc(m.id)}" data-admin-value="${m.is_admin ? 'false' : 'true'}">${m.is_admin ? 'Retirar admin' : 'Dar admin'}</button>
+      </div>`
+    ).join('') || '<div class="admin-loading">Não existem outros sócios.</div>';
+
+    box.querySelectorAll('[data-admin-toggle]').forEach(btn => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          const { error } = await state.supabase.rpc('admin_definir_admin', {
+            p_socio_id: btn.dataset.adminToggle,
+            p_is_admin: btn.dataset.adminValue === 'true'
+          });
+          if (error) throw error;
+          await loadMembers();
+          show('Permissões de administrador atualizadas.');
+        } catch (e) {
+          fail(e);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    });
+  }
+
+  function bind() {
+    $('btn-refresh').onclick = () => loadMembers().catch(fail);
+    $('btn-refresh-list').onclick = () => loadMembers().catch(fail);
+    $('member-search').oninput = renderMembers;
+    $('member-status').onchange = renderMembers;
+
+    $('btn-select-all').onclick = () => {
+      document.querySelectorAll('.member-check').forEach(x => x.checked = true);
+      updateSelectedCount();
+    };
+
+    $('btn-clear-selection').onclick = () => {
+      document.querySelectorAll('.member-check').forEach(x => x.checked = false);
+      updateSelectedCount();
+    };
+
+    $('members-body').addEventListener('change', updateSelectedCount);
+    $('members-body').addEventListener('click', e => {
+      const payment = e.target.closest('.manual-quota-open');
+      if (payment) openManualQuota(payment.dataset.id);
+
+      const number = e.target.closest('.member-number-open');
+      if (number) editMemberNumber(number.dataset.id, number.dataset.number).catch(fail);
+    });
+
+    $('btn-send-overdue-selected').onclick = () => sendOverdueSelected().catch(fail);
+    $('btn-send-document').onclick = () => sendDocument().catch(fail);
+    $('btn-parse-pdf').onclick = () => parsePdf().catch(fail);
+    $('btn-import-pdf').onclick = () => importPdfRows().catch(fail);
+
+    $('btn-funlearn-pdf').onclick = () => importFunlearnPdf().catch(fail);
+    $('btn-funlearn-add').onclick = () => addFunlearnPoints().catch(fail);
+    $('btn-funlearn-remove').onclick = () => removeFunlearnPoints().catch(fail);
+
+    document.querySelectorAll('.admin-tab').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        $(`panel-${btn.dataset.panel}`)?.classList.add('active');
+      };
+    });
+  }
+
+  async function init() {
+    try {
+      assertConfig();
+      if (!window.supabase) throw new Error('Biblioteca Supabase não carregada.');
+
+      state.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      window.supabaseClient = state.supabase;
+      window.__NAF_SUPABASE = state.supabase;
+
+      const { data: { session }, error: sessionError } = await state.supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      state.user = session?.user || null;
+      if (!state.user) {
+        $('admin-login-warning').hidden = false;
+        return;
+      }
+
+      const { data: isAdmin, error } = await state.supabase.rpc('is_admin');
+      if (error) throw error;
+
+      if (isAdmin !== true) {
+        $('admin-login-warning').hidden = false;
+        return;
+      }
+
+      $('admin-app').hidden = false;
+      bind();
+      await loadMembers();
+    } catch (e) {
+      fail(e);
+    }
+  }
+
   init();
 })();
