@@ -1,0 +1,33 @@
+<!-- INTEGRAR dentro de #panel-quotas, sem substituir o painel existente -->
+<section class="admin-card quotas-pagamento-manual">
+  <div class="admin-card-header">
+    <div>
+      <h3>Registar pagamento de quotas</h3>
+      <p class="admin-help">Emite manualmente um recibo por transferência bancária, MB WAY ou numerário.</p>
+    </div>
+  </div>
+
+  <div class="admin-form-grid">
+    <label class="wide">
+      <span>Sócio</span>
+      <select id="manual-quota-socio" required></select>
+    </label>
+    <label>
+      <span>Montante pago (€)</span>
+      <input id="manual-quota-valor" type="number" min="12" step="12" value="12.00" inputmode="decimal">
+    </label>
+    <label>
+      <span>Método de pagamento</span>
+      <select id="manual-quota-metodo">
+        <option value="transferencia">Transferência bancária</option>
+        <option value="mbway">MB WAY</option>
+        <option value="numerario">Numerário</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="manual-quota-result" class="admin-result" hidden aria-live="polite"></div>
+  <button id="btn-manual-quota" type="button" class="admin-small-btn primary">
+    Registar pagamento e enviar recibo
+  </button>
+</section>
