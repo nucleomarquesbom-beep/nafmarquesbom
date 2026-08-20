@@ -23,7 +23,7 @@
     <div>
       <span class="admin-badge">Área reservada</span>
       <h1>Administração</h1>
-      <p class="admin-help">Gestão de sócios, quotas, Fun&Learn e comunicações.</p>
+      <p class="admin-help">Gestão de sócios, quotas, Fun&amp;Learn, comunicações e Drº Árbitro.</p>
     </div>
     <button id="btn-refresh" class="admin-small-btn primary" type="button">Atualizar</button>
   </div>
@@ -40,7 +40,7 @@
       <div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div>
       <div class="admin-kpi"><span>Ativos</span><strong id="kpi-ativos">—</strong></div>
       <div class="admin-kpi"><span>Quotas em atraso</span><strong id="kpi-atrasos">—</strong></div>
-      <div class="admin-kpi"><span>Pontos Fun&Learn</span><strong id="kpi-pontos">—</strong></div>
+      <div class="admin-kpi"><span>Pontos Fun&amp;Learn</span><strong id="kpi-pontos">—</strong></div>
     </div>
 
     <div class="admin-tabs">
@@ -48,7 +48,7 @@
       <button id="tab-admins" class="admin-tab" data-panel="admins" type="button" hidden>Administradores</button>
       <button class="admin-tab" data-panel="quotas" type="button">Quotas</button>
       <button class="admin-tab" data-panel="email" type="button">Email geral</button>
-      <button class="admin-tab" data-panel="funlearn" type="button">Fun&Learn</button>
+      <button class="admin-tab" data-panel="funlearn" type="button">Fun&amp;Learn</button>
       <button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>
     </div>
 
@@ -57,7 +57,7 @@
         <div class="admin-card-header">
           <div>
             <h2 id="criar-socio-title">Adicionar sócio</h2>
-            <p class="admin-help">Cria a conta e envia ao sócio um email para definir a própria palavra-passe.</p>
+            <p class="admin-help">Pode criar um sócio individualmente ou importar vários através de Excel.</p>
           </div>
         </div>
 
@@ -72,19 +72,51 @@
           <div id="admin-create-socio-result" class="admin-result" hidden aria-live="polite"></div>
         </form>
 
-        <div class="admin-subsection">
-          <h3>Importar novos sócios por PDF</h3>
-          <p class="admin-help">O PDF é analisado no navegador. A gravação só acontece depois da pré-visualização e confirmação.</p>
-          <div class="admin-file">
-            <label>PDF de origem<input id="pdf-file" type="file" accept="application/pdf"></label>
-            <div id="pdf-progress" class="admin-progress"><span></span></div>
-            <p class="admin-import-note">Formato esperado: linhas contendo número de sócio e nome.</p>
+        <div id="admin-socios-excel-panel" class="admin-subsection admin-excel-socios-panel">
+          <div class="admin-card-header">
+            <div>
+              <h3>Importar novos sócios por Excel</h3>
+              <p class="admin-help">A primeira folha deve conter <strong>Nome</strong>, <strong>Nº Sócio</strong> e <strong>Email</strong>. Telemóvel é opcional.</p>
+            </div>
+            <span class="admin-badge">Excel</span>
           </div>
+
+          <div class="admin-excel-format">
+            <div><strong>Nome</strong><span>Obrigatório</span></div>
+            <div><strong>Nº Sócio</strong><span>Obrigatório</span></div>
+            <div><strong>Email</strong><span>Obrigatório</span></div>
+            <div><strong>Telemóvel</strong><span>Opcional</span></div>
+          </div>
+
+          <div class="admin-file admin-excel-upload">
+            <label>Ficheiro Excel
+              <input id="admin-socios-excel-file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
+            </label>
+            <p class="admin-import-note">O ficheiro é validado primeiro. Só depois da validação é iniciada a criação das contas.</p>
+          </div>
+
           <div class="admin-actions">
-            <button id="btn-parse-pdf" type="button" class="admin-small-btn primary">Ler PDF</button>
-            <button id="btn-import-pdf" type="button" class="admin-small-btn" disabled>Confirmar importação</button>
+            <button id="admin-socios-excel-preview-btn" type="button" class="admin-small-btn primary">Validar Excel</button>
+            <button id="admin-excel-socios-import" type="button" class="admin-small-btn" disabled>Importar sócios</button>
           </div>
-          <div id="pdf-preview" class="admin-preview"></div>
+
+          <div class="admin-excel-progress-row">
+            <progress id="admin-excel-socios-progress" value="0" max="100"></progress>
+            <span id="admin-excel-socios-status">A aguardar ficheiro.</span>
+          </div>
+
+          <div id="admin-excel-socios-summary" class="admin-selected-count"></div>
+          <div id="admin-excel-socios-preview" class="admin-preview admin-excel-socios-preview"></div>
+          <div id="admin-excel-socios-result" class="admin-result" hidden aria-live="polite"></div>
+        </div>
+
+        <!-- Compatibilidade com o JS administrativo existente: o PDF deixa de ser mostrado. -->
+        <div class="admin-legacy-hidden" aria-hidden="true">
+          <input id="pdf-file" type="file" accept="application/pdf">
+          <div id="pdf-progress"><span></span></div>
+          <button id="btn-parse-pdf" type="button">Ler PDF</button>
+          <button id="btn-import-pdf" type="button" disabled>Importar PDF</button>
+          <div id="pdf-preview"></div>
         </div>
       </section>
 
@@ -145,6 +177,30 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
         </div>
       </div>
 
+      <div id="admin-excel-panel" class="admin-card admin-excel-panel">
+        <div class="admin-card-header">
+          <div>
+            <span class="admin-badge">Quotas</span>
+            <h3>Importar / exportar quotas por Excel</h3>
+            <p class="admin-help">Este módulo mantém a importação e exportação anual de dívida que já existe na base de dados.</p>
+          </div>
+        </div>
+        <div class="admin-file">
+          <label>Ficheiro Excel de dívida
+            <input id="quota-excel-file" type="file" accept=".xlsx,.xls,.csv">
+          </label>
+          <p class="admin-import-note">Colunas: Nº Sócio, Nome e Valor em dívida total.</p>
+        </div>
+        <div class="admin-actions">
+          <button id="btn-quota-excel-preview" type="button" class="admin-small-btn primary">Validar Excel</button>
+          <button id="btn-quota-excel-import" type="button" class="admin-small-btn" disabled>Importar dívida</button>
+          <button id="btn-quota-excel-export" type="button" class="admin-small-btn">Exportar Excel</button>
+        </div>
+        <div id="quota-excel-summary" class="admin-selected-count"></div>
+        <div id="quota-excel-preview" class="admin-preview"></div>
+        <div id="quota-excel-result" class="admin-result" hidden aria-live="polite"></div>
+      </div>
+
       <div class="admin-card manual-quota">
         <h3>Registar pagamento manual</h3>
         <p class="admin-help">Escolhe o sócio, o montante efetivamente pago e o método. O sistema regista o pagamento, emite o recibo PDF e envia-o ao sócio com o Núcleo em CC.</p>
@@ -175,7 +231,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       <div class="admin-card funlearn-unified-card">
         <div class="admin-card-header">
           <div>
-            <span class="admin-badge">Fun&Learn</span>
+            <span class="admin-badge">Fun&amp;Learn</span>
             <h2>Gestão de pontos</h2>
             <p class="admin-help">Um único bloco para PDF, adição individual e retirada individual.</p>
           </div>
@@ -199,7 +255,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
           <div class="admin-form-grid">
             <label>Sócio<select id="funlearn-add-member"></select></label>
             <label>Pontos<input id="funlearn-add-points" type="number" min="1" step="1" value="1"></label>
-            <label>Atividade<input id="funlearn-add-activity" value="Fun&Learn"></label>
+            <label>Atividade<input id="funlearn-add-activity" value="Fun&amp;Learn"></label>
             <label>Motivo<input id="funlearn-add-description" placeholder="Motivo da atribuição"></label>
           </div>
           <button id="btn-funlearn-add" type="button" class="admin-small-btn primary">Adicionar pontos</button>
@@ -233,6 +289,8 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 
 <script src="js/admin-config.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/admin-import-socios-excel.js" defer></script>
+<script src="js/admin-excel.js" defer></script>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
