@@ -8,8 +8,8 @@
     <title>Área de Sócios | Núcleo de Árbitros de Futebol Marques Bom</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/socio.css?v=20260813-1">
-    <link rel="stylesheet" href="css/socio-excel.css?v=20260815-1">
+    <link rel="stylesheet" href="css/socio.css?v=20260820-2">
+    <link rel="stylesheet" href="css/socio-excel.css?v=20260820-2">
 
 
     <link
@@ -146,6 +146,136 @@
   #integrated-admin-host .socio-admin-subtabs { overflow-x:auto; flex-wrap:nowrap; }
   #integrated-admin-host .socio-admin-subtab { white-space:nowrap; }
 }
+
+
+/* ==========================================================
+   ADMINISTRAÇÃO INTEGRADA — APRESENTAÇÃO LIMPA
+   A administração pertence ao dashboard do sócio.
+   Não é uma página dentro de outra página.
+========================================================== */
+#administracao.socio-tab-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#administracao .socio-admin-integrated {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+#administracao .socio-admin-title-row {
+    margin: 0 0 22px;
+    padding: 0 2px;
+}
+#administracao .socio-admin-title-row h2 {
+    margin: 5px 0 4px;
+    font-size: clamp(25px, 3vw, 34px);
+}
+#administracao .socio-admin-title-row p {
+    max-width: 780px;
+}
+#integrated-admin-host {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host > #admin-app {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .admin-kpis {
+    margin: 0 0 22px !important;
+}
+#integrated-admin-host .admin-tabs {
+    display: none !important;
+}
+#integrated-admin-host .socio-admin-subtabs {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 0 22px !important;
+    padding: 5px !important;
+    background: #f1edf4 !important;
+    border: 1px solid #e6dfea;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .socio-admin-subtab {
+    min-height: 42px;
+    padding: 9px 19px !important;
+    border-radius: 10px !important;
+    color: #5b2a72 !important;
+    background: transparent !important;
+    transition: .18s ease;
+}
+#integrated-admin-host .socio-admin-subtab:hover {
+    background: rgba(255,255,255,.72) !important;
+}
+#integrated-admin-host .socio-admin-subtab.active {
+    background: #fff !important;
+    color: #4a205e !important;
+    box-shadow: 0 2px 7px rgba(50,25,60,.10) !important;
+}
+#integrated-admin-host .integrated-admin-group {
+    width: 100%;
+}
+#integrated-admin-host .admin-card {
+    width: 100%;
+    margin: 0 0 18px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 5px 18px rgba(40,20,50,.055) !important;
+}
+#integrated-admin-host .admin-card:last-child {
+    margin-bottom: 0 !important;
+}
+#integrated-admin-host .admin-page-head {
+    display: none !important;
+}
+#integrated-admin-host .admin-result {
+    margin-bottom: 16px;
+}
+#integrated-admin-host .admin-table-wrap {
+    max-width: 100%;
+}
+#integrated-admin-host .admin-table {
+    min-width: 1040px;
+}
+#integrated-admin-host .admin-kpi {
+    min-height: 105px;
+}
+#integrated-admin-host .admin-permission-button {
+    min-width: 120px;
+}
+#integrated-admin-host .admin-permission-button[disabled] {
+    opacity: .7;
+}
+@media (max-width: 800px) {
+    #integrated-admin-host .socio-admin-subtabs {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+    #integrated-admin-host .socio-admin-subtab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
+
 </style>
 
 </head>
