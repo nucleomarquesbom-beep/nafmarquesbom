@@ -195,6 +195,16 @@ async function assertPrincipalAdmin() {
     return session;
 }
 
+function loadStylesheetOnce(href) {
+    const absolute = new URL(href, window.location.href).href;
+    if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(link => link.href === absolute)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.dataset.nafAdminStyle = 'true';
+    document.head.appendChild(link);
+}
+
 async function loadScriptOnce(src) {
     const existing = document.querySelector(`script[data-naf-src="${src}"]`);
     if (existing) return;
@@ -233,8 +243,16 @@ async function loadIntegratedAdmin() {
         const source = doc.querySelector('#admin-app');
         if (!source) throw new Error('O admin.html não contém #admin-app.');
 
+        // O admin.html traz o seu próprio CSS através do <head>, mas ao
+        // integrar apenas #admin-app esse <head> não é copiado.
+        // Carregamos o CSS oficial da administração e mantemos a classe
+        // admin-modern no contentor, para que o grafismo seja exatamente
+        // o mesmo da página administrativa autónoma.
+        loadStylesheetOnce('css/admin.css?v=20260820-admin-integrated');
+
         const clone = source.cloneNode(true);
         clone.hidden = false;
+        clone.classList.add('admin-modern');
         host.replaceChildren(clone);
         host.hidden = false;
 
