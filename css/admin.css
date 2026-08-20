@@ -1,5 +1,5 @@
 /* Extensão administrativa — layout consolidado. */
-.admin-modern{margin-top:34px}
+.admin-modern{margin-top:34px;width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
 .admin-modern *{box-sizing:border-box}
 .admin-page-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:20px}
 .admin-page-head h1{color:var(--roxo);font-size:42px;margin:8px 0}
@@ -60,6 +60,40 @@
 .admin-permission-row{display:grid;grid-template-columns:90px 1fr 1.4fr 150px auto;gap:12px;align-items:center}
 .manual-quota{margin-top:24px}
 .manual-quota-result{margin-top:14px}
-@media(max-width:1000px){.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.admin-permission-row{grid-template-columns:1fr;gap:6px}.admin-card-header{display:block}}
-@media(max-width:620px){.admin-kpis{grid-template-columns:1fr}.admin-page-head{flex-direction:column;align-items:stretch}.admin-form-grid{grid-template-columns:1fr}.admin-form-grid .wide{grid-column:auto}.admin-card{padding:18px}.admin-toolbar .admin-small-btn{width:100%}}
+
+.admin-excel-socios-panel{background:linear-gradient(180deg,#fff,#fcf9fd)}
+.admin-excel-format{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.admin-excel-format>div{border:1px solid #eee;border-radius:12px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:3px}
+.admin-excel-format strong{color:var(--roxo)}
+.admin-excel-format span{font-size:11px;color:#777}
+.admin-excel-upload{margin-top:12px}
+.admin-excel-progress-row{display:flex;align-items:center;gap:12px;margin-top:14px}
+.admin-excel-progress-row progress{width:260px;height:10px}
+.admin-excel-progress-row span{font-size:12px;color:#666}
+.admin-excel-socios-preview{max-height:360px}
+.admin-excel-preview-row{display:grid;grid-template-columns:90px minmax(180px,1fr) minmax(220px,1fr) 140px;gap:12px;padding:10px 12px;border-bottom:1px solid #eee;align-items:center;font-size:13px}
+.admin-excel-preview-row.admin-excel-error{grid-template-columns:90px 1fr;background:#fff7f7;color:#842029}
+.admin-excel-panel{margin-top:24px}
+.admin-legacy-hidden{display:none!important}
+
+@media(max-width:1100px){
+  .admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-modern{max-width:100%}
+}
+@media(max-width:800px){
+  .admin-excel-format{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-excel-preview-row{grid-template-columns:70px 1fr;gap:6px}
+  .admin-excel-preview-row span:nth-child(3),.admin-excel-preview-row span:nth-child(4){grid-column:2}
+  .admin-page-head{align-items:flex-start}
+}
+@media(max-width:620px){
+  .admin-kpis{grid-template-columns:1fr}
+  .admin-page-head{flex-direction:column;align-items:stretch}
+  .admin-form-grid{grid-template-columns:1fr}
+  .admin-form-grid .wide{grid-column:auto}
+  .admin-card{padding:18px;border-radius:16px}
+  .admin-toolbar .admin-small-btn{width:100%}
+  .admin-excel-format{grid-template-columns:1fr}
+  .admin-excel-progress-row{align-items:flex-start;flex-direction:column}
+  .admin-excel-progress-row progress{width:100%}
+}
