@@ -76,16 +76,27 @@
           <div class="admin-card-header">
             <div>
               <h3>Importar novos sócios por Excel</h3>
-              <p class="admin-help">A primeira folha deve conter <strong>Nome</strong>, <strong>Nº Sócio</strong> e <strong>Email</strong>. Telemóvel é opcional.</p>
+              <p class="admin-help">A primeira folha deve respeitar os campos abaixo. O sistema guarda os dados pessoais e de arbitragem nas respetivas colunas da ficha do sócio.</p>
             </div>
             <span class="admin-badge">Excel</span>
           </div>
 
-          <div class="admin-excel-format">
-            <div><strong>Nome</strong><span>Obrigatório</span></div>
-            <div><strong>Nº Sócio</strong><span>Obrigatório</span></div>
-            <div><strong>Email</strong><span>Obrigatório</span></div>
+          <div class="admin-excel-format admin-excel-format-wide">
+            <div><strong>Nº de Sócio</strong><span>Obrigatório</span></div>
+            <div><strong>Nome Completo</strong><span>Obrigatório</span></div>
+            <div><strong>NIF</strong><span>Opcional</span></div>
+            <div><strong>Data de Nascimento</strong><span>Opcional</span></div>
+            <div><strong>Naturalidade</strong><span>Opcional</span></div>
+            <div><strong>Cartão de Cidadão</strong><span>Opcional</span></div>
+            <div><strong>Profissão</strong><span>Opcional</span></div>
+            <div><strong>Morada Completa</strong><span>Opcional</span></div>
+            <div><strong>Localidade</strong><span>Opcional</span></div>
+            <div><strong>Código Postal</strong><span>Opcional</span></div>
             <div><strong>Telemóvel</strong><span>Opcional</span></div>
+            <div><strong>Email</strong><span>Obrigatório</span></div>
+            <div><strong>Modalidade</strong><span>Obrigatório</span></div>
+            <div><strong>Categoria</strong><span>Obrigatório</span></div>
+            <div><strong>Associação Distrital</strong><span>Opcional</span></div>
           </div>
 
           <div class="admin-file admin-excel-upload">
@@ -118,6 +129,18 @@
           <button id="btn-import-pdf" type="button" disabled>Importar PDF</button>
           <div id="pdf-preview"></div>
         </div>
+      </section>
+
+      <section id="admin-questoes-card" class="admin-card admin-questoes-card">
+        <div class="admin-card-header">
+          <div>
+            <span class="admin-badge">Questões</span>
+            <h3>Questões dos sócios</h3>
+            <p class="admin-help">Consulte as questões recebidas e responda por texto, PDF ou pelos dois meios.</p>
+          </div>
+          <button id="questoes-admin-refresh" class="admin-small-btn" type="button">Atualizar</button>
+        </div>
+        <div id="admin-questoes-list"><div class="admin-loading">A carregar…</div></div>
       </section>
 
       <div class="admin-card">
@@ -294,5 +317,6 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
+<script type="module" src="js/admin-questoes.js?v=20260822-1"></script>
 </body>
 </html>

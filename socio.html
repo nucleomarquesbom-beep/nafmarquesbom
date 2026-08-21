@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/socio.css?v=20260820-2">
     <link rel="stylesheet" href="css/socio-public-members.css?v=20260821-3">
     <link rel="stylesheet" href="css/socio-excel.css?v=20260820-2">
+    <link rel="stylesheet" href="css/questoes-socios.css?v=20260822-1">
 
 
     <link
@@ -555,6 +556,14 @@
                 </button>
 
                 <button
+                    class="socio-tab"
+                    data-tab="questoes"
+                    type="button"
+                >
+                    Questões
+                </button>
+
+                <button
                     id="admin-tab"
                     class="socio-tab admin-only-tab"
                     data-tab="administracao"
@@ -1029,6 +1038,39 @@
             </section>
 
 
+            <!-- QUESTÕES -->
+
+            <section
+                id="questoes"
+                class="socio-tab-content"
+            >
+                <div class="questoes-head">
+                    <span class="admin-badge">Contacto com o Núcleo</span>
+                    <h2>Questões</h2>
+                    <p>Envie uma questão por escrito ou através de PDF. Quando o Núcleo responder, a resposta aparecerá imediatamente abaixo da questão.</p>
+                </div>
+
+                <form id="questao-form" class="questao-form">
+                    <label>
+                        Questão
+                        <textarea id="questao-texto" rows="6" placeholder="Escreva aqui a sua questão…"></textarea>
+                    </label>
+
+                    <label>
+                        Anexar PDF (opcional)
+                        <input id="questao-pdf" type="file" accept="application/pdf">
+                    </label>
+
+                    <button class="botao" type="submit">Enviar questão</button>
+                    <div id="questao-result" class="admin-result" hidden aria-live="polite"></div>
+                </form>
+
+                <div id="questoes-list" class="questoes-list">
+                    <div class="vazio">Inicie sessão para consultar as suas questões.</div>
+                </div>
+            </section>
+
+
             <!-- =====================================================
                  ADMIN
             ====================================================== -->
@@ -1094,5 +1136,10 @@
     type="module"
     src="js/socio.js?v=20260821-admin-public"
 ></script>
+<script
+    type="module"
+    src="js/socio-questoes.js?v=20260822-1"
+></script>
+<script type="module" src="js/socio-enhancements.js?v=20260821-1"></script>
 </body>
 </html>
