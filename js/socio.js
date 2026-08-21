@@ -9,10 +9,223 @@ const state = {
     socio: null,
     admin: false,
     adminSocios: [],
-    selectedSocios: new Set(),
-    adminLoaded: false,
-    adminLoading: false
+    selectedSocios: new Set()
 };
+
+async function loadPublicMembers() {
+    const root = document.getElementById('public-members-list');
+    if (!root) return;
+
+    try {
+        const client = supabase;
+        const { data, error } = await client.rpc('socios_publicos_por_categoria');
+
+        if (error) throw error;
+
+        const groups = {
+            Futebol: [],
+            Futsal: []
+        };
+
+        (data || []).forEach(row => {
+            const modalidade =
+                String(row.modalidade || '').toLowerCase() === 'futsal'
+                    ? 'Futsal'
+                    : 'Futebol';
+
+            if (!row.categoria || !row.nome) return;
+
+            (groups[modalidade] ||= []).push({
+                categoria: String(row.categoria),
+                nome: String(row.nome)
+            });
+        });
+
+        const order = {
+            Futebol: [
+                'C1',
+                'C2',
+                'C3',
+                'C4',
+                'C4 Core',
+                'C5',
+                'C6',
+                'C7',
+                'Cj',
+                'CF1',
+                'CF2',
+                'CF3',
+                'CF4'
+            ],
+            Futsal: [
+                'C1',
+                'C2',
+                'C3',
+                'C4',
+                'C5',
+                'C6',
+                'C7',
+                'Cj',
+                'CFF1',
+                'CFF2'
+            ]
+        };
+
+        const norm = value =>
+            value.trim().toLowerCase();
+
+        root.innerHTML = '';
+
+        Object.entries(groups).forEach(([modalidade, rows]) => {
+            const cats = [
+                ...new Set(rows.map(row => row.categoria))
+            ].sort((a, b) => {
+                const ia = order[modalidade].findIndex(
+                    x => norm(x) === norm(a)
+                );
+
+                const ib = order[modalidade].findIndex(
+                    x => norm(x) === norm(b)
+                );
+
+                return (
+                    (ia < 0 ? 999 : ia) -
+                    (ib < 0 ? 999 : ib)
+                ) || a.localeCompare(b, 'pt');
+            });
+
+            if (!cats.length) return;
+
+            const group = document.createElement('section');
+            group.className = 'public-members-group';
+
+            group.innerHTML = `
+                <h3>${modalidade}</h3>
+                <div class="public-category-row"></div>
+            `;
+
+            const rowEl =
+                group.querySelector('.public-category-row');
+
+            cats.forEach(cat => {
+                const members = rows
+                    .filter(
+                        row =>
+                            norm(row.categoria) === norm(cat)
+                    )
+                    .sort(
+                        (a, b) =>
+                            a.nome.localeCompare(
+                                b.nome,
+                                'pt'
+                            )
+                    );
+
+                const wrap =
+                    document.createElement('div');
+
+                wrap.className = 'public-category';
+
+                const button =
+                    document.createElement('button');
+
+                button.type = 'button';
+                button.className =
+                    'public-category-trigger';
+                button.textContent = cat;
+                button.setAttribute(
+                    'aria-expanded',
+                    'false'
+                );
+
+                const panel =
+                    document.createElement('div');
+
+                panel.className =
+                    'public-category-members';
+
+                const ul =
+                    document.createElement('ul');
+
+                members.forEach(member => {
+                    const li =
+                        document.createElement('li');
+
+                    li.textContent = member.nome;
+
+                    ul.appendChild(li);
+                });
+
+                panel.appendChild(ul);
+
+                wrap.append(
+                    button,
+                    panel
+                );
+
+                rowEl.appendChild(wrap);
+
+                button.addEventListener(
+                    'click',
+                    () => {
+                        if (
+                            window.matchMedia(
+                                '(max-width: 700px)'
+                            ).matches
+                        ) {
+                            const open =
+                                !wrap.classList.contains(
+                                    'open'
+                                );
+
+                            document
+                                .querySelectorAll(
+                                    '.public-category.open'
+                                )
+                                .forEach(x => {
+                                    x.classList.remove(
+                                        'open'
+                                    );
+
+                                    x.querySelector(
+                                        'button'
+                                    )?.setAttribute(
+                                        'aria-expanded',
+                                        'false'
+                                    );
+                                });
+
+                            wrap.classList.toggle(
+                                'open',
+                                open
+                            );
+
+                            button.setAttribute(
+                                'aria-expanded',
+                                String(open)
+                            );
+                        }
+                    }
+                );
+            });
+
+            root.appendChild(group);
+        });
+
+        if (!root.children.length) {
+            root.innerHTML =
+                '<div class="vazio">Não existem categorias com sócios ativos.</div>';
+        }
+    } catch (error) {
+        console.error(
+            'Sócios públicos:',
+            error
+        );
+
+        root.innerHTML =
+            '<div class="vazio">Não foi possível carregar a lista de sócios.</div>';
+    }
+}
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -49,17 +262,10 @@ function clearPrivateUI() {
     state.user = null;
     state.socio = null;
     state.admin = false;
-    state.adminLoaded = false;
-    state.adminLoading = false;
 
     if ($('#login-panel')) $('#login-panel').hidden = false;
     if ($('#dashboard')) $('#dashboard').hidden = true;
     if ($('#admin-panel')) $('#admin-panel').hidden = true;
-    const adminTab = $('#admin-tab');
-    if (adminTab) {
-        adminTab.hidden = true;
-        adminTab.classList.remove('admin-visible');
-    }
 
     const clearIds = [
         '#socio-name', '#socio-number', '#dados-nome', '#dados-numero',
@@ -128,318 +334,11 @@ async function loadProfile(user) {
 
     state.user = user;
     state.socio = data;
-
-    /*
-     * ADMINISTRACAO
-     *
-     * Qualquer socio marcado como is_admin pode usar a area
-     * administrativa. O socio 9999 continua a ser o administrador
-     * principal e a regra de permissoes sensiveis e tratada
-     * separadamente por assertPrincipalAdmin().
-     */
     state.admin =
+        Number(data.numero_socio) === ADMIN_NUMERO &&
         data.is_admin === true &&
         data.ativo === true;
-
-    updateAdminVisibility();
 }
-
-function updateAdminVisibility() {
-    const adminTab = $('#admin-tab');
-    const adminPanel = $('#admin-panel');
-    const adminSection = $('#administracao');
-
-    if (adminTab) {
-        adminTab.hidden = !state.admin;
-        adminTab.classList.toggle('admin-visible', state.admin);
-        adminTab.setAttribute('aria-hidden', String(!state.admin));
-    }
-
-    if (adminPanel) {
-        adminPanel.hidden = !state.admin;
-    }
-
-    if (adminSection && !state.admin) {
-        adminSection.hidden = true;
-        adminSection.classList.remove('active');
-    }
-
-    syncMobileTabSelector();
-}
-
-function isPrincipalAdmin() {
-    return state.admin &&
-        Number(state.socio?.numero_socio) === ADMIN_NUMERO;
-}
-
-async function assertPrincipalAdmin() {
-    const session = await getSession();
-    if (!session) throw new Error('Sessao nao autenticada.');
-
-    const { data, error } = await supabase
-        .from('socios')
-        .select('id,numero_socio,is_admin,ativo')
-        .eq('user_id', session.user.id)
-        .eq('ativo', true)
-        .single();
-
-    if (error) throw error;
-
-    if (
-        data.is_admin !== true ||
-        Number(data.numero_socio) !== ADMIN_NUMERO
-    ) {
-        throw new Error('Esta operacao esta reservada ao administrador principal.');
-    }
-
-    return session;
-}
-
-function loadStylesheetOnce(href) {
-    const absolute = new URL(href, window.location.href).href;
-    if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(link => link.href === absolute)) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    link.dataset.nafAdminStyle = 'true';
-    document.head.appendChild(link);
-}
-
-async function loadScriptOnce(src) {
-    const existing = document.querySelector(`script[data-naf-src="${src}"]`);
-    if (existing) return;
-
-    await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.dataset.nafSrc = src;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
-        document.head.appendChild(script);
-    });
-}
-
-async function loadIntegratedAdmin() {
-    if (!state.admin) return;
-
-    const host = $('#integrated-admin-host');
-    const loading = $('#integrated-admin-loading');
-    const errorBox = $('#integrated-admin-error');
-    if (!host || state.adminLoading) return;
-    if (state.adminLoaded) return;
-
-    state.adminLoading = true;
-    try {
-        if (loading) loading.hidden = false;
-        if (errorBox) errorBox.hidden = true;
-
-        // O admin continua a ser a fonte oficial do HTML administrativo.
-        // Apenas o seu conteúdo é colocado dentro da aba; não existe iframe.
-        const response = await fetch(`admin.html?embedded=1&_=${Date.now()}`, { cache:'no-store' });
-        if (!response.ok) throw new Error('Não foi possível carregar a área administrativa.');
-
-        const adminHtml = await response.text();
-        const doc = new DOMParser().parseFromString(adminHtml, 'text/html');
-        const source = doc.querySelector('#admin-app');
-        if (!source) throw new Error('O admin.html não contém #admin-app.');
-
-        // O admin.html traz o seu próprio CSS através do <head>, mas ao
-        // integrar apenas #admin-app esse <head> não é copiado.
-        // Carregamos o CSS oficial da administração e mantemos a classe
-        // admin-modern no contentor, para que o grafismo seja exatamente
-        // o mesmo da página administrativa autónoma.
-        loadStylesheetOnce('css/admin.css?v=20260820-admin-integrated');
-
-        const clone = source.cloneNode(true);
-        clone.hidden = false;
-        clone.classList.add('admin-modern');
-        host.replaceChildren(clone);
-        host.hidden = false;
-
-        // Carregamos exatamente os módulos que o admin.html usa.
-        if (!window.supabase?.createClient) {
-            await loadScriptOnce('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
-        }
-        await loadScriptOnce('js/admin-config.js?v=20260820-clean');
-        await loadScriptOnce('js/admin.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-criar-socio.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-quotas-manual.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-excel.js?v=20260820-clean');
-        await loadScriptOnce('js/dr-arbitro.js?v=20260820-clean');
-
-        // Todos os refreshes futuros passam por este wrapper, para que
-        // a coluna Admin seja reconstruída depois de cada renderização.
-        if (typeof window.loadMembers === 'function' && !window.__NAF_LOAD_MEMBERS_WRAPPED) {
-            const originalLoadMembers = window.loadMembers;
-            window.loadMembers = async (...args) => {
-                const result = await originalLoadMembers(...args);
-                await patchAdminPermissionColumn();
-                return result;
-            };
-            window.__NAF_LOAD_MEMBERS_WRAPPED = true;
-        }
-
-        await new Promise(r => setTimeout(r, 50));
-        buildIntegratedAdminTabs();
-        patchAdminPermissionColumn();
-
-        if (typeof window.loadMembers === 'function') {
-            await window.loadMembers();
-        }
-        patchAdminPermissionColumn();
-
-        if (loading) loading.hidden = true;
-        state.adminLoaded = true;
-    } catch (error) {
-        console.error('Administração integrada:', error);
-        if (loading) loading.hidden = true;
-        if (errorBox) {
-            errorBox.textContent = error.message || 'Não foi possível carregar a administração.';
-            errorBox.hidden = false;
-        }
-    } finally {
-        state.adminLoading = false;
-    }
-}
-
-function buildIntegratedAdminTabs() {
-    const host = $('#integrated-admin-host');
-    if (!host || host.querySelector('.socio-admin-subtabs')) return;
-
-    const app = host.querySelector('#admin-app');
-    if (!app) return;
-
-    const panelSocios = app.querySelector('#panel-socios');
-    const panelQuotas = app.querySelector('#panel-quotas');
-    const panelEmail = app.querySelector('#panel-email');
-    const panelFun = app.querySelector('#panel-funlearn');
-    const panelDr = app.querySelector('#panel-dr-arbitro');
-    const panelAdmins = app.querySelector('#panel-admins');
-
-    if (!panelSocios || !panelFun || !panelDr) {
-        throw new Error('A estrutura administrativa esperada não foi encontrada.');
-    }
-
-    if (panelAdmins) panelAdmins.hidden = true;
-
-    const subtabs = document.createElement('div');
-    subtabs.className = 'socio-admin-subtabs';
-    subtabs.innerHTML = `
-        <button type="button" class="socio-admin-subtab active" data-admin-section="socios">Sócios</button>
-        <button type="button" class="socio-admin-subtab" data-admin-section="funlearn">Fun&amp;Learn</button>
-        <button type="button" class="socio-admin-subtab" data-admin-section="dr-arbitro">Drº Árbitro</button>
-    `;
-
-    const groupSocios = document.createElement('div');
-    groupSocios.className = 'integrated-admin-group active';
-    groupSocios.dataset.adminGroup = 'socios';
-    groupSocios.append(panelSocios);
-    if (panelQuotas) groupSocios.append(panelQuotas);
-    if (panelEmail) groupSocios.append(panelEmail);
-
-    const groupFun = document.createElement('div');
-    groupFun.className = 'integrated-admin-group';
-    groupFun.dataset.adminGroup = 'funlearn';
-    groupFun.append(panelFun);
-
-    const groupDr = document.createElement('div');
-    groupDr.className = 'integrated-admin-group';
-    groupDr.dataset.adminGroup = 'dr-arbitro';
-    groupDr.append(panelDr);
-
-    app.append(subtabs, groupSocios, groupFun, groupDr);
-
-    subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
-        button.addEventListener('click', () => {
-            const name = button.dataset.adminSection;
-            subtabs.querySelectorAll('.socio-admin-subtab').forEach(b => b.classList.toggle('active', b === button));
-            host.querySelectorAll('.integrated-admin-group').forEach(g => g.classList.toggle('active', g.dataset.adminGroup === name));
-        });
-    });
-}
-
-async function getAdminMembersMap() {
-    const client = window.__NAF_SUPABASE || supabase;
-    const { data, error } = await client.rpc('admin_listar_socios');
-    if (error) throw error;
-    return new Map((data || []).map(m => [String(m.id), m]));
-}
-
-async function patchAdminPermissionColumn() {
-    const host = $('#integrated-admin-host');
-    const body = host?.querySelector('#members-body');
-    const table = host?.querySelector('.admin-table');
-    if (!host || !body || !table) return;
-
-    const headerRow = table.querySelector('thead tr');
-    if (headerRow && !headerRow.querySelector('.admin-permission-col')) {
-        const th = document.createElement('th');
-        th.className = 'admin-permission-col';
-        th.textContent = 'Admin';
-        const actions = headerRow.lastElementChild;
-        headerRow.insertBefore(th, actions);
-    }
-
-    let members;
-    try {
-        members = await getAdminMembersMap();
-    } catch (error) {
-        console.error('Não foi possível obter as permissões administrativas:', error);
-        return;
-    }
-
-    const principal = isPrincipalAdmin();
-
-    body.querySelectorAll('tr').forEach(row => {
-        if (row.querySelector('.admin-permission-cell')) return;
-        const check = row.querySelector('.member-check');
-        const actions = row.lastElementChild;
-        if (!check || !actions) return;
-
-        const member = members.get(String(check.value));
-        if (!member) return;
-
-        const cell = document.createElement('td');
-        cell.className = 'admin-permission-cell';
-
-        const isMemberPrincipal = Number(member.numero_socio) === ADMIN_NUMERO;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `admin-small-btn admin-permission-button ${member.is_admin ? 'danger' : 'primary'}`;
-
-        if (isMemberPrincipal) {
-            button.textContent = 'ADMIN PRINCIPAL';
-            button.disabled = true;
-        } else if (!principal) {
-            button.textContent = member.is_admin ? 'Admin' : 'Sócio';
-            button.disabled = true;
-        } else {
-            button.textContent = member.is_admin ? 'Retirar admin' : 'Dar admin';
-            button.addEventListener('click', async () => {
-                button.disabled = true;
-                try {
-                    const client = window.__NAF_SUPABASE || supabase;
-                    const { error } = await client.rpc('admin_definir_admin', {
-                        p_socio_id: member.id,
-                        p_is_admin: !member.is_admin
-                    });
-                    if (error) throw error;
-                    await window.loadMembers();
-                    await patchAdminPermissionColumn();
-                    showMessage('Permissões de administrador atualizadas.', 'sucesso');
-                } catch (error) {
-                    console.error(error);
-                    showMessage(error.message || 'Não foi possível alterar a permissão.', 'erro');
-                    button.disabled = false;
-                }
-            });
-        }
-
-        cell.appendChild(button);
-        row.insertBefore(cell, actions);
-    });
-}
-
 
 function renderProfile() {
     const s = state.socio;
@@ -447,7 +346,7 @@ function renderProfile() {
 
     $('#login-panel').hidden = true;
     $('#dashboard').hidden = false;
-    updateAdminVisibility();
+    $('#admin-panel').hidden = !state.admin;
 
     $('#socio-name').textContent = s.nome || 'Sócio';
     $('#socio-number').textContent = s.numero_socio ?? '—';
@@ -463,7 +362,6 @@ function renderProfile() {
     $('#dados-arbitro').textContent = s.numero_arbitro || '—';
     $('#dados-af').textContent = s.associacao_futebol || '—';
     $('#dados-modalidade').textContent = s.modalidade || '—';
-    if ($('#dados-categoria')) $('#dados-categoria').textContent = s.categoria || '—';
 
     fillEditForms();
     loadPhoto();
@@ -472,7 +370,7 @@ function renderProfile() {
     loadFunlearn();
 
     if (state.admin) {
-        updateAdminVisibility();
+        loadAdminSocios();
     }
 }
 
@@ -794,33 +692,6 @@ async function loadFunlearn() {
         : '<div class="vazio">Ainda não existem movimentos de pontos.</div>';
 }
 
-
-function setupArbitragemSelectors() {
-    const modality = $('#edit-modalidade');
-    const category = $('#edit-categoria');
-    if (!modality || !category) return;
-
-    const categories = {
-        Futebol: ['C1','C2','C3','C4','C4 Core','C5','C6','C7','Cj','CF1','CF2','CF3','CF4'],
-        Futsal: ['C1','C2','C3','C4','C5','C6','C7','Cj','CFF1','CFF2']
-    };
-
-    const refresh = () => {
-        const current = category.value || state.socio?.categoria || '';
-        const values = categories[modality.value] || [];
-        category.innerHTML = '<option value="">Selecionar categoria</option>' +
-            values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
-        category.disabled = values.length === 0;
-        if (current && values.includes(current)) category.value = current;
-    };
-
-    if (!modality.dataset.categoryBound) {
-        modality.dataset.categoryBound = '1';
-        modality.addEventListener('change', refresh);
-    }
-    refresh();
-}
-
 function fillEditForms() {
     const s = state.socio;
     if (!s) return;
@@ -834,8 +705,6 @@ function fillEditForms() {
     $('#edit-arbitro').value = s.numero_arbitro || '';
     $('#edit-af').value = s.associacao_futebol || '';
     $('#edit-modalidade').value = s.modalidade || '';
-    setupArbitragemSelectors();
-    $('#edit-categoria').value = s.categoria || '';
 }
 
 function closeEditForms() {
@@ -891,8 +760,7 @@ async function saveArbitragemData() {
         telemovel: state.socio.telemovel,
         numero_arbitro: $('#edit-arbitro').value || null,
         associacao_futebol: $('#edit-af').value || null,
-        modalidade: $('#edit-modalidade').value || null,
-        categoria: $('#edit-categoria').value || null
+        modalidade: $('#edit-modalidade').value || null
     });
 }
 
@@ -912,10 +780,10 @@ async function assertAdmin() {
     if (error) throw error;
 
     if (
-        data.is_admin !== true ||
-        data.ativo !== true
+        Number(data.numero_socio) !== ADMIN_NUMERO ||
+        data.is_admin !== true
     ) {
-        throw new Error('Acesso reservado a administradores autorizados.');
+        throw new Error('Acesso reservado ao administrador.');
     }
 
     return session;
@@ -1256,71 +1124,21 @@ function normalizeName(value = '') {
         .trim();
 }
 
-function syncMobileTabSelector() {
-    const select = $('#socio-tab-select');
-    if (!select) return;
-
-    const buttons = $$('.socio-tab').filter(button => !button.hidden);
-    const active = buttons.find(button => button.classList.contains('active'))?.dataset.tab;
-    const current = select.value;
-
-    select.innerHTML = buttons.map(button =>
-        `<option value="${escapeHtml(button.dataset.tab || '')}">${escapeHtml(button.textContent.trim())}</option>`
-    ).join('');
-
-    select.value = buttons.some(button => button.dataset.tab === current)
-        ? current
-        : (active || buttons[0]?.dataset.tab || '');
-}
-
-function activateSocioTab(tabName) {
-    const button = $$('.socio-tab').find(item =>
-        item.dataset.tab === tabName && !item.hidden
-    );
-
-    if (!button) return;
-
-    $$('.socio-tab').forEach(item => item.classList.remove('active'));
-    $$('.socio-tab-content').forEach(panel => {
-        panel.classList.remove('active');
-        if (panel.id === 'administracao') panel.hidden = true;
-    });
-
-    button.classList.add('active');
-
-    const panel = document.getElementById(tabName);
-    if (panel) {
-        panel.classList.add('active');
-        if (panel.id === 'administracao') panel.hidden = false;
-    }
-
-    const select = $('#socio-tab-select');
-    if (select) select.value = tabName;
-
-    if (tabName === 'administracao' && state.admin) {
-        loadIntegratedAdmin();
-    }
-}
-
 function setupTabs() {
     $$('.socio-tab').forEach(button => {
-        if (button.dataset.bound === '1') return;
-        button.dataset.bound = '1';
-        button.addEventListener('click', () => activateSocioTab(button.dataset.tab));
+        button.addEventListener('click', () => {
+            $$('.socio-tab').forEach(item => item.classList.remove('active'));
+            $$('.socio-tab-content').forEach(panel => panel.classList.remove('active'));
+
+            button.classList.add('active');
+            document.getElementById(button.dataset.tab)?.classList.add('active');
+        });
     });
-
-    const select = $('#socio-tab-select');
-    if (select && !select.dataset.bound) {
-        select.dataset.bound = '1';
-        select.addEventListener('change', event => activateSocioTab(event.target.value));
-    }
-
-    syncMobileTabSelector();
-    updateAdminVisibility();
 }
 
-
 async function init() {
+    await loadPublicMembers();
+
     // Nunca mostrar dados privados por defeito.
     clearPrivateUI();
     cleanupDuplicateQuotaMarkup();
@@ -1601,22 +1419,9 @@ async function init() {
     }
 }
 
-supabase.auth.onAuthStateChange(async (_event, session) => {
+supabase.auth.onAuthStateChange((_event, session) => {
     if (!session) {
         clearPrivateUI();
-        return;
-    }
-
-    /*
-     * O evento auth pode disparar antes do init terminar.
-     * Revalidamos o perfil e atualizamos a interface sem
-     * redirecionar administradores.
-     */
-    try {
-        await loadProfile(session.user);
-        renderProfile();
-    } catch (error) {
-        console.error('Erro ao validar a sessao:', error);
     }
 });
 
