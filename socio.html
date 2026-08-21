@@ -8,19 +8,278 @@
     <title>Área de Sócios | Núcleo de Árbitros de Futebol Marques Bom</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/socio.css?v=20260813-1">
-    <link rel="stylesheet" href="css/socio-public-members.css?v=20260821-2">
+    <link rel="stylesheet" href="css/socio.css?v=20260820-2">
+    <link rel="stylesheet" href="css/socio-public-members.css?v=20260821-3">
+    <link rel="stylesheet" href="css/socio-excel.css?v=20260820-2">
 
 
     <link
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
+
+<style id="socio-admin-ui-20260815">
+.socio-edit-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:22px 28px;
+    align-items:start;
+}
+.socio-edit-grid > label {
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    min-width:0;
+    font-weight:700;
+    color:#3e3e3e;
+}
+.socio-edit-grid > label input,
+.socio-edit-grid > label select {
+    width:100% !important;
+    min-height:48px;
+    box-sizing:border-box;
+    padding:10px 14px;
+    border:1px solid #d8d8d8;
+    border-radius:10px;
+    background:#fff;
+    color:#333;
+    font:inherit;
+}
+.socio-edit-grid > label select {
+    appearance:auto;
+    cursor:pointer;
+}
+.socio-edit-grid > label input:focus,
+.socio-edit-grid > label select:focus {
+    outline:none;
+    border-color:#5b2a72;
+    box-shadow:0 0 0 3px rgba(91,42,114,.10);
+}
+.admin-socio-row {
+    display:grid !important;
+    grid-template-columns:36px 210px minmax(220px,1fr) 76px auto !important;
+    gap:14px !important;
+    align-items:center !important;
+    padding:14px 16px !important;
+}
+.admin-socio-number-cell {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+}
+.admin-socio-number-display {
+    min-width:62px;
+    font-size:18px;
+    font-weight:800;
+    color:#222;
+}
+.admin-socio-numero-input {
+    width:86px !important;
+    min-height:38px;
+    padding:7px 9px;
+    border:1px solid #cfcfcf;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+.admin-socio-number-cell .admin-small-btn {
+    white-space:nowrap;
+}
+.admin-numero-confirm {
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+}
+.admin-members-actions {
+    display:flex !important;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+.admin-members-actions .botao,
+.admin-members-actions .botao-secundario {
+    margin:0 !important;
+}
+#admin-comunicacao-form[hidden] { display:none !important; }
+@media (max-width:900px) {
+    .socio-edit-grid { grid-template-columns:1fr; }
+    .admin-socio-row {
+        grid-template-columns:30px minmax(150px,1fr) !important;
+    }
+    .admin-socio-main,
+    .admin-socio-status,
+    .admin-socio-admin-toggle {
+        grid-column:2;
+    }
+}
+</style>
+
+
+<style id="socio-integrated-admin-ui">
+#admin-tab { display:none !important; }
+#admin-tab.admin-visible { display:inline-flex !important; }
+#administracao { padding:0; }
+.socio-admin-integrated { width:100%; }
+.socio-admin-title-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+.socio-admin-title-row h2 { margin:6px 0 4px; }
+.socio-admin-title-row p { margin:0; color:#666; }
+.socio-admin-loading { padding:24px; text-align:center; background:#fff; border-radius:14px; }
+.socio-admin-error { margin:0 0 18px; padding:14px 16px; border-radius:10px; background:#fff0f0; color:#9d1c1c; border:1px solid #e5b5b5; }
+#integrated-admin-host { width:100%; }
+#integrated-admin-host .admin-tabs { display:none !important; }
+#integrated-admin-host #admin-app { display:block !important; }
+#integrated-admin-host .admin-kpis { margin-bottom:18px; }
+#integrated-admin-host .socio-admin-subtabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; padding:4px; background:#f4f1f6; border-radius:12px; }
+#integrated-admin-host .socio-admin-subtab { border:0; background:transparent; padding:11px 16px; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; color:#5b2a72; }
+#integrated-admin-host .socio-admin-subtab.active { background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+#integrated-admin-host .integrated-admin-group > .admin-tab-panel { display:block !important; }
+#integrated-admin-host .integrated-admin-group { display:none; }
+#integrated-admin-host .integrated-admin-group.active { display:block; }
+#integrated-admin-host .admin-tab-panel { display:block !important; }
+#integrated-admin-host #panel-admins { display:none !important; }
+#integrated-admin-host .admin-table th.admin-permission-col,
+#integrated-admin-host .admin-table td.admin-permission-cell { white-space:nowrap; }
+#integrated-admin-host .admin-permission-button { min-width:120px; }
+#integrated-admin-host .admin-permission-button[disabled] { opacity:.65; cursor:default; }
+@media (max-width:800px) {
+  #integrated-admin-host .socio-admin-subtabs { overflow-x:auto; flex-wrap:nowrap; }
+  #integrated-admin-host .socio-admin-subtab { white-space:nowrap; }
+}
+
+
+/* ==========================================================
+   ADMINISTRAÇÃO INTEGRADA — APRESENTAÇÃO LIMPA
+   A administração pertence ao dashboard do sócio.
+   Não é uma página dentro de outra página.
+========================================================== */
+#administracao.socio-tab-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#administracao .socio-admin-integrated {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+#administracao .socio-admin-title-row {
+    margin: 0 0 22px;
+    padding: 0 2px;
+}
+#administracao .socio-admin-title-row h2 {
+    margin: 5px 0 4px;
+    font-size: clamp(25px, 3vw, 34px);
+}
+#administracao .socio-admin-title-row p {
+    max-width: 780px;
+}
+#integrated-admin-host {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host > #admin-app {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .admin-kpis {
+    margin: 0 0 22px !important;
+}
+#integrated-admin-host .admin-tabs {
+    display: none !important;
+}
+#integrated-admin-host .socio-admin-subtabs {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 0 22px !important;
+    padding: 5px !important;
+    background: #f1edf4 !important;
+    border: 1px solid #e6dfea;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .socio-admin-subtab {
+    min-height: 42px;
+    padding: 9px 19px !important;
+    border-radius: 10px !important;
+    color: #5b2a72 !important;
+    background: transparent !important;
+    transition: .18s ease;
+}
+#integrated-admin-host .socio-admin-subtab:hover {
+    background: rgba(255,255,255,.72) !important;
+}
+#integrated-admin-host .socio-admin-subtab.active {
+    background: #fff !important;
+    color: #4a205e !important;
+    box-shadow: 0 2px 7px rgba(50,25,60,.10) !important;
+}
+#integrated-admin-host .integrated-admin-group {
+    width: 100%;
+}
+#integrated-admin-host .admin-card {
+    width: 100%;
+    margin: 0 0 18px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 5px 18px rgba(40,20,50,.055) !important;
+}
+#integrated-admin-host .admin-card:last-child {
+    margin-bottom: 0 !important;
+}
+#integrated-admin-host .admin-page-head {
+    display: none !important;
+}
+#integrated-admin-host .admin-result {
+    margin-bottom: 16px;
+}
+#integrated-admin-host .admin-table-wrap {
+    max-width: 100%;
+}
+#integrated-admin-host .admin-table {
+    min-width: 1040px;
+}
+#integrated-admin-host .admin-kpi {
+    min-height: 105px;
+}
+#integrated-admin-host .admin-permission-button {
+    min-width: 120px;
+}
+#integrated-admin-host .admin-permission-button[disabled] {
+    opacity: .7;
+}
+@media (max-width: 800px) {
+    #integrated-admin-host .socio-admin-subtabs {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+    #integrated-admin-host .socio-admin-subtab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
+
+</style>
+
 </head>
-    
-    
-<script src="js/dr-arbitro.js?v=20260813-5" defer></script>
-<script src="js/admin-excel.js?v=20260814-2" defer></script>
 <body>
 
 <header>
@@ -73,7 +332,6 @@
         <section id="socios-publicos" class="socios-publicos" aria-labelledby="socios-publicos-title">
             <div class="public-members-head">
                 <div>
-                    <span class="socio-etiqueta">NÚCLEO</span>
                     <h2 id="socios-publicos-title">Os nossos sócios</h2>
                     <p>Conheça os sócios por categoria. Passe o rato por uma categoria para ver a lista.</p>
                 </div>
@@ -296,6 +554,16 @@
                     Fun&amp;Learn
                 </button>
 
+                <button
+                    id="admin-tab"
+                    class="socio-tab admin-only-tab"
+                    data-tab="administracao"
+                    type="button"
+                    hidden
+                >
+                    Administração
+                </button>
+
             </div>
 
 
@@ -505,6 +773,11 @@
                         <strong id="dados-modalidade">—</strong>
                     </div>
 
+                    <div>
+                        <span>Categoria</span>
+                        <strong id="dados-categoria">—</strong>
+                    </div>
+
                 </div>
 
 
@@ -523,12 +796,47 @@
 
                         <label>
                             Associação de Futebol
-                            <input id="edit-af" type="text">
+                            <select id="edit-af" required>
+                                <option value="">Selecionar Associação de Futebol</option>
+                                <option value="AF Algarve">AF Algarve</option>
+                                <option value="AF Angra do Heroísmo">AF Angra do Heroísmo</option>
+                                <option value="AF Aveiro">AF Aveiro</option>
+                                <option value="AF Beja">AF Beja</option>
+                                <option value="AF Braga">AF Braga</option>
+                                <option value="AF Bragança">AF Bragança</option>
+                                <option value="AF Castelo Branco">AF Castelo Branco</option>
+                                <option value="AF Coimbra">AF Coimbra</option>
+                                <option value="AF Évora">AF Évora</option>
+                                <option value="AF Guarda">AF Guarda</option>
+                                <option value="AF Horta">AF Horta</option>
+                                <option value="AF Leiria">AF Leiria</option>
+                                <option value="AF Lisboa">AF Lisboa</option>
+                                <option value="AF Madeira">AF Madeira</option>
+                                <option value="AF Ponta Delgada">AF Ponta Delgada</option>
+                                <option value="AF Portalegre">AF Portalegre</option>
+                                <option value="AF Porto">AF Porto</option>
+                                <option value="AF Santarém">AF Santarém</option>
+                                <option value="AF Setúbal">AF Setúbal</option>
+                                <option value="AF Viana do Castelo">AF Viana do Castelo</option>
+                                <option value="AF Vila Real">AF Vila Real</option>
+                                <option value="AF Viseu">AF Viseu</option>
+                            </select>
                         </label>
 
                         <label>
                             Modalidade
-                            <input id="edit-modalidade" type="text">
+                            <select id="edit-modalidade" required>
+                                <option value="">Selecionar modalidade</option>
+                                <option value="Futebol">Futebol</option>
+                                <option value="Futsal">Futsal</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Categoria
+                            <select id="edit-categoria" required disabled>
+                                <option value="">Selecionar categoria</option>
+                            </select>
                         </label>
 
                     </div>
@@ -726,449 +1034,25 @@
             ====================================================== -->
 
             <section
-                id="admin-panel"
-                class="admin-panel"
+                id="administracao"
+                class="socio-tab-content"
                 hidden
             >
 
-                <h2>
-                    Área do Administrador
-                </h2>
+                <div class="socio-admin-integrated">
 
-                <p>
-                    Administrador: Sócio
-                    <strong>9999 — Núcleo Marques Bom</strong>
-                </p>
-
-
-                <!-- NOVO SÓCIO -->
-
-                <div class="admin-subpanel">
-
-                    <h3>Novo sócio</h3>
-
-                    <p>
-                        O convite é enviado através da função segura do Supabase.
-                    </p>
-
-                    <form
-                        id="novo-socio-form"
-                        class="admin-form-grid"
-                    >
-
-                        <label>
-                            Nome *
-                            <input
-                                id="novo-socio-nome"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            N.º de sócio *
-                            <input
-                                id="novo-socio-numero"
-                                type="number"
-                                min="1"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            Email *
-                            <input
-                                id="novo-socio-email"
-                                type="email"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            Telemóvel
-                            <input
-                                id="novo-socio-telemovel"
-                            >
-                        </label>
-
-                        <button
-                            id="novo-socio-submit"
-                            class="botao"
-                            type="submit"
-                        >
-                            Criar sócio e enviar convite
-                        </button>
-
-                    </form>
-
-                    <div
-                        id="novo-socio-resultado"
-                        class="admin-result"
-                        hidden
-                    ></div>
-
-                </div>
-
-
-                <!-- LISTA DE SÓCIOS -->
-
-                <div class="admin-subpanel">
-
-                    <div class="tab-heading-row">
-
+                    <div class="socio-admin-title-row">
                         <div>
-                            <h3>Sócios registados</h3>
-
-                            <p>
-                                Seleciona sócios para ações administrativas.
-                            </p>
-                        </div>
-
-                        <button
-                            id="admin-refresh-socios"
-                            class="botao-secundario"
-                            type="button"
-                        >
-                            Atualizar lista
-                        </button>
-
-                    </div>
-
-
-                    <div class="admin-selection-bar">
-
-                        <button
-                            id="admin-select-all"
-                            class="admin-small-btn"
-                            type="button"
-                        >
-                            Selecionar todos
-                        </button>
-
-                        <button
-                            id="admin-clear-selection"
-                            class="admin-small-btn"
-                            type="button"
-                        >
-                            Limpar seleção
-                        </button>
-
-                        <span
-                            id="admin-selected-count"
-                            class="admin-selected-count"
-                        >
-                            0 selecionados
-                        </span>
-
-                    </div>
-
-
-                    <div
-                        id="admin-socios-lista"
-                        class="admin-socios-lista"
-                    >
-                        <div class="vazio">
-                            A carregar…
+                            <span class="admin-badge">Área reservada</span>
+                            <h2>Administração</h2>
+                            <p>Gestão de sócios, quotas, Fun&amp;Learn, comunicações e Drº Árbitro.</p>
                         </div>
                     </div>
 
+                    <div id="integrated-admin-loading" class="socio-admin-loading">A carregar a administração…</div>
+                    <div id="integrated-admin-error" class="socio-admin-error" hidden></div>
 
-                    <div class="admin-actions-row">
-
-                        <button
-                            id="admin-quotas-atraso"
-                            class="botao"
-                            type="button"
-                        >
-                            Enviar email de quotas em atraso aos selecionados
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- QUOTAS -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Quotas em atraso
-                    </h3>
-
-                    <p>
-                        Apenas aparecem sócios ativos com quotas que não estejam regularizadas.
-                    </p>
-
-
-                    <div class="admin-selection-bar">
-
-                        <button
-                            id="admin-overdue-select-all"
-                            class="admin-small-btn"
-                            type="button"
-                        >
-                            Selecionar todos
-                        </button>
-
-                        <button
-                            id="admin-overdue-clear"
-                            class="admin-small-btn"
-                            type="button"
-                        >
-                            Limpar seleção
-                        </button>
-
-                        <span
-                            id="admin-overdue-count"
-                            class="admin-selected-count"
-                        >
-                            0 selecionados
-                        </span>
-
-                    </div>
-
-
-                    <div
-                        id="admin-overdue-list"
-                        class="admin-overdue-list"
-                    >
-                        <div class="vazio">
-                            A carregar…
-                        </div>
-                    </div>
-
-                </div>
-
-
-                <!-- DOCUMENTO PARA TODOS -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Enviar documento a todos
-                    </h3>
-
-                    <p>
-                        O documento é enviado pela função administrativa para todos os sócios ativos com email.
-                    </p>
-
-
-                    <form
-                        id="admin-documento-form"
-                        class="admin-form-grid"
-                    >
-
-                        <label class="wide">
-                            Assunto do email *
-                            <input
-                                id="admin-documento-assunto"
-                                type="text"
-                                value="Comunicação — Núcleo Marques Bom"
-                                required
-                            >
-                        </label>
-
-
-                        <label class="wide">
-                            Conteúdo do email *
-                            <textarea
-                                id="admin-documento-mensagem"
-                                rows="7"
-                                placeholder="Escreva aqui o conteúdo do email que será enviado aos sócios..."
-                                required
-                            ></textarea>
-                        </label>
-
-
-                        <label class="wide">
-                            Documento PDF *
-                            <input
-                                id="admin-documento-file"
-                                type="file"
-                                accept="application/pdf"
-                                required
-                            >
-                        </label>
-
-
-                        <button
-                            id="admin-documento-submit"
-                            class="botao"
-                            type="submit"
-                        >
-                            Enviar documento a todos
-                        </button>
-
-                    </form>
-
-
-                    <div
-                        id="admin-documento-result"
-                        class="admin-result"
-                        hidden
-                    ></div>
-
-                </div>
-
-
-                <!-- IMPORTAR PDF -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Importar dados de sócios a partir de PDF
-                    </h3>
-
-                    <form
-                        id="admin-import-form"
-                        class="admin-inline-form"
-                    >
-
-                        <input
-                            id="admin-import-file"
-                            type="file"
-                            accept="application/pdf"
-                            required
-                        >
-
-                        <button
-                            class="botao"
-                            type="submit"
-                            id="admin-import-submit"
-                        >
-                            Importar PDF
-                        </button>
-
-                    </form>
-
-                    <div
-                        id="admin-import-result"
-                        class="admin-result"
-                        hidden
-                    ></div>
-
-                </div>
-
-
-                <!-- RETIRAR PONTOS -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Retirar pontos Fun&amp;Learn
-                    </h3>
-
-                    <form
-                        id="admin-remove-points-form"
-                        class="admin-form-grid"
-                    >
-
-                        <label>
-                            Sócio
-
-                            <select
-                                id="admin-remove-socio"
-                                required
-                            ></select>
-                        </label>
-
-                        <label>
-                            Pontos
-
-                            <input
-                                id="admin-remove-pontos"
-                                type="number"
-                                min="1"
-                                step="1"
-                                required
-                            >
-                        </label>
-
-                        <label class="wide">
-                            Motivo
-
-                            <input
-                                id="admin-remove-motivo"
-                                required
-                            >
-                        </label>
-
-                        <button
-                            class="botao"
-                            type="submit"
-                            id="admin-remove-points-submit"
-                        >
-                            Retirar pontos e notificar por email
-                        </button>
-
-                    </form>
-
-                </div>
-
-
-                <!-- FUNLEARN PDF -->
-
-                <div class="admin-subpanel">
-
-                    <h3>
-                        Fun&amp;Learn por PDF
-                    </h3>
-
-                    <form
-                        id="funlearn-form"
-                        class="admin-form-grid"
-                    >
-
-                        <label>
-                            PDF
-
-                            <input
-                                id="funlearn-file"
-                                type="file"
-                                accept="application/pdf"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            Pontos
-
-                            <input
-                                id="funlearn-pontos"
-                                type="number"
-                                min="1"
-                                step="1"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            Atividade
-
-                            <input
-                                id="funlearn-atividade"
-                                required
-                            >
-                        </label>
-
-                        <label>
-                            Descrição
-
-                            <input
-                                id="funlearn-descricao"
-                                required
-                            >
-                        </label>
-
-                        <button
-                            id="funlearn-submit"
-                            class="botao"
-                            type="submit"
-                        >
-                            Processar PDF e atribuir pontos
-                        </button>
-
-                    </form>
+                    <div id="integrated-admin-host" hidden></div>
 
                 </div>
 
@@ -1200,19 +1084,15 @@
         <p>
             © 2026 Todos os direitos reservados.
         </p>
-
+        <p class="rgpd-footer-link">
+        <a href="rgpd.html">Proteção de Dados</a>
+        </p>
     </div>
 
 </footer>
-
-
-
 <script
     type="module"
-    src="js/socio.js?v=20260821-public"
+    src="js/socio.js?v=20260821-admin-public"
 ></script>
-
-<script src="js/admin-excel.js?v=20260815-3" defer></script>
-
 </body>
 </html>
