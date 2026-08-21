@@ -1,17 +1,12 @@
 /* ==========================================================
    NAF — OS NOSSOS SÓCIOS
-   Upgrade visual inspirado no padrão circular dourado/roxo.
-   Aplicar depois do socio.css existente.
+   Apenas apresentação visual da secção pública.
+   A lógica continua em js/socio.js.
 ========================================================== */
 
-.socios-publicos {
-    margin: 0 0 3.2rem;
-    padding: .35rem 0 .5rem;
-}
-
 .socios-publicos .public-members-head {
-    margin: 0 0 1.5rem;
     text-align: center;
+    margin-bottom: 1.5rem;
 }
 
 .socios-publicos .public-members-head h2 {
@@ -21,13 +16,12 @@
     min-height: 76px;
     margin: 0 0 .75rem;
     padding: 0 2.25rem;
+    border: 5px solid var(--dourado, #c7a21d);
     border-radius: 999px;
-    background: var(--roxo);
-    border: 5px solid var(--dourado);
+    background: var(--roxo, #5b2a72);
     color: #fff;
-    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    font-size: clamp(1.2rem, 2.2vw, 1.7rem);
     font-weight: 800;
-    line-height: 1;
     letter-spacing: .025em;
     text-transform: uppercase;
     box-shadow: 0 12px 28px rgba(61,31,76,.20);
@@ -36,8 +30,6 @@
 .socios-publicos .public-members-head p {
     max-width: 760px;
     margin: 0 auto;
-    color: #666;
-    font-size: .95rem;
 }
 
 .socios-publicos .public-members-list {
@@ -47,35 +39,26 @@
 }
 
 .socios-publicos .public-members-group {
-    position: relative;
-    overflow: visible;
-    padding: 1.25rem 1.4rem 1.45rem;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+    padding: 1rem 0 1.4rem;
 }
 
 .socios-publicos .public-members-group h3 {
     margin: 0 0 1rem;
-    color: var(--roxo);
+    color: var(--roxo, #5b2a72);
     font-size: 1rem;
     font-weight: 800;
-    letter-spacing: .08em;
+    letter-spacing: .12em;
+    text-align: center;
     text-transform: uppercase;
 }
 
 .socios-publicos .public-category-row {
     display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 0;
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding: 8px 10px 18px 12px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--dourado) transparent;
+    padding: 8px 12px 20px;
 }
 
 .socios-publicos .public-category {
@@ -92,99 +75,76 @@
 }
 
 .socios-publicos .public-category-trigger {
-    position: relative;
-    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
-    box-sizing: border-box;
     padding: 1rem;
-    border: 5px solid var(--dourado);
+    box-sizing: border-box;
+    border: 5px solid var(--dourado, #c7a21d);
     border-radius: 50%;
-    background: var(--roxo);
+    background: var(--roxo, #5b2a72);
     color: #fff;
     font: inherit;
-    font-size: clamp(.78rem,1.05vw,1rem);
+    font-size: clamp(.75rem, 1vw, .98rem);
     font-weight: 800;
-    line-height: 1.12;
+    line-height: 1.1;
     text-align: center;
     text-transform: uppercase;
     cursor: pointer;
     box-shadow: 0 10px 22px rgba(61,31,76,.18);
-    transition:
-        transform .2s ease,
-        background-color .2s ease,
-        color .2s ease,
-        box-shadow .2s ease;
+    transition: transform .2s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
-.socios-publicos .public-category-trigger:hover,
+.socios-publicos .public-category.open,
+.socios-publicos .public-category:hover {
+    z-index: 20;
+}
+
 .socios-publicos .public-category.open .public-category-trigger,
+.socios-publicos .public-category-trigger:hover,
 .socios-publicos .public-category-trigger:focus-visible {
-    z-index: 4;
     transform: translateY(-4px) scale(1.035);
-    background: var(--dourado);
+    background: var(--dourado, #c7a21d);
     color: #1d1621;
     box-shadow: 0 16px 30px rgba(61,31,76,.24);
     outline: none;
 }
 
 .socios-publicos .public-category-members {
+    position: absolute;
     left: 50%;
-    top: calc(100% - 14px);
-    transform: translateX(-50%);
+    top: calc(100% - 12px);
+    z-index: 30;
     min-width: 230px;
     max-width: 330px;
-    padding: .85rem 1rem;
-    border: 2px solid var(--dourado);
+    padding: .8rem 1rem;
+    transform: translateX(-50%);
+    border: 2px solid var(--dourado, #c7a21d);
     border-radius: 16px;
     background: #fff;
     box-shadow: 0 18px 38px rgba(30,18,35,.18);
 }
 
+.socios-publicos .public-category-members ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
 .socios-publicos .public-category-members li {
-    color: #333;
     padding: .42rem .15rem;
+    color: #333;
 }
 
-.socios-publicos .public-category-members li::before {
-    content: "•";
-    margin-right: .45rem;
-    color: var(--dourado);
-    font-weight: 900;
-}
-
-@media (max-width: 900px) {
-    .socios-publicos .public-category-row {
-        padding-left: 4px;
-    }
-
-    .socios-publicos .public-category {
-        width: 118px;
-        height: 118px;
-    }
+.socios-publicos .public-category-members li + li {
+    border-top: 1px solid rgba(91,42,114,.08);
 }
 
 @media (max-width: 700px) {
-    .socios-publicos .public-members-head h2 {
-        min-height: 64px;
-        padding: 0 1.5rem;
-        border-width: 4px;
-    }
-
-    .socios-publicos .public-members-group {
-        padding-left: 0;
-        padding-right: 0;
-    }
-
     .socios-publicos .public-category-row {
-        flex-wrap: wrap;
-        justify-content: center;
         gap: 8px;
-        overflow: visible;
-        padding: 6px 0 16px;
     }
 
     .socios-publicos .public-category {
@@ -195,24 +155,25 @@
 
     .socios-publicos .public-category-trigger {
         border-width: 4px;
-        font-size: .74rem;
+        font-size: .7rem;
     }
 
     .socios-publicos .public-category-members {
         position: static;
-        transform: none;
         width: 100%;
         min-width: 0;
         max-width: none;
-        margin-top: .45rem;
+        margin-top: .5rem;
+        transform: none;
     }
 }
 
 @media (max-width: 480px) {
     .socios-publicos .public-members-head h2 {
-        min-height: 58px;
         width: 100%;
+        min-height: 58px;
         box-sizing: border-box;
+        padding: 0 1.25rem;
         font-size: 1.05rem;
     }
 
@@ -222,8 +183,7 @@
     }
 
     .socios-publicos .public-category-trigger {
-        padding: .7rem;
-        border-width: 4px;
-        font-size: .68rem;
+        padding: .65rem;
+        font-size: .64rem;
     }
 }
