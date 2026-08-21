@@ -13,6 +13,11 @@ function response(body: unknown, status = 200) {
   })
 }
 
+function optionalText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || null
+}
+
 export default {
   fetch: async (req: Request) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -36,7 +41,7 @@ export default {
       const body = await req.json()
       const nome = String(body?.nome || '').trim()
       const email = String(body?.email || '').trim().toLowerCase()
-      const telemovel = String(body?.telemovel || '').trim()
+      const telemovel = optionalText(body?.telemovel)
       const numeroSocio = Number(body?.numero_socio)
 
       if (!nome) return response({ error: 'O nome é obrigatório.' }, 400)
@@ -74,6 +79,20 @@ export default {
         return response({ error: inviteError?.message || 'Não foi possível criar o acesso do sócio.' }, 400)
       }
 
+      const extra = {
+        nif: optionalText(body?.nif),
+        data_nascimento: optionalText(body?.data_nascimento),
+        naturalidade: optionalText(body?.naturalidade),
+        cartao_cidadao: optionalText(body?.cartao_cidadao),
+        profissao: optionalText(body?.profissao),
+        morada: optionalText(body?.morada),
+        localidade: optionalText(body?.localidade),
+        codigo_postal: optionalText(body?.codigo_postal),
+        modalidade: optionalText(body?.modalidade),
+        categoria: optionalText(body?.categoria),
+        associacao_futebol: optionalText(body?.associacao_futebol),
+      }
+
       const { data: socio, error: socioError } = await ctx.supabaseAdmin
         .from('socios')
         .insert({
@@ -81,11 +100,12 @@ export default {
           numero_socio: numeroSocio,
           nome,
           email,
-          telemovel: telemovel || null,
+          telemovel,
+          ...extra,
           is_admin: false,
           ativo: true,
         })
-        .select('id,user_id,numero_socio,nome,email,telemovel,ativo')
+        .select('id,user_id,numero_socio,nome,email,telemovel,nif,data_nascimento,naturalidade,cartao_cidadao,profissao,morada,localidade,codigo_postal,modalidade,categoria,associacao_futebol,ativo')
         .single()
 
       if (socioError) {
