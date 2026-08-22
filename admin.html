@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="css/admin-criar-socio.css">
   <link rel="stylesheet" href="css/admin-funlearn.css">
   <link rel="stylesheet" href="css/admin-quotas-manual.css">
-  <link rel="stylesheet" href="css/admin-questoes-placement.css?v=20260822-final2">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -44,17 +43,17 @@
       <div class="admin-kpi"><span>Pontos Fun&amp;Learn</span><strong id="kpi-pontos">—</strong></div>
     </div>
 
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-panel="socios" type="button">Sócios</button>
-      <button id="tab-admins" class="admin-tab" data-panel="admins" type="button" hidden>Administradores</button>
-      <button class="admin-tab" data-panel="quotas" type="button">Quotas</button>
-      <button class="admin-tab" data-panel="email" type="button">Email geral</button>
-      <button class="admin-tab" data-panel="funlearn" type="button">Fun&amp;Learn</button>
-      <button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>
-      <button class="admin-tab" data-panel="questoes" type="button">Questões</button>
+    <div class="admin-tabs" role="tablist" aria-label="Secções da administração">
+      <button id="tab-socios" class="admin-tab active" data-panel="socios" type="button" role="tab" aria-selected="true" aria-controls="panel-socios">Sócios</button>
+      <button id="tab-admins" class="admin-tab" data-panel="admins" type="button" role="tab" aria-selected="false" aria-controls="panel-admins" hidden>Administradores</button>
+      <button id="tab-quotas" class="admin-tab" data-panel="quotas" type="button" role="tab" aria-selected="false" aria-controls="panel-quotas">Quotas</button>
+      <button id="tab-email" class="admin-tab" data-panel="email" type="button" role="tab" aria-selected="false" aria-controls="panel-email">Email geral</button>
+      <button id="tab-funlearn" class="admin-tab" data-panel="funlearn" type="button" role="tab" aria-selected="false" aria-controls="panel-funlearn">Fun&amp;Learn</button>
+      <button id="tab-dr-arbitro" class="admin-tab" data-panel="dr-arbitro" type="button" role="tab" aria-selected="false" aria-controls="panel-dr-arbitro">Drº Árbitro</button>
+      <button id="tab-questoes" class="admin-tab" data-panel="questoes" type="button" role="tab" aria-selected="false" aria-controls="panel-questoes">Questões</button>
     </div>
 
-    <section id="panel-socios" class="admin-tab-panel active">
+    <section id="panel-socios" class="admin-tab-panel active" role="tabpanel" aria-labelledby="tab-socios">
       <section id="criar-socio-section" class="admin-card" aria-labelledby="criar-socio-title">
         <div class="admin-card-header">
           <div>
@@ -166,7 +165,7 @@
       </div>
     </section>
 
-    <section id="panel-admins" class="admin-tab-panel" hidden>
+    <section id="panel-admins" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
       <div class="admin-card">
         <h3>Administradores</h3>
         <p class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p>
@@ -174,7 +173,7 @@
       </div>
     </section>
 
-    <section id="panel-quotas" class="admin-tab-panel">
+    <section id="panel-quotas" class="admin-tab-panel" role="tabpanel">
       <div class="admin-card">
         <h3>Avisos de quotas em atraso</h3>
         <p class="admin-help">Seleciona os sócios na lista principal e usa “Enviar avisos de quotas”. Só são processados os selecionados que tenham dívida e email.</p>
@@ -207,7 +206,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
           <button id="btn-quota-excel-preview" type="button" class="admin-small-btn primary">Validar Excel</button>
           <button id="btn-quota-excel-import" type="button" class="admin-small-btn" disabled>Importar dívida</button>
           <button id="btn-quota-excel-export" type="button" class="admin-small-btn">Exportar Excel</button>
-            <button id="btn-quota-paid-excel-export" type="button" class="admin-small-btn primary">Exportar quotas pagas</button>
+          <button id="btn-quota-paid-excel-export" type="button" class="admin-small-btn primary">Exportar quotas pagas</button>
         </div>
         <div id="quota-excel-summary" class="admin-selected-count"></div>
         <div id="quota-excel-preview" class="admin-preview"></div>
@@ -227,7 +226,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       </div>
     </section>
 
-    <section id="panel-email" class="admin-tab-panel">
+    <section id="panel-email" class="admin-tab-panel" role="tabpanel">
       <div class="admin-card">
         <h3>Enviar documento para a lista de sócios</h3>
         <div class="admin-form-grid">
@@ -240,7 +239,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       </div>
     </section>
 
-    <section id="panel-funlearn" class="admin-tab-panel">
+    <section id="panel-funlearn" class="admin-tab-panel" role="tabpanel">
       <div class="admin-card funlearn-unified-card">
         <div class="admin-card-header">
           <div>
@@ -289,14 +288,14 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       </div>
     </section>
 
-    <section id="panel-dr-arbitro" class="admin-tab-panel">
+    <section id="panel-dr-arbitro" class="admin-tab-panel" role="tabpanel">
       <div class="admin-card dr-card">
         <div class="dr-page-head"><div><h3>Drº Árbitro</h3><p class="admin-help">Gestão das atividades exclusivas de Futebol e Futsal.</p></div></div>
         <div class="dr-grid"><div id="dr-futebol" class="dr-modalidade"></div><div id="dr-futsal" class="dr-modalidade"></div></div>
       </div>
     </section>
 
-    <section id="panel-questoes" class="admin-tab-panel">
+    <section id="panel-questoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-questoes">
       <section id="admin-questoes-card" class="admin-card admin-questoes-card">
         <div class="admin-card-header">
           <div>
@@ -321,6 +320,6 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
-<script type="module" src="js/admin-questoes.js?v=20260822-final2"></script>
+<script type="module" src="js/admin-questoes.js?v=20260822-final3"></script>
 </body>
 </html>
