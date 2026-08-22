@@ -8,6 +8,56 @@ const esc = (value = '') => String(value).replace(/[&<>'"]/g, (c) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[c]));
 
+/*
+ * A caixa das questões estava dentro do painel "Sócios".
+ * Corrigimos apenas a estrutura no arranque: a caixa passa para um painel
+ * próprio e a respetiva aba é criada caso a versão do HTML ainda não a tenha.
+ * Assim não mexemos na lógica de sócios nem na lógica de resposta às questões.
+ */
+function ensureQuestionsPanel() {
+  const card = $('admin-questoes-card');
+  const app = $('admin-app');
+  const tabs = document.querySelector('.admin-tabs');
+  if (!card || !app || !tabs) return;
+
+  let panel = $('panel-questoes');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = 'panel-questoes';
+    panel.className = 'admin-tab-panel';
+
+    const drPanel = $('panel-dr-arbitro');
+    if (drPanel?.parentNode === app) drPanel.insertAdjacentElement('afterend', panel);
+    else app.appendChild(panel);
+  }
+
+  if (card.parentElement !== panel) panel.appendChild(card);
+
+  let tab = tabs.querySelector('.admin-tab[data-panel="questoes"]');
+  if (!tab) {
+    tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'admin-tab';
+    tab.dataset.panel = 'questoes';
+    tab.textContent = 'Questões';
+    tabs.appendChild(tab);
+  }
+
+  const activate = () => {
+    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
+    tab.classList.add('active');
+    panel.classList.add('active');
+  };
+
+  if (tab.dataset.questionsBound !== '1') {
+    tab.dataset.questionsBound = '1';
+    tab.addEventListener('click', activate);
+  }
+
+  if (tab.classList.contains('active')) panel.classList.add('active');
+}
+
 async function signedUrl(path) {
   if (!path) return null;
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
@@ -106,6 +156,8 @@ async function respond(card) {
 }
 
 function init() {
+  ensureQuestionsPanel();
+
   const list = $('admin-questoes-list');
   if (!list || list.dataset.bound === '1') return;
   list.dataset.bound = '1';
