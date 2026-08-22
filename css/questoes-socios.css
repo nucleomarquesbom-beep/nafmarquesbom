@@ -39,3 +39,34 @@
   .questao-card-head, .admin-questao-meta { grid-template-columns: 1fr; display: grid; }
   .admin-excel-format.admin-excel-format-wide { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
 }
+
+/* Questões — administração integrada */
+.admin-questoes-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-questao-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-questao-item.arquivada {
+  opacity: .96;
+}
+
+@media (max-width: 700px) {
+  .admin-questoes-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-questao-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
