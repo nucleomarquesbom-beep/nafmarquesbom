@@ -529,9 +529,10 @@ function buildIntegratedAdminTabs() {
     const panelEmail = app.querySelector('#panel-email');
     const panelFun = app.querySelector('#panel-funlearn');
     const panelDr = app.querySelector('#panel-dr-arbitro');
+    const panelQuestoes = app.querySelector('#panel-questoes');
     const panelAdmins = app.querySelector('#panel-admins');
 
-    if (!panelSocios || !panelFun || !panelDr) {
+    if (!panelSocios || !panelFun || !panelDr || !panelQuestoes) {
         throw new Error('A estrutura administrativa esperada não foi encontrada.');
     }
 
@@ -543,6 +544,7 @@ function buildIntegratedAdminTabs() {
         <button type="button" class="socio-admin-subtab active" data-admin-section="socios">Sócios</button>
         <button type="button" class="socio-admin-subtab" data-admin-section="funlearn">Fun&amp;Learn</button>
         <button type="button" class="socio-admin-subtab" data-admin-section="dr-arbitro">Drº Árbitro</button>
+        <button type="button" class="socio-admin-subtab" data-admin-section="questoes">Questões</button>
     `;
 
     const groupSocios = document.createElement('div');
@@ -562,7 +564,12 @@ function buildIntegratedAdminTabs() {
     groupDr.dataset.adminGroup = 'dr-arbitro';
     groupDr.append(panelDr);
 
-    app.append(subtabs, groupSocios, groupFun, groupDr);
+    const groupQuestoes = document.createElement('div');
+    groupQuestoes.className = 'integrated-admin-group';
+    groupQuestoes.dataset.adminGroup = 'questoes';
+    groupQuestoes.append(panelQuestoes);
+
+    app.append(subtabs, groupSocios, groupFun, groupDr, groupQuestoes);
 
     subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
         button.addEventListener('click', () => {

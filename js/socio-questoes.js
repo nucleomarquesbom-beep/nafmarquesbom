@@ -184,148 +184,6 @@ function initMemberQuestions() {
   ensureObservadorOption();
 }
 
-function ensureAdminCard() {
-  const panel = document.querySelector('#panel-socios');
-  if (!panel || $('admin-questoes-card')) return;
-
-  const card = document.createElement('section');
-  card.id = 'admin-questoes-card';
-  card.className = 'admin-card admin-questoes-card';
-  card.innerHTML = `
-    <div class="admin-card-header">
-      <div>
-        <span class="admin-badge">Questões</span>
-        <h3>Questões dos sócios</h3>
-        <p class="admin-help">Consulte as questões recebidas e responda por texto, PDF ou pelos dois meios.</p>
-      </div>
-      <button id="questoes-admin-refresh" class="admin-small-btn" type="button">Atualizar</button>
-    </div>
-    <div id="admin-questoes-list"><div class="admin-loading">A carregar…</div></div>
-  `;
-
-  panel.appendChild(card);
-  $('questoes-admin-refresh').addEventListener('click', loadAdminQuestions);
-  loadAdminQuestions();
-}
-
-async function loadAdminQuestions() {
-  const list = $('admin-questoes-list');
-  if (!list) return;
-
-  try {
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin_user');
-    if (adminError) throw adminError;
-    if (isAdmin !== true) {
-      list.innerHTML = '<div class="vazio">Acesso reservado a administradores.</div>';
-      return;
-    }
-
-    const { data: questions, error } = await supabase
-      .from('questoes_socios')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-
-    const ids = [...new Set((questions || []).map((q) => q.socio_id))];
-    const { data: members } = ids.length
-      ? await supabase.from('socios').select('id,nome,numero_socio,email').in('id', ids)
-      : { data: [] };
-    const memberMap = new Map((members || []).map((member) => [member.id, member]));
-
-    if (!questions?.length) {
-      list.innerHTML = '<div class="vazio">Não existem questões colocadas pelos sócios.</div>';
-      return;
-    }
-
-    const blocks = [];
-    for (const question of questions) {
-      const member = memberMap.get(question.socio_id) || {};
-      const questionUrl = await signedUrl(question.anexo_storage_path);
-      const answerUrl = await signedUrl(question.resposta_storage_path);
-      const answered = question.estado === 'respondida';
-
-      blocks.push(`
-        <article class="admin-questao-item" data-id="${esc(question.id)}">
-          <div class="admin-questao-meta">
-            <strong>${esc(member.numero_socio)} — ${esc(member.nome || 'Sócio')}</strong>
-            <span>${question.created_at ? new Date(question.created_at).toLocaleString('pt-PT') : ''}</span>
-            <b class="${answered ? 'respondida' : 'aberta'}">${answered ? 'Respondida' : 'Aberta'}</b>
-          </div>
-          <div class="admin-questao-body">
-            ${question.texto
-              ? esc(question.texto).replace(/\n/g, '<br>')
-              : '<em>Questão enviada através de PDF.</em>'}
-          </div>
-          ${questionUrl ? `<a class="questao-file" href="${questionUrl}" target="_blank" rel="noopener">📎 Abrir PDF da questão</a>` : ''}
-          ${answered && answerUrl ? `<div class="admin-questao-current-answer"><strong>PDF de resposta atual:</strong> <a href="${answerUrl}" target="_blank" rel="noopener">Abrir PDF</a></div>` : ''}
-          <div class="admin-questao-response">
-            <label>Resposta por texto
-              <textarea class="admin-questao-answer" rows="5" placeholder="Escreva a resposta ao sócio…">${esc(question.resposta_texto || '')}</textarea>
-            </label>
-            <label>PDF de resposta (opcional)
-              <input class="admin-questao-pdf" type="file" accept="application/pdf">
-            </label>
-            <button type="button" class="admin-small-btn primary admin-questao-send">${answered ? 'Atualizar resposta' : 'Responder ao sócio'}</button>
-            <div class="admin-questao-result" hidden></div>
-          </div>
-        </article>
-      `);
-    }
-
-    list.innerHTML = blocks.join('');
-    list.querySelectorAll('.admin-questao-item').forEach((card) => {
-      card.querySelector('.admin-questao-send')?.addEventListener('click', () => respondToQuestion(card));
-    });
-  } catch (error) {
-    console.error('Questões administrativas:', error);
-    list.innerHTML = `<div class="vazio">${esc(error?.message || 'Não foi possível carregar as questões.')}</div>`;
-  }
-}
-
-async function respondToQuestion(card) {
-  const questionId = card.dataset.id;
-  const text = card.querySelector('.admin-questao-answer')?.value.trim() || '';
-  const file = card.querySelector('.admin-questao-pdf')?.files?.[0] || null;
-  const button = card.querySelector('.admin-questao-send');
-  const result = card.querySelector('.admin-questao-result');
-
-  try {
-    if (!text && !file) throw new Error('Escreva uma resposta ou anexe um PDF.');
-    if (file && file.type !== 'application/pdf') throw new Error('O ficheiro de resposta tem de ser PDF.');
-    if (file && file.size > 10 * 1024 * 1024) throw new Error('O PDF não pode ultrapassar 10 MB.');
-
-    button.disabled = true;
-    button.textContent = 'A enviar…';
-
-    let responsePath = null;
-    if (file) {
-      responsePath = `admin/${questionId}-${crypto.randomUUID()}.pdf`;
-      await uploadPdf(file, responsePath);
-    }
-
-    const { error } = await supabase.rpc('admin_responder_questao', {
-      p_questao_id: questionId,
-      p_resposta_texto: text || null,
-      p_resposta_storage_path: responsePath,
-      p_resposta_nome: file?.name || null
-    });
-    if (error) throw error;
-
-    result.textContent = 'Resposta registada e email colocado na fila de envio.';
-    result.className = 'admin-result success';
-    result.hidden = false;
-    await loadAdminQuestions();
-  } catch (error) {
-    console.error('Responder questão:', error);
-    result.textContent = error?.message || 'Não foi possível responder à questão.';
-    result.className = 'admin-result error';
-    result.hidden = false;
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Responder ao sócio';
-  }
-}
-
 function boot() {
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
@@ -334,13 +192,11 @@ function boot() {
 
   initMemberQuestions();
   ensureObservadorOption();
-  ensureAdminCard();
 
   const observer = new MutationObserver(() => {
     initMemberQuestions();
     ensureObservadorOption();
-    ensureAdminCard();
-  });
+    });
   observer.observe(document.body, { childList: true, subtree: true });
 
   supabase.auth.onAuthStateChange(() => {
@@ -349,8 +205,7 @@ function boot() {
       initMemberQuestions();
       ensureObservadorOption();
       if ($('questoes')?.classList.contains('active')) loadMemberQuestions();
-      ensureAdminCard();
-    }, 50);
+        }, 50);
   });
 
   document.addEventListener('click', (event) => {
