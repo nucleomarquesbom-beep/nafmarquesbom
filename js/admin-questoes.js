@@ -8,6 +8,80 @@ const esc = (value = '') => String(value).replace(/[&<>'"]/g, (c) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[c]));
 
+/*
+ * CORREÇÃO CIRÚRGICA DE ESTRUTURA
+ *
+ * A caixa "Questões dos sócios" TEM de ser filha de #panel-questoes.
+ * Algumas versões anteriores do admin.html deixaram a caixa dentro de
+ * #panel-socios, fazendo-a aparecer mesmo quando a aba "Sócios" estava ativa.
+ *
+ * Esta função corrige também instalações que ainda tenham o HTML antigo em
+ * cache: procura a caixa pelo ID/classe, garante o painel e move a caixa para
+ * o local certo. Não altera a lógica de sócios, quotas ou Drº Árbitro.
+ */
+function ensureQuestionsPlacement() {
+  const app = $('admin-app');
+  const tabs = document.querySelector('.admin-tabs');
+  if (!app || !tabs) return null;
+
+  let panel = $('panel-questoes');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = 'panel-questoes';
+    panel.className = 'admin-tab-panel';
+    const drPanel = $('panel-dr-arbitro');
+    if (drPanel && drPanel.parentElement === app) {
+      drPanel.insertAdjacentElement('afterend', panel);
+    } else {
+      app.appendChild(panel);
+    }
+  }
+
+  // O admin.html atual tem uma única caixa correta, mas instalações/cache antigos
+  // podem ainda deixar uma segunda caixa renderizada fora da aba Questões.
+  // Não dependemos apenas do ID/classe: identificamos também qualquer card cujo
+  // título seja exatamente "Questões dos sócios". Isto elimina o bloco legado
+  // que aparece por cima das abas, sem tocar nas restantes secções.
+  const candidates = new Set(
+    [...document.querySelectorAll('#admin-questoes-card, .admin-questoes-card')]
+  );
+
+  document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach((heading) => {
+    if (heading.textContent.trim().toLocaleLowerCase('pt-PT') !== 'questões dos sócios') return;
+    const container = heading.closest('.admin-card, article, section');
+    if (container) candidates.add(container);
+  });
+
+  const cards = [...candidates];
+  let card = cards.find((el) => el.id === 'admin-questoes-card')
+    || cards.find((el) => el.classList.contains('admin-questoes-card'))
+    || cards.find((el) => el.parentElement === panel)
+    || null;
+
+  if (card) {
+    // Primeiro elimina qualquer cópia que esteja fora do painel correto.
+    cards.filter((el) => el !== card && !panel.contains(el)).forEach((el) => el.remove());
+
+    // Se ainda houver cópias dentro do painel, mantém apenas a caixa oficial.
+    cards.filter((el) => el !== card && panel.contains(el)).forEach((el) => el.remove());
+
+    // Movimento decisivo: a caixa passa obrigatoriamente para a aba Questões.
+    if (card.parentElement !== panel) panel.appendChild(card);
+  }
+
+  let tab = tabs.querySelector('.admin-tab[data-panel="questoes"]');
+  if (!tab) {
+    tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'admin-tab';
+    tab.dataset.panel = 'questoes';
+    tab.textContent = 'Questões';
+    tabs.appendChild(tab);
+  }
+
+  return { panel, tab };
+}
+
 async function signedUrl(path) {
   if (!path) return null;
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
@@ -25,6 +99,9 @@ async function uploadPdf(file, path) {
 }
 
 async function loadQuestions() {
+  // Reforça a colocação antes de renderizar os dados.
+  ensureQuestionsPlacement();
+
   const list = $('admin-questoes-list');
   if (!list) return;
 
@@ -129,14 +206,19 @@ async function respond(card) {
 }
 
 function init() {
+  const structure = ensureQuestionsPlacement();
   const list = $('admin-questoes-list');
-  const panel = $('panel-questoes');
-  if (!list || !panel) return;
-  if (list.dataset.bound !== '1') {
-    list.dataset.bound = '1';
-    $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
-  }
-  window.loadAdminQuestions = loadQuestions;
+  if (!structure || !list || list.dataset.bound === '1') return;
+
+  list.dataset.bound = '1';
+  structure.tab.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
+    structure.tab.classList.add('active');
+    structure.panel.classList.add('active');
+  });
+
+  $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
   loadQuestions();
 }
 
