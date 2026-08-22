@@ -9,29 +9,45 @@ const esc = (value = '') => String(value).replace(/[&<>'"]/g, (c) => ({
 }[c]));
 
 /*
- * A caixa das questões estava dentro do painel "Sócios".
- * Corrigimos apenas a estrutura no arranque: a caixa passa para um painel
- * próprio e a respetiva aba é criada caso a versão do HTML ainda não a tenha.
- * Assim não mexemos na lógica de sócios nem na lógica de resposta às questões.
+ * CORREÇÃO CIRÚRGICA DE ESTRUTURA
+ *
+ * A caixa "Questões dos sócios" TEM de ser filha de #panel-questoes.
+ * Algumas versões anteriores do admin.html deixaram a caixa dentro de
+ * #panel-socios, fazendo-a aparecer mesmo quando a aba "Sócios" estava ativa.
+ *
+ * Esta função corrige também instalações que ainda tenham o HTML antigo em
+ * cache: procura a caixa pelo ID/classe, garante o painel e move a caixa para
+ * o local certo. Não altera a lógica de sócios, quotas ou Drº Árbitro.
  */
-function ensureQuestionsPanel() {
-  const card = $('admin-questoes-card');
+function ensureQuestionsPlacement() {
   const app = $('admin-app');
   const tabs = document.querySelector('.admin-tabs');
-  if (!card || !app || !tabs) return;
+  if (!app || !tabs) return null;
 
   let panel = $('panel-questoes');
   if (!panel) {
     panel = document.createElement('section');
     panel.id = 'panel-questoes';
     panel.className = 'admin-tab-panel';
-
     const drPanel = $('panel-dr-arbitro');
-    if (drPanel?.parentNode === app) drPanel.insertAdjacentElement('afterend', panel);
-    else app.appendChild(panel);
+    if (drPanel && drPanel.parentElement === app) {
+      drPanel.insertAdjacentElement('afterend', panel);
+    } else {
+      app.appendChild(panel);
+    }
   }
 
-  if (card.parentElement !== panel) panel.appendChild(card);
+  // Aceita tanto a versão correta como a versão antiga que tinha a caixa em Sócios.
+  const cards = Array.from(document.querySelectorAll('#admin-questoes-card, .admin-questoes-card'));
+  let card = cards.find((el) => el.id === 'admin-questoes-card') || cards[0] || null;
+
+  if (card) {
+    // Remove duplicados, se uma versão antiga tiver criado mais do que uma caixa.
+    cards.filter((el) => el !== card).forEach((el) => el.remove());
+
+    // Movimento decisivo: a caixa passa obrigatoriamente para a aba Questões.
+    if (card.parentElement !== panel) panel.appendChild(card);
+  }
 
   let tab = tabs.querySelector('.admin-tab[data-panel="questoes"]');
   if (!tab) {
@@ -43,19 +59,7 @@ function ensureQuestionsPanel() {
     tabs.appendChild(tab);
   }
 
-  const activate = () => {
-    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
-    tab.classList.add('active');
-    panel.classList.add('active');
-  };
-
-  if (tab.dataset.questionsBound !== '1') {
-    tab.dataset.questionsBound = '1';
-    tab.addEventListener('click', activate);
-  }
-
-  if (tab.classList.contains('active')) panel.classList.add('active');
+  return { panel, tab };
 }
 
 async function signedUrl(path) {
@@ -67,25 +71,44 @@ async function signedUrl(path) {
 async function uploadPdf(file, path) {
   if (!file || file.type !== 'application/pdf') throw new Error('O ficheiro de resposta tem de ser PDF.');
   if (file.size > 10 * 1024 * 1024) throw new Error('O PDF não pode ultrapassar 10 MB.');
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: 'application/pdf', upsert: false });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    contentType: 'application/pdf',
+    upsert: false
+  });
   if (error) throw error;
 }
 
 async function loadQuestions() {
+  // Reforça a colocação antes de renderizar os dados.
+  ensureQuestionsPlacement();
+
   const list = $('admin-questoes-list');
   if (!list) return;
+
   try {
     const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin_user');
     if (adminError) throw adminError;
-    if (isAdmin !== true) { list.innerHTML = '<div class="vazio">Acesso reservado a administradores.</div>'; return; }
+    if (isAdmin !== true) {
+      list.innerHTML = '<div class="vazio">Acesso reservado a administradores.</div>';
+      return;
+    }
 
-    const { data: questions, error } = await supabase.from('questoes_socios').select('*').order('created_at', { ascending: false });
+    const { data: questions, error } = await supabase
+      .from('questoes_socios')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
+
     const ids = [...new Set((questions || []).map(q => q.socio_id))];
-    const { data: members } = ids.length ? await supabase.from('socios').select('id,nome,numero_socio,email').in('id', ids) : { data: [] };
+    const { data: members } = ids.length
+      ? await supabase.from('socios').select('id,nome,numero_socio,email').in('id', ids)
+      : { data: [] };
     const memberMap = new Map((members || []).map(m => [m.id, m]));
 
-    if (!questions?.length) { list.innerHTML = '<div class="vazio">Não existem questões colocadas pelos sócios.</div>'; return; }
+    if (!questions?.length) {
+      list.innerHTML = '<div class="vazio">Não existem questões colocadas pelos sócios.</div>';
+      return;
+    }
 
     const html = [];
     for (const q of questions) {
@@ -128,12 +151,18 @@ async function respond(card) {
   const file = card.querySelector('.admin-questao-pdf')?.files?.[0] || null;
   const button = card.querySelector('.admin-questao-send');
   const result = card.querySelector('.admin-questao-result');
+
   try {
     if (!text && !file) throw new Error('Escreva uma resposta ou anexe um PDF.');
     button.disabled = true;
     button.textContent = 'A enviar…';
+
     let path = null;
-    if (file) { path = `admin/${id}-${crypto.randomUUID()}.pdf`; await uploadPdf(file, path); }
+    if (file) {
+      path = `admin/${id}-${crypto.randomUUID()}.pdf`;
+      await uploadPdf(file, path);
+    }
+
     const { error } = await supabase.rpc('admin_responder_questao', {
       p_questao_id: id,
       p_resposta_texto: text || null,
@@ -141,6 +170,7 @@ async function respond(card) {
       p_resposta_nome: file?.name || null
     });
     if (error) throw error;
+
     result.textContent = 'Resposta registada e email colocado na fila de envio.';
     result.className = 'admin-result success';
     result.hidden = false;
@@ -156,14 +186,24 @@ async function respond(card) {
 }
 
 function init() {
-  ensureQuestionsPanel();
-
+  const structure = ensureQuestionsPlacement();
   const list = $('admin-questoes-list');
-  if (!list || list.dataset.bound === '1') return;
+  if (!structure || !list || list.dataset.bound === '1') return;
+
   list.dataset.bound = '1';
+  structure.tab.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
+    structure.tab.classList.add('active');
+    structure.panel.classList.add('active');
+  });
+
   $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
   loadQuestions();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
-else init();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init, { once: true });
+} else {
+  init();
+}
