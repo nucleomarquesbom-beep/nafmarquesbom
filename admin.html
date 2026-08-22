@@ -50,6 +50,7 @@
       <button class="admin-tab" data-panel="email" type="button">Email geral</button>
       <button class="admin-tab" data-panel="funlearn" type="button">Fun&amp;Learn</button>
       <button class="admin-tab" data-panel="dr-arbitro" type="button">Drº Árbitro</button>
+      <button class="admin-tab" data-panel="questoes" type="button">Questões</button>
     </div>
 
     <section id="panel-socios" class="admin-tab-panel active">
@@ -121,7 +122,6 @@
           <div id="admin-excel-socios-result" class="admin-result" hidden aria-live="polite"></div>
         </div>
 
-        <!-- Compatibilidade com o JS administrativo existente: o PDF deixa de ser mostrado. -->
         <div class="admin-legacy-hidden" aria-hidden="true">
           <input id="pdf-file" type="file" accept="application/pdf">
           <div id="pdf-progress"><span></span></div>
@@ -129,18 +129,6 @@
           <button id="btn-import-pdf" type="button" disabled>Importar PDF</button>
           <div id="pdf-preview"></div>
         </div>
-      </section>
-
-      <section id="admin-questoes-card" class="admin-card admin-questoes-card">
-        <div class="admin-card-header">
-          <div>
-            <span class="admin-badge">Questões</span>
-            <h3>Questões dos sócios</h3>
-            <p class="admin-help">Consulte as questões recebidas e responda por texto, PDF ou pelos dois meios.</p>
-          </div>
-          <button id="questoes-admin-refresh" class="admin-small-btn" type="button">Atualizar</button>
-        </div>
-        <div id="admin-questoes-list"><div class="admin-loading">A carregar…</div></div>
       </section>
 
       <div class="admin-card">
@@ -305,6 +293,20 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
         <div class="dr-grid"><div id="dr-futebol" class="dr-modalidade"></div><div id="dr-futsal" class="dr-modalidade"></div></div>
       </div>
     </section>
+
+    <section id="panel-questoes" class="admin-tab-panel">
+      <section id="admin-questoes-card" class="admin-card admin-questoes-card">
+        <div class="admin-card-header">
+          <div>
+            <span class="admin-badge">Questões</span>
+            <h3>Questões dos sócios</h3>
+            <p class="admin-help">Consulte as questões recebidas e responda por texto, PDF ou pelos dois meios.</p>
+          </div>
+          <button id="questoes-admin-refresh" class="admin-small-btn" type="button">Atualizar</button>
+        </div>
+        <div id="admin-questoes-list"><div class="admin-loading">A carregar…</div></div>
+      </section>
+    </section>
   </section>
 </main>
 
@@ -317,6 +319,6 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
-<script type="module" src="js/admin-questoes.js?v=20260822-1"></script>
+<script type="module" src="js/admin-questoes.js?v=20260822-2"></script>
 </body>
 </html>
