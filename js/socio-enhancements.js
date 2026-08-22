@@ -89,54 +89,6 @@ async function loadQuestions() {
   list.innerHTML=cards.join('');
 }
 
-function injectAdminQuestions() {
-  const app=document.querySelector('#integrated-admin-host #admin-app') || $('admin-app');
-  if(!app || app.querySelector('.socio-admin-subtab[data-admin-section="questoes"]') || !app.querySelector('.socio-admin-subtabs')) return;
-  const subtabs=app.querySelector('.socio-admin-subtabs');
-  const btn=document.createElement('button'); btn.type='button'; btn.className='socio-admin-subtab'; btn.dataset.adminSection='questoes'; btn.textContent='Questões';
-  subtabs.append(btn);
-  const group=document.createElement('div'); group.className='integrated-admin-group'; group.dataset.adminGroup='questoes';
-  group.innerHTML=`<section class="admin-card admin-questoes-panel"><div class="admin-card-header"><div><span class="admin-badge">Questões</span><h2>Questões dos sócios</h2><p class="admin-help">Responda por texto, PDF ou ambos. A resposta fica imediatamente associada à questão do sócio.</p></div><button type="button" id="admin-questoes-refresh" class="admin-small-btn">Atualizar</button></div><div id="admin-questoes-list"><div class="admin-loading">A carregar…</div></div></section>`;
-  app.append(group);
-  btn.addEventListener('click',()=>activateAdminGroup('questoes'));
-  $('admin-questoes-refresh')?.addEventListener('click',loadAdminQuestions);
-  loadAdminQuestions();
-}
-function activateAdminGroup(name){
-  const app=document.querySelector('#integrated-admin-host #admin-app') || $('admin-app'); if(!app)return;
-  app.querySelectorAll('.socio-admin-subtab').forEach(b=>b.classList.toggle('active',b.dataset.adminSection===name));
-  app.querySelectorAll('.integrated-admin-group').forEach(g=>g.classList.toggle('active',g.dataset.adminGroup===name));
-}
-async function loadAdminQuestions(){
-  const list=$('admin-questoes-list'); if(!list)return;
-  const client=window.__NAF_SUPABASE || window.supabaseClient || sb;
-  const {data,error}=await client.from('questoes_socios').select('*,socios!questoes_socios_socio_id_fkey(numero_socio,nome,email)').order('created_at',{ascending:false});
-  if(error){list.innerHTML=`<div class="vazio">${esc(error.message)}</div>`;return;}
-  if(!data?.length){list.innerHTML='<div class="vazio">Não existem questões.</div>';return;}
-  list.innerHTML=data.map(q=>`<article class="admin-questao-card" data-id="${esc(q.id)}"><div class="admin-questao-head"><div><strong>Nº ${esc(q.socios?.numero_socio||'—')} — ${esc(q.socios?.nome||'Sócio')}</strong><small>${new Date(q.created_at).toLocaleString('pt-PT')} · ${q.estado==='respondida'?'Respondida':'Por responder'}</small></div></div><div class="admin-questao-body">${esc(q.texto||'Questão enviada em PDF.')}</div><div class="admin-questao-links" data-question-links="${esc(q.id)}"></div>${q.estado==='respondida'?`<div class="admin-questao-response"><strong>Resposta</strong><p>${esc(q.resposta_texto||'Resposta enviada em PDF.')}</p><div class="admin-questao-links" data-response-links="${esc(q.id)}"></div></div>`:`<form class="admin-questao-response-form"><textarea name="resposta" rows="4" placeholder="Escreva a resposta…"></textarea><input name="pdf" type="file" accept="application/pdf"><button class="admin-small-btn primary" type="submit">Responder</button></form>`}</article>`).join('');
-  for(const q of data){
-    const card=list.querySelector(`[data-id="${CSS.escape(q.id)}"]`); if(!card)continue;
-    if(q.anexo_storage_path){const url=await signedUrl(q.anexo_storage_path);if(url)card.querySelector(`[data-question-links="${CSS.escape(q.id)}"]`).innerHTML=`<a class="questao-pdf" target="_blank" rel="noopener" href="${url}">📄 PDF da questão</a>`;}
-    if(q.resposta_storage_path){const url=await signedUrl(q.resposta_storage_path);if(url)card.querySelector(`[data-response-links="${CSS.escape(q.id)}"]`).innerHTML=`<a class="questao-pdf" target="_blank" rel="noopener" href="${url}">📄 PDF da resposta</a>`;}
-  }
-  list.querySelectorAll('.admin-questao-response-form').forEach(form=>form.addEventListener('submit',answerQuestion));
-}
-async function answerQuestion(e){
-  e.preventDefault();
-  const form=e.currentTarget, card=form.closest('[data-id]'), id=card.dataset.id;
-  const text=form.resposta.value.trim(), file=form.pdf.files?.[0];
-  if(!text&&!file){alert('Escreva uma resposta ou anexe um PDF.');return;}
-  try{
-    const {data:{session}}=await sb.auth.getSession(); if(!session)throw new Error('Sessão expirada.');
-    let path=null;
-    if(file){if(file.type!=='application/pdf')throw new Error('A resposta tem de ser PDF.');path=`admin/${session.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error}=await sb.storage.from('questoes-socios').upload(path,file,{contentType:'application/pdf',upsert:false});if(error)throw error;}
-    const client=window.__NAF_SUPABASE || sb;
-    const {error}=await client.rpc('admin_responder_questao',{p_questao_id:id,p_resposta_texto:text||null,p_resposta_storage_path:path,p_resposta_nome:file?.name||null});
-    if(error){if(path)await sb.storage.from('questoes-socios').remove([path]);throw error;}
-    await loadAdminQuestions();
-  }catch(err){alert(err.message||'Não foi possível responder.');}
-}
-
 function replaceExcelButtons(){
   const panel=$('admin-socios-excel-panel'); if(!panel || panel.dataset.questionExcelBound==='1')return;
   const file=$('admin-socios-excel-file'); if(!file)return;
@@ -158,7 +110,6 @@ function replaceExcelButtons(){
 function boot(){
   injectSocioTab();
   replaceExcelButtons();
-  injectAdminQuestions();
 }
 new MutationObserver(boot).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(boot,250);setTimeout(boot,1000);setTimeout(boot,2500);

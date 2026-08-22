@@ -25,8 +25,6 @@ async function uploadPdf(file, path) {
 }
 
 async function loadQuestions() {
-  // A estrutura da aba é definida exclusivamente pelo admin.html.
-  // Este módulo trata apenas dos dados e das respostas.
   const list = $('admin-questoes-list');
   if (!list) return;
 
@@ -133,17 +131,12 @@ async function respond(card) {
 function init() {
   const list = $('admin-questoes-list');
   const panel = $('panel-questoes');
-  const refresh = $('questoes-admin-refresh');
-
-  // Não criar, mover ou duplicar HTML. admin.html já contém exatamente
-  // uma aba #panel-questoes e uma caixa #admin-questoes-card.
   if (!list || !panel) return;
-
   if (list.dataset.bound !== '1') {
     list.dataset.bound = '1';
-    refresh?.addEventListener('click', loadQuestions);
+    $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
   }
-
+  window.loadAdminQuestions = loadQuestions;
   loadQuestions();
 }
 

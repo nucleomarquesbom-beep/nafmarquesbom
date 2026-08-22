@@ -85,6 +85,81 @@
     XLSX.writeFile(wb,'quotas-em-divida.xlsx');
     show(`Exportação concluída: ${out.length} sócio(s).`);
   }
+  async function exportPaid(){
+    const client=getClient();
+    if(!client)throw new Error('Ligação à BD indisponível.');
+    await loadXLSX();
+
+    const {data,error}=await client
+      .from('quotas')
+      .select('socio_id,ano,mes,valor,pago,data_pagamento,metodo_pagamento,pagamento_id,socios(numero_socio,nome,email)')
+      .eq('pago',true)
+      .order('data_pagamento',{ascending:true})
+      .order('socio_id',{ascending:true});
+
+    if(error)throw error;
+
+    const labels={transferencia:'Transferência bancária',mbway:'MB WAY',numerario:'Numerário'};
+    const grouped=new Map();
+
+    for(const q of (data||[])){
+      const metodo=String(q.metodo_pagamento||'').toLowerCase();
+      const key=q.pagamento_id
+        ? `pagamento:${q.pagamento_id}`
+        : `${q.socio_id}|${q.data_pagamento||''}|${metodo}`;
+      if(!grouped.has(key)) grouped.set(key,{
+        numero_socio:q.socios?.numero_socio??'',
+        nome:q.socios?.nome??'',
+        email:q.socios?.email??'',
+        data:q.data_pagamento||'',
+        metodo:labels[metodo]||q.metodo_pagamento||'Não indicado',
+        valor:0,
+        quotas:[]
+      });
+      const item=grouped.get(key);
+      item.valor+=Number(q.valor||0);
+      item.quotas.push(`${q.ano}/${String(q.mes||'').padStart(2,'0')}`);
+    }
+
+    const payments=[...grouped.values()];
+    const totals={
+      'Transferência bancária':payments.filter(x=>x.metodo==='Transferência bancária').reduce((a,x)=>a+x.valor,0),
+      'MB WAY':payments.filter(x=>x.metodo==='MB WAY').reduce((a,x)=>a+x.valor,0),
+      'Numerário':payments.filter(x=>x.metodo==='Numerário').reduce((a,x)=>a+x.valor,0)
+    };
+    const total=Object.values(totals).reduce((a,x)=>a+x,0);
+
+    const rows=payments.map(x=>({
+      'Nº Sócio':x.numero_socio,
+      'Nome':x.nome,
+      'Email':x.email,
+      'Data de pagamento':x.data?new Date(x.data).toLocaleDateString('pt-PT'):'',
+      'Método de pagamento':x.metodo,
+      'Valor pago (€)':Number(x.valor.toFixed(2)),
+      'Quotas regularizadas':x.quotas.join(', ')
+    }));
+
+    const ws=XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.sheet_add_aoa(ws,[[],
+      ['TOTAIS','','','','Transferência bancária',Number(totals['Transferência bancária'].toFixed(2))],
+      ['','','','','MB WAY',Number(totals['MB WAY'].toFixed(2))],
+      ['','','','','Numerário',Number(totals['Numerário'].toFixed(2))],
+      ['','','','','TOTAL GERAL',Number(total.toFixed(2))]
+    ],{origin:-1});
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Quotas pagas');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['Resumo de quotas pagas'],
+      ['Transferência bancária (€)',Number(totals['Transferência bancária'].toFixed(2))],
+      ['MB WAY (€)',Number(totals['MB WAY'].toFixed(2))],
+      ['Numerário (€)',Number(totals['Numerário'].toFixed(2))],
+      ['TOTAL GERAL (€)',Number(total.toFixed(2))]
+    ]),'Totais');
+    XLSX.writeFile(wb,'quotas-pagas.xlsx');
+    show(`Exportação concluída: ${payments.length} pagamento(s). Total geral: ${total.toFixed(2)} €.`);
+  }
+
   function bind(){
     const panel=$('admin-excel-panel');
     if(!panel||panel.dataset.bound==='1')return;
@@ -92,6 +167,8 @@
     $('btn-quota-excel-preview')?.addEventListener('click',()=>preview().catch(e=>show(e.message,'erro')));
     $('btn-quota-excel-import')?.addEventListener('click',()=>importDebt().catch(e=>show(e.message,'erro')));
     $('btn-quota-excel-export')?.addEventListener('click',()=>exportDebt().catch(e=>show(e.message,'erro')));
+    $('btn-quota-paid-excel-export')?.addEventListener('click',()=>exportPaid().catch(e=>show(e.message,'erro')));
   }
+  window.bindAdminExcel=bind;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();

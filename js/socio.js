@@ -278,7 +278,9 @@ function clearPrivateUI() {
 
     const clearIds = [
         '#socio-name', '#socio-number', '#dados-nome', '#dados-numero',
-        '#dados-nascimento', '#dados-email', '#dados-morada',
+        '#dados-nif', '#dados-nascimento', '#dados-naturalidade',
+        '#dados-cartao-cidadao', '#dados-profissao', '#dados-email',
+        '#dados-morada', '#dados-localidade', '#dados-codigo-postal',
         '#dados-telemovel', '#dados-arbitro', '#dados-af',
         '#dados-modalidade', '#funlearn-total', '#funlearn-total-top'
     ];
@@ -481,6 +483,8 @@ async function loadIntegratedAdmin() {
         await loadScriptOnce('js/admin-quotas-manual.js?v=20260820-clean');
         await loadScriptOnce('js/admin-excel.js?v=20260820-clean');
         await loadScriptOnce('js/dr-arbitro.js?v=20260820-clean');
+        window.bindAdminExcel?.();
+        window.bindAdminQuotasManual?.();
 
         // Todos os refreshes futuros passam por este wrapper, para que
         // a coluna Admin seja reconstruída depois de cada renderização.
@@ -502,6 +506,7 @@ async function loadIntegratedAdmin() {
             await window.loadMembers();
         }
         patchAdminPermissionColumn();
+        window.loadAdminQuestions?.();
 
         if (loading) loading.hidden = true;
         state.adminLoaded = true;
@@ -529,10 +534,9 @@ function buildIntegratedAdminTabs() {
     const panelEmail = app.querySelector('#panel-email');
     const panelFun = app.querySelector('#panel-funlearn');
     const panelDr = app.querySelector('#panel-dr-arbitro');
-    const panelQuestoes = app.querySelector('#panel-questoes');
     const panelAdmins = app.querySelector('#panel-admins');
 
-    if (!panelSocios || !panelFun || !panelDr || !panelQuestoes) {
+    if (!panelSocios || !panelFun || !panelDr) {
         throw new Error('A estrutura administrativa esperada não foi encontrada.');
     }
 
@@ -544,7 +548,6 @@ function buildIntegratedAdminTabs() {
         <button type="button" class="socio-admin-subtab active" data-admin-section="socios">Sócios</button>
         <button type="button" class="socio-admin-subtab" data-admin-section="funlearn">Fun&amp;Learn</button>
         <button type="button" class="socio-admin-subtab" data-admin-section="dr-arbitro">Drº Árbitro</button>
-        <button type="button" class="socio-admin-subtab" data-admin-section="questoes">Questões</button>
     `;
 
     const groupSocios = document.createElement('div');
@@ -564,12 +567,7 @@ function buildIntegratedAdminTabs() {
     groupDr.dataset.adminGroup = 'dr-arbitro';
     groupDr.append(panelDr);
 
-    const groupQuestoes = document.createElement('div');
-    groupQuestoes.className = 'integrated-admin-group';
-    groupQuestoes.dataset.adminGroup = 'questoes';
-    groupQuestoes.append(panelQuestoes);
-
-    app.append(subtabs, groupSocios, groupFun, groupDr, groupQuestoes);
+    app.append(subtabs, groupSocios, groupFun, groupDr);
 
     subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
         button.addEventListener('click', () => {
@@ -676,10 +674,16 @@ function renderProfile() {
 
     $('#dados-nome').textContent = s.nome || '—';
     $('#dados-numero').textContent = s.numero_socio ?? '—';
+    $('#dados-nif').textContent = s.nif || '—';
     $('#dados-nascimento').textContent = s.data_nascimento
         ? new Date(`${s.data_nascimento}T00:00:00`).toLocaleDateString('pt-PT')
         : '—';
+    $('#dados-naturalidade').textContent = s.naturalidade || '—';
+    $('#dados-cartao-cidadao').textContent = s.cartao_cidadao || '—';
+    $('#dados-profissao').textContent = s.profissao || '—';
     $('#dados-morada').textContent = s.morada || '—';
+    $('#dados-localidade').textContent = s.localidade || '—';
+    $('#dados-codigo-postal').textContent = s.codigo_postal || '—';
     $('#dados-email').textContent = s.email || state.user?.email || '—';
     $('#dados-telemovel').textContent = s.telemovel || '—';
     $('#dados-arbitro').textContent = s.numero_arbitro || '—';
