@@ -9,77 +9,24 @@ const esc = (value = '') => String(value).replace(/[&<>'"]/g, (c) => ({
 }[c]));
 
 /*
- * CORREÇÃO CIRÚRGICA DE ESTRUTURA
- *
- * A caixa "Questões dos sócios" TEM de ser filha de #panel-questoes.
- * Algumas versões anteriores do admin.html deixaram a caixa dentro de
- * #panel-socios, fazendo-a aparecer mesmo quando a aba "Sócios" estava ativa.
- *
- * Esta função corrige também instalações que ainda tenham o HTML antigo em
- * cache: procura a caixa pelo ID/classe, garante o painel e move a caixa para
- * o local certo. Não altera a lógica de sócios, quotas ou Drº Árbitro.
+ * A estrutura da aba pertence ao admin.html.
+ * Este módulo NÃO cria abas, NÃO move cartões e NÃO altera o painel Sócios.
+ * Existe exatamente um #panel-questoes e um #admin-questoes-card no HTML.
  */
-function ensureQuestionsPlacement() {
-  const app = $('admin-app');
-  const tabs = document.querySelector('.admin-tabs');
-  if (!app || !tabs) return null;
+function getQuestionsPanel() {
+  const panel = $('panel-questoes');
+  const card = $('admin-questoes-card');
+  if (!panel || !card) return null;
 
-  let panel = $('panel-questoes');
-  if (!panel) {
-    panel = document.createElement('section');
-    panel.id = 'panel-questoes';
-    panel.className = 'admin-tab-panel';
-    const drPanel = $('panel-dr-arbitro');
-    if (drPanel && drPanel.parentElement === app) {
-      drPanel.insertAdjacentElement('afterend', panel);
-    } else {
-      app.appendChild(panel);
-    }
-  }
+  // Proteção contra versões antigas/caches que possam ter duplicado o cartão.
+  // O módulo atual nunca cria um segundo cartão; se houver cópias com o mesmo
+  // ID no DOM, mantém apenas o primeiro dentro do painel oficial.
+  const cards = [...document.querySelectorAll('#admin-questoes-card')];
+  const official = cards.find((el) => el.parentElement === panel) || card;
+  cards.filter((el) => el !== official).forEach((el) => el.remove());
+  if (official.parentElement !== panel) panel.appendChild(official);
 
-  // O admin.html atual tem uma única caixa correta, mas instalações/cache antigos
-  // podem ainda deixar uma segunda caixa renderizada fora da aba Questões.
-  // Não dependemos apenas do ID/classe: identificamos também qualquer card cujo
-  // título seja exatamente "Questões dos sócios". Isto elimina o bloco legado
-  // que aparece por cima das abas, sem tocar nas restantes secções.
-  const candidates = new Set(
-    [...document.querySelectorAll('#admin-questoes-card, .admin-questoes-card')]
-  );
-
-  document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach((heading) => {
-    if (heading.textContent.trim().toLocaleLowerCase('pt-PT') !== 'questões dos sócios') return;
-    const container = heading.closest('.admin-card, article, section');
-    if (container) candidates.add(container);
-  });
-
-  const cards = [...candidates];
-  let card = cards.find((el) => el.id === 'admin-questoes-card')
-    || cards.find((el) => el.classList.contains('admin-questoes-card'))
-    || cards.find((el) => el.parentElement === panel)
-    || null;
-
-  if (card) {
-    // Primeiro elimina qualquer cópia que esteja fora do painel correto.
-    cards.filter((el) => el !== card && !panel.contains(el)).forEach((el) => el.remove());
-
-    // Se ainda houver cópias dentro do painel, mantém apenas a caixa oficial.
-    cards.filter((el) => el !== card && panel.contains(el)).forEach((el) => el.remove());
-
-    // Movimento decisivo: a caixa passa obrigatoriamente para a aba Questões.
-    if (card.parentElement !== panel) panel.appendChild(card);
-  }
-
-  let tab = tabs.querySelector('.admin-tab[data-panel="questoes"]');
-  if (!tab) {
-    tab = document.createElement('button');
-    tab.type = 'button';
-    tab.className = 'admin-tab';
-    tab.dataset.panel = 'questoes';
-    tab.textContent = 'Questões';
-    tabs.appendChild(tab);
-  }
-
-  return { panel, tab };
+  return panel;
 }
 
 async function signedUrl(path) {
@@ -89,8 +36,12 @@ async function signedUrl(path) {
 }
 
 async function uploadPdf(file, path) {
-  if (!file || file.type !== 'application/pdf') throw new Error('O ficheiro de resposta tem de ser PDF.');
-  if (file.size > 10 * 1024 * 1024) throw new Error('O PDF não pode ultrapassar 10 MB.');
+  if (!file || file.type !== 'application/pdf') {
+    throw new Error('O ficheiro de resposta tem de ser PDF.');
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('O PDF não pode ultrapassar 10 MB.');
+  }
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     contentType: 'application/pdf',
     upsert: false
@@ -99,11 +50,12 @@ async function uploadPdf(file, path) {
 }
 
 async function loadQuestions() {
-  // Reforça a colocação antes de renderizar os dados.
-  ensureQuestionsPlacement();
+  getQuestionsPanel();
 
   const list = $('admin-questoes-list');
   if (!list) return;
+
+  list.innerHTML = '<div class="admin-loading">A carregar…</div>';
 
   try {
     const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin_user');
@@ -119,10 +71,12 @@ async function loadQuestions() {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    const ids = [...new Set((questions || []).map(q => q.socio_id))];
-    const { data: members } = ids.length
+    const ids = [...new Set((questions || []).map(q => q.socio_id).filter(Boolean))];
+    const { data: members, error: membersError } = ids.length
       ? await supabase.from('socios').select('id,nome,numero_socio,email').in('id', ids)
-      : { data: [] };
+      : { data: [], error: null };
+    if (membersError) throw membersError;
+
     const memberMap = new Map((members || []).map(m => [m.id, m]));
 
     if (!questions?.length) {
@@ -136,6 +90,7 @@ async function loadQuestions() {
       const questionUrl = await signedUrl(q.anexo_storage_path);
       const answerUrl = await signedUrl(q.resposta_storage_path);
       const answered = q.estado === 'respondida';
+
       html.push(`
         <article class="admin-questao-item" data-id="${esc(q.id)}">
           <div class="admin-questao-meta">
@@ -205,19 +160,15 @@ async function respond(card) {
   }
 }
 
+// Disponibilizado para páginas integradas que já tenham o painel dentro do DOM.
+window.loadAdminQuestions = loadQuestions;
+
 function init() {
-  const structure = ensureQuestionsPlacement();
+  const panel = getQuestionsPanel();
   const list = $('admin-questoes-list');
-  if (!structure || !list || list.dataset.bound === '1') return;
+  if (!panel || !list || list.dataset.bound === '1') return;
 
   list.dataset.bound = '1';
-  structure.tab.addEventListener('click', () => {
-    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
-    structure.tab.classList.add('active');
-    structure.panel.classList.add('active');
-  });
-
   $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
   loadQuestions();
 }
