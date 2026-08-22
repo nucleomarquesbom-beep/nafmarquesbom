@@ -37,13 +37,33 @@ function ensureQuestionsPlacement() {
     }
   }
 
-  // Aceita tanto a versão correta como a versão antiga que tinha a caixa em Sócios.
-  const cards = Array.from(document.querySelectorAll('#admin-questoes-card, .admin-questoes-card'));
-  let card = cards.find((el) => el.id === 'admin-questoes-card') || cards[0] || null;
+  // O admin.html atual tem uma única caixa correta, mas instalações/cache antigos
+  // podem ainda deixar uma segunda caixa renderizada fora da aba Questões.
+  // Não dependemos apenas do ID/classe: identificamos também qualquer card cujo
+  // título seja exatamente "Questões dos sócios". Isto elimina o bloco legado
+  // que aparece por cima das abas, sem tocar nas restantes secções.
+  const candidates = new Set(
+    [...document.querySelectorAll('#admin-questoes-card, .admin-questoes-card')]
+  );
+
+  document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach((heading) => {
+    if (heading.textContent.trim().toLocaleLowerCase('pt-PT') !== 'questões dos sócios') return;
+    const container = heading.closest('.admin-card, article, section');
+    if (container) candidates.add(container);
+  });
+
+  const cards = [...candidates];
+  let card = cards.find((el) => el.id === 'admin-questoes-card')
+    || cards.find((el) => el.classList.contains('admin-questoes-card'))
+    || cards.find((el) => el.parentElement === panel)
+    || null;
 
   if (card) {
-    // Remove duplicados, se uma versão antiga tiver criado mais do que uma caixa.
-    cards.filter((el) => el !== card).forEach((el) => el.remove());
+    // Primeiro elimina qualquer cópia que esteja fora do painel correto.
+    cards.filter((el) => el !== card && !panel.contains(el)).forEach((el) => el.remove());
+
+    // Se ainda houver cópias dentro do painel, mantém apenas a caixa oficial.
+    cards.filter((el) => el !== card && panel.contains(el)).forEach((el) => el.remove());
 
     // Movimento decisivo: a caixa passa obrigatoriamente para a aba Questões.
     if (card.parentElement !== panel) panel.appendChild(card);
