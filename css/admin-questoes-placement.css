@@ -1,7 +1,3 @@
-/* Guardião estrutural da aba Questões — não altera o design geral. */
-#admin-app > .admin-tabs { position: relative; z-index: 1; }
+/* Questões usa exatamente o mesmo sistema de abas do admin.css. */
 #admin-app > .admin-tab-panel { display: none; }
 #admin-app > .admin-tab-panel.active { display: block; }
-#admin-app > #panel-questoes { position: static; order: initial; }
-#admin-app > #panel-questoes:not(.active) { display: none !important; }
-#admin-app > #panel-questoes.active { display: block !important; }
