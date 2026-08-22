@@ -8,25 +8,39 @@ const esc = (value = '') => String(value).replace(/[&<>'"]/g, (c) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[c]));
 
-/*
- * A estrutura da aba pertence ao admin.html.
- * Este módulo NÃO cria abas, NÃO move cartões e NÃO altera o painel Sócios.
- * Existe exatamente um #panel-questoes e um #admin-questoes-card no HTML.
- */
 function getQuestionsPanel() {
   const panel = $('panel-questoes');
   const card = $('admin-questoes-card');
   if (!panel || !card) return null;
-
-  // Proteção contra versões antigas/caches que possam ter duplicado o cartão.
-  // O módulo atual nunca cria um segundo cartão; se houver cópias com o mesmo
-  // ID no DOM, mantém apenas o primeiro dentro do painel oficial.
   const cards = [...document.querySelectorAll('#admin-questoes-card')];
   const official = cards.find((el) => el.parentElement === panel) || card;
   cards.filter((el) => el !== official).forEach((el) => el.remove());
   if (official.parentElement !== panel) panel.appendChild(official);
-
   return panel;
+}
+
+function ensureArchiveControls() {
+  const card = $('admin-questoes-card');
+  if (!card || card.querySelector('.admin-questoes-controls')) return;
+  const header = card.querySelector('.admin-card-header');
+  if (!header) return;
+
+  const controls = document.createElement('div');
+  controls.className = 'admin-questoes-controls';
+  controls.innerHTML = `
+    <button id="questoes-admin-refresh" class="admin-small-btn" type="button">Atualizar</button>
+    <button id="questoes-admin-show-archived" class="admin-small-btn" type="button">Mostrar arquivadas</button>
+  `;
+  header.querySelector('#questoes-admin-refresh')?.remove();
+  header.appendChild(controls);
+
+  controls.querySelector('#questoes-admin-refresh')?.addEventListener('click', () => loadQuestions());
+  controls.querySelector('#questoes-admin-show-archived')?.addEventListener('click', async (event) => {
+    const showArchived = event.currentTarget.dataset.showArchived !== '1';
+    event.currentTarget.dataset.showArchived = showArchived ? '1' : '0';
+    event.currentTarget.textContent = showArchived ? 'Ocultar arquivadas' : 'Mostrar arquivadas';
+    await loadQuestions(showArchived);
+  });
 }
 
 async function signedUrl(path) {
@@ -36,12 +50,8 @@ async function signedUrl(path) {
 }
 
 async function uploadPdf(file, path) {
-  if (!file || file.type !== 'application/pdf') {
-    throw new Error('O ficheiro de resposta tem de ser PDF.');
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('O PDF não pode ultrapassar 10 MB.');
-  }
+  if (!file || file.type !== 'application/pdf') throw new Error('O ficheiro de resposta tem de ser PDF.');
+  if (file.size > 10 * 1024 * 1024) throw new Error('O PDF não pode ultrapassar 10 MB.');
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     contentType: 'application/pdf',
     upsert: false
@@ -49,11 +59,11 @@ async function uploadPdf(file, path) {
   if (error) throw error;
 }
 
-async function loadQuestions() {
-  getQuestionsPanel();
-
+async function loadQuestions(showArchived = false) {
+  const panel = getQuestionsPanel();
+  ensureArchiveControls();
   const list = $('admin-questoes-list');
-  if (!list) return;
+  if (!panel || !list) return;
 
   list.innerHTML = '<div class="admin-loading">A carregar…</div>';
 
@@ -65,26 +75,38 @@ async function loadQuestions() {
       return;
     }
 
-    const { data: questions, error } = await supabase
+    let query = supabase
       .from('questoes_socios')
       .select('*')
       .order('created_at', { ascending: false });
+
+    query = showArchived
+      ? query.eq('arquivada', true)
+      : query.eq('arquivada', false);
+
+    const { data: questions, error } = await query;
     if (error) throw error;
 
     const ids = [...new Set((questions || []).map(q => q.socio_id).filter(Boolean))];
     const { data: members, error: membersError } = ids.length
       ? await supabase.from('socios').select('id,nome,numero_socio,email').in('id', ids)
       : { data: [], error: null };
+
     if (membersError) throw membersError;
 
     const memberMap = new Map((members || []).map(m => [m.id, m]));
 
     if (!questions?.length) {
-      list.innerHTML = '<div class="vazio">Não existem questões colocadas pelos sócios.</div>';
+      list.innerHTML = `<div class="vazio">${
+        showArchived
+          ? 'Não existem questões arquivadas.'
+          : 'Não existem questões colocadas pelos sócios.'
+      }</div>`;
       return;
     }
 
     const html = [];
+
     for (const q of questions) {
       const member = memberMap.get(q.socio_id) || {};
       const questionUrl = await signedUrl(q.anexo_storage_path);
@@ -92,31 +114,70 @@ async function loadQuestions() {
       const answered = q.estado === 'respondida';
 
       html.push(`
-        <article class="admin-questao-item" data-id="${esc(q.id)}">
+        <article class="admin-questao-item ${q.arquivada ? 'arquivada' : ''}" data-id="${esc(q.id)}">
           <div class="admin-questao-meta">
             <strong>${esc(member.numero_socio)} — ${esc(member.nome || 'Sócio')}</strong>
             <span>${q.created_at ? new Date(q.created_at).toLocaleString('pt-PT') : ''}</span>
             <b class="${answered ? 'respondida' : 'aberta'}">${answered ? 'Respondida' : 'Aberta'}</b>
           </div>
-          <div class="admin-questao-body">${q.texto ? esc(q.texto).replace(/\n/g, '<br>') : '<em>Questão enviada através de PDF.</em>'}</div>
-          ${questionUrl ? `<a class="questao-file" href="${questionUrl}" target="_blank" rel="noopener">📎 Abrir PDF da questão</a>` : ''}
-          ${answered && answerUrl ? `<div class="admin-questao-current-answer"><strong>PDF de resposta atual:</strong> <a href="${answerUrl}" target="_blank" rel="noopener">Abrir PDF</a></div>` : ''}
+
+          <div class="admin-questao-body">
+            ${q.texto ? esc(q.texto).replace(/\n/g, '<br>') : '<em>Questão enviada através de PDF.</em>'}
+          </div>
+
+          ${questionUrl ? `
+            <a class="questao-file" href="${questionUrl}" target="_blank" rel="noopener">
+              📎 Abrir PDF da questão
+            </a>` : ''}
+
+          ${answered && answerUrl ? `
+            <div class="admin-questao-current-answer">
+              <strong>PDF de resposta atual:</strong>
+              <a href="${answerUrl}" target="_blank" rel="noopener">Abrir PDF</a>
+            </div>` : ''}
+
           <div class="admin-questao-response">
-            <label>Resposta por texto<textarea class="admin-questao-answer" rows="5" placeholder="Escreva a resposta ao sócio…">${esc(q.resposta_texto || '')}</textarea></label>
-            <label>PDF de resposta (opcional)<input class="admin-questao-pdf" type="file" accept="application/pdf"></label>
-            <button type="button" class="admin-small-btn primary admin-questao-send">${answered ? 'Atualizar resposta' : 'Responder ao sócio'}</button>
+            <label>
+              Resposta por texto
+              <textarea class="admin-questao-answer" rows="5" placeholder="Escreva a resposta ao sócio…">${esc(q.resposta_texto || '')}</textarea>
+            </label>
+
+            <label>
+              PDF de resposta (opcional)
+              <input class="admin-questao-pdf" type="file" accept="application/pdf">
+            </label>
+
+            <div class="admin-questao-actions">
+              <button type="button" class="admin-small-btn primary admin-questao-send">
+                ${answered ? 'Atualizar resposta' : 'Responder ao sócio'}
+              </button>
+
+              ${!q.arquivada ? `
+                <button type="button" class="admin-small-btn danger admin-questao-archive">
+                  Arquivar questão
+                </button>` : ''}
+            </div>
+
             <div class="admin-questao-result" hidden></div>
           </div>
-        </article>`);
+        </article>
+      `);
     }
 
     list.innerHTML = html.join('');
+
     list.querySelectorAll('.admin-questao-item').forEach(card => {
-      card.querySelector('.admin-questao-send')?.addEventListener('click', () => respond(card));
+      card.querySelector('.admin-questao-send')
+        ?.addEventListener('click', () => respond(card));
+
+      card.querySelector('.admin-questao-archive')
+        ?.addEventListener('click', () => archiveQuestion(card));
     });
+
   } catch (error) {
     console.error(error);
-    list.innerHTML = `<div class="vazio">${esc(error?.message || 'Não foi possível carregar as questões.')}</div>`;
+    list.innerHTML =
+      `<div class="vazio">${esc(error?.message || 'Não foi possível carregar as questões.')}</div>`;
   }
 }
 
@@ -128,11 +189,15 @@ async function respond(card) {
   const result = card.querySelector('.admin-questao-result');
 
   try {
-    if (!text && !file) throw new Error('Escreva uma resposta ou anexe um PDF.');
+    if (!text && !file) {
+      throw new Error('Escreva uma resposta ou anexe um PDF.');
+    }
+
     button.disabled = true;
     button.textContent = 'A enviar…';
 
     let path = null;
+
     if (file) {
       path = `admin/${id}-${crypto.randomUUID()}.pdf`;
       await uploadPdf(file, path);
@@ -144,33 +209,76 @@ async function respond(card) {
       p_resposta_storage_path: path,
       p_resposta_nome: file?.name || null
     });
+
     if (error) throw error;
 
     result.textContent = 'Resposta registada e email colocado na fila de envio.';
     result.className = 'admin-result success';
     result.hidden = false;
-    await loadQuestions();
+
+    await loadQuestions(card.classList.contains('arquivada'));
+
   } catch (error) {
-    result.textContent = error?.message || 'Não foi possível responder à questão.';
+    result.textContent =
+      error?.message || 'Não foi possível responder à questão.';
     result.className = 'admin-result error';
     result.hidden = false;
+
   } finally {
     button.disabled = false;
     button.textContent = 'Responder ao sócio';
   }
 }
 
-// Disponibilizado para páginas integradas que já tenham o painel dentro do DOM.
+async function archiveQuestion(card) {
+  const id = card.dataset.id;
+  const button = card.querySelector('.admin-questao-archive');
+  const result = card.querySelector('.admin-questao-result');
+
+  if (!id) return;
+
+  try {
+    if (!window.confirm(
+      'Arquivar esta questão? Ela ficará oculta da lista principal, mas não será apagada.'
+    )) return;
+
+    button.disabled = true;
+    button.textContent = 'A arquivar…';
+
+    const { error } = await supabase.rpc(
+      'admin_arquivar_questao',
+      { p_questao_id: id }
+    );
+
+    if (error) throw error;
+
+    await loadQuestions(false);
+
+  } catch (error) {
+    result.textContent =
+      error?.message || 'Não foi possível arquivar a questão.';
+    result.className = 'admin-result error';
+    result.hidden = false;
+
+    button.disabled = false;
+    button.textContent = 'Arquivar questão';
+  }
+}
+
 window.loadAdminQuestions = loadQuestions;
 
 function init() {
   const panel = getQuestionsPanel();
   const list = $('admin-questoes-list');
-  if (!panel || !list || list.dataset.bound === '1') return;
+
+  if (!panel || !list) return;
+
+  ensureArchiveControls();
+
+  if (list.dataset.bound === '1') return;
 
   list.dataset.bound = '1';
-  $('questoes-admin-refresh')?.addEventListener('click', loadQuestions);
-  loadQuestions();
+  loadQuestions(false);
 }
 
 if (document.readyState === 'loading') {
