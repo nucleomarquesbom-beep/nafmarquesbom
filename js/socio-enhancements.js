@@ -107,10 +107,38 @@ function replaceExcelButtons(){
   imp.addEventListener('click',async()=>{try{if(!rows.length)throw new Error('Valida primeiro o Excel.');imp.disabled=true;imp.textContent='A importar…';const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão de administrador expirada.');let ok=0,fail=0,details=[];for(let i=0;i<rows.length;i++){try{const {data,error}=await sb.functions.invoke('criar-socio',{body:rows[i]});if(error)throw error;if(data?.error)throw new Error(data.error);ok++;}catch(err){fail++;details.push(`${rows[i].numero_socio} — ${rows[i].nome}: ${err.message||err}`);}const prog=$('admin-excel-socios-progress');if(prog)prog.value=Math.round(((i+1)/rows.length)*100);const st=$('admin-excel-socios-status');if(st)st.textContent=`${i+1}/${rows.length} processados`; }const r=$('admin-excel-socios-result');r.textContent=`Importação concluída: ${ok} criado(s), ${fail} com erro.${details.length?' '+details.slice(0,5).join(' | '):''}`;r.className=`admin-result ${fail?'error':'success'}`;r.hidden=false;rows=[];imp.disabled=true;imp.textContent='Importar sócios';if(typeof window.loadMembers==='function')await window.loadMembers();}catch(err){const r=$('admin-excel-socios-result');r.textContent=err.message;r.className='admin-result error';r.hidden=false;imp.disabled=false;imp.textContent='Importar sócios';}});
 }
 
+function normalizeQuotaRowsToAnnual() {
+  const list = $('quotas-list');
+  if (!list) return;
+
+  list.querySelectorAll('.quota-row').forEach(row => {
+    const strong = row.querySelector('strong');
+    if (!strong) return;
+
+    const current = strong.textContent.trim();
+    const match = current.match(/\b(20\d{2})\b/);
+    if (!match) return;
+
+    // Quota do Núcleo = 12 € por ANO. O campo mes da BD não altera a
+    // natureza da quota e nunca deve ser apresentado como "agosto".
+    const year = match[1];
+    if (!/^Quota anual\s+\d{4}$/i.test(current)) {
+      strong.textContent = `Quota anual ${year}`;
+    }
+  });
+}
+
 function boot(){
   injectSocioTab();
   replaceExcelButtons();
+  normalizeQuotaRowsToAnnual();
 }
-new MutationObserver(boot).observe(document.documentElement,{childList:true,subtree:true});
-setTimeout(boot,250);setTimeout(boot,1000);setTimeout(boot,2500);
+
+new MutationObserver(() => {
+  boot();
+}).observe(document.documentElement,{childList:true,subtree:true});
+
+setTimeout(boot,250);
+setTimeout(boot,1000);
+setTimeout(boot,2500);
 window.addEventListener('load',boot);
