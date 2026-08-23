@@ -556,6 +556,16 @@
                 </button>
 
                 <button
+                    id="acoes-tab"
+                    class="socio-tab"
+                    data-tab="acoes"
+                    type="button"
+                    hidden
+                >
+                    Ações
+                </button>
+
+                <button
                     class="socio-tab"
                     data-tab="questoes"
                     type="button"
@@ -575,6 +585,13 @@
 
             </div>
 
+
+            <section class="socio-tab-content" id="acoes">
+                <div class="tab-heading-row"><div><h2>Ações</h2><p>Atividades disponibilizadas pelo Núcleo e o seu histórico de inscrições.</p></div></div>
+                <div id="acoes-socio-result" class="socio-message" hidden aria-live="polite"></div>
+                <div class="admin-subpanel"><h3>Atividades disponíveis</h3><div id="acoes-disponiveis" class="acoes-socio-list"><div class="acao-empty">A carregar…</div></div></div>
+                <div class="admin-subpanel"><h3>As minhas inscrições</h3><div id="acoes-minhas" class="acoes-socio-list"><div class="acao-empty">A carregar…</div></div></div>
+            </section>
 
             <!-- DADOS PESSOAIS -->
 
@@ -1171,5 +1188,6 @@
     src="js/socio-questoes.js?v=20260822-1"
 ></script>
 <script type="module" src="js/socio-enhancements.js?v=20260821-1"></script>
+<script src="js/acoes-socio.js" defer></script>
 </body>
 </html>

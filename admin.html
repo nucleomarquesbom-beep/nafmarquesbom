@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/admin-criar-socio.css">
   <link rel="stylesheet" href="css/admin-funlearn.css">
   <link rel="stylesheet" href="css/admin-quotas-manual.css">
+  <link rel="stylesheet" href="css/acoes.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -50,6 +51,7 @@
       <button id="tab-email" class="admin-tab" data-panel="email" type="button" role="tab" aria-selected="false" aria-controls="panel-email">Email geral</button>
       <button id="tab-funlearn" class="admin-tab" data-panel="funlearn" type="button" role="tab" aria-selected="false" aria-controls="panel-funlearn">Fun&amp;Learn</button>
       <button id="tab-dr-arbitro" class="admin-tab" data-panel="dr-arbitro" type="button" role="tab" aria-selected="false" aria-controls="panel-dr-arbitro">Drº Árbitro</button>
+      <button id="tab-acoes" class="admin-tab" data-panel="acoes" type="button" role="tab" aria-selected="false" aria-controls="panel-acoes">Ações</button>
       <button id="tab-questoes" class="admin-tab" data-panel="questoes" type="button" role="tab" aria-selected="false" aria-controls="panel-questoes">Questões</button>
     </div>
 
@@ -295,6 +297,14 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       </div>
     </section>
 
+    <section id="panel-acoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-acoes">
+      <div id="acoes-admin-module" class="admin-card">
+        <div class="admin-card-header"><div><span class="admin-badge">Ações</span><h3>Atividades e inscrições</h3><p class="admin-help">Crie atividades, defina pagamento e comprovativo e controle as inscrições.</p></div><div class="admin-actions"><button id="acoes-refresh" type="button" class="admin-small-btn">Atualizar</button><button id="acoes-export-all" type="button" class="admin-small-btn primary">Exportar todas as inscrições</button></div></div>
+        <div id="acoes-admin-result" class="admin-result" hidden aria-live="polite"></div>
+        <div class="admin-subpanel"><h3>Criar / editar ação</h3><div id="acoes-admin-form-wrap"></div></div>
+        <div class="admin-subpanel"><h3>Ações existentes</h3><div id="acoes-admin-list" class="acoes-admin-list"></div></div>
+      </div>
+    </section>
     <section id="panel-questoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-questoes">
       <section id="admin-questoes-card" class="admin-card admin-questoes-card">
         <div class="admin-card-header">
@@ -320,6 +330,7 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
+<script src="js/acoes-admin.js" defer></script>
 <script type="module" src="js/admin-questoes.js?v=20260822-final3"></script>
 </body>
 </html>
