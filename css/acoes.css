@@ -249,3 +249,94 @@
   justify-content: center;
   white-space: nowrap;
 }
+
+/* =========================================================
+   AÇÕES — barra principal do Administrador
+========================================================= */
+.admin-tabs #tab-acoes,
+.admin-tabs .admin-tab[data-panel="acoes"] {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 46px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* O estado ativo segue o mesmo padrão visual da barra existente. */
+.admin-tabs #tab-acoes.active,
+.admin-tabs .admin-tab[data-panel="acoes"].active {
+  font-weight: 700;
+}
+
+/* =========================================================
+   AÇÕES — botões de estado elegantes
+========================================================= */
+#panel-acoes .acoes-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 2px;
+  padding: 2px 0;
+}
+
+#panel-acoes .acao-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #e2dfe5;
+  border-radius: 12px;
+  background: #f7f5f8;
+  color: #54277b;
+  box-shadow: 0 1px 2px rgba(35, 28, 42, .04);
+  font: 600 13px/1.25 Poppins, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease,
+              background .16s ease, border-color .16s ease,
+              color .16s ease;
+}
+
+#panel-acoes .acao-toggle::before {
+  content: '○';
+  display: inline-block;
+  width: 22px;
+  font-size: 15px;
+  line-height: 1;
+  vertical-align: -1px;
+}
+
+#panel-acoes .acao-toggle:hover {
+  background: #fff;
+  border-color: #c99d17;
+  box-shadow: 0 5px 14px rgba(35, 28, 42, .08);
+  transform: translateY(-1px);
+}
+
+#panel-acoes .acao-toggle:focus-visible {
+  outline: 3px solid rgba(201, 157, 23, .22);
+  outline-offset: 2px;
+}
+
+#panel-acoes .acao-toggle[aria-pressed="true"] {
+  background: #c99d17;
+  border-color: #c99d17;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(201, 157, 23, .24);
+}
+
+#panel-acoes .acao-toggle[aria-pressed="true"]::before {
+  content: '✓';
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  #panel-acoes .acoes-options {
+    grid-template-columns: 1fr;
+  }
+}
