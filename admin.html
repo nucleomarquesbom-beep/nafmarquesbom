@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/admin-funlearn.css">
   <link rel="stylesheet" href="css/admin-quotas-manual.css">
   <link rel="stylesheet" href="css/acoes.css">
-  <link rel="stylesheet" href="css/acoes-admin.css?v=20260823-integrated">
+  <link rel="stylesheet" href="css/acoes-admin.css?v=20260823-final">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -48,12 +48,11 @@
     <div class="admin-tabs" role="tablist" aria-label="Secções da administração">
       <button id="tab-socios" class="admin-tab active" data-panel="socios" type="button" role="tab" aria-selected="true" aria-controls="panel-socios">Sócios</button>
       <button id="tab-admins" class="admin-tab" data-panel="admins" type="button" role="tab" aria-selected="false" aria-controls="panel-admins" hidden>Administradores</button>
-      <button id="tab-quotas" class="admin-tab" data-panel="quotas" type="button" role="tab" aria-selected="false" aria-controls="panel-quotas">Quotas</button>
-      <button id="tab-email" class="admin-tab" data-panel="email" type="button" role="tab" aria-selected="false" aria-controls="panel-email">Email geral</button>
+      <button id="tab-email" class="admin-tab" data-panel="email" type="button" role="tab" aria-selected="false" aria-controls="panel-email">Email</button>
       <button id="tab-funlearn" class="admin-tab" data-panel="funlearn" type="button" role="tab" aria-selected="false" aria-controls="panel-funlearn">Fun&amp;Learn</button>
       <button id="tab-dr-arbitro" class="admin-tab" data-panel="dr-arbitro" type="button" role="tab" aria-selected="false" aria-controls="panel-dr-arbitro">Drº Árbitro</button>
-      <button id="tab-acoes" class="admin-tab" data-panel="acoes" type="button" role="tab" aria-selected="false" aria-controls="panel-acoes">Ações</button>
       <button id="tab-questoes" class="admin-tab" data-panel="questoes" type="button" role="tab" aria-selected="false" aria-controls="panel-questoes">Questões</button>
+      <button id="tab-acoes" class="admin-tab" data-panel="acoes" type="button" role="tab" aria-selected="false" aria-controls="panel-acoes">Ações</button>
     </div>
 
     <section id="panel-socios" class="admin-tab-panel active" role="tabpanel" aria-labelledby="tab-socios">
@@ -140,7 +139,10 @@
             <h3>Sócios registados</h3>
             <p class="admin-help">A dívida aparece diretamente na linha de cada sócio. O pagamento manual abre já com o sócio selecionado.</p>
           </div>
-          <button id="btn-refresh-list" type="button" class="admin-small-btn">Atualizar lista</button>
+          <div class="admin-actions admin-members-head-actions">
+            <button id="btn-export-members-excel" type="button" class="admin-small-btn primary">Descarregar Excel</button>
+            <button id="btn-refresh-list" type="button" class="admin-small-btn">Atualizar lista</button>
+          </div>
         </div>
 
         <div class="admin-toolbar">
@@ -157,6 +159,8 @@
 
         <div id="selected-count" class="admin-selected-count">0 selecionados</div>
 
+        <input id="admin-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -166,17 +170,7 @@
           </table>
         </div>
       </div>
-    </section>
-
-    <section id="panel-admins" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
-      <div class="admin-card">
-        <h3>Administradores</h3>
-        <p class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p>
-        <div id="admin-permissions-list" class="admin-preview"></div>
-      </div>
-    </section>
-
-    <section id="panel-quotas" class="admin-tab-panel" role="tabpanel">
+    </section>      <section id="panel-quotas" class="admin-inline-subpanel" aria-labelledby="tab-socios">
       <div class="admin-card">
         <h3>Avisos de quotas em atraso</h3>
         <p class="admin-help">Seleciona os sócios na lista principal e usa “Enviar avisos de quotas”. Só são processados os selecionados que tenham dívida e email.</p>
@@ -226,6 +220,16 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
         </div>
         <button id="btn-manual-quota" type="button" class="admin-small-btn primary">Registar pagamento e enviar recibo</button>
         <div id="manual-quota-result" class="admin-result" hidden aria-live="polite"></div>
+      </div>
+      </section>
+
+
+
+    <section id="panel-admins" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
+      <div class="admin-card">
+        <h3>Administradores</h3>
+        <p class="admin-help">Apenas o administrador principal pode atribuir ou retirar acessos de administrador.</p>
+        <div id="admin-permissions-list" class="admin-preview"></div>
       </div>
     </section>
 
