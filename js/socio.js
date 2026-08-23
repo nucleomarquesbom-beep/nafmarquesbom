@@ -465,7 +465,9 @@ async function loadIntegratedAdmin() {
         // Carregamos o CSS oficial da administração e mantemos a classe
         // admin-modern no contentor, para que o grafismo seja exatamente
         // o mesmo da página administrativa autónoma.
-        loadStylesheetOnce('css/admin.css?v=20260820-admin-integrated');
+        loadStylesheetOnce('css/admin.css?v=20260823-admin-final');
+        loadStylesheetOnce('css/acoes.css?v=20260823-admin-final');
+        loadStylesheetOnce('css/acoes-admin.css?v=20260823-admin-final');
 
         const clone = source.cloneNode(true);
         clone.hidden = false;
@@ -480,9 +482,12 @@ async function loadIntegratedAdmin() {
         await loadScriptOnce('js/admin-config.js?v=20260820-clean');
         await loadScriptOnce('js/admin.js?v=20260820-clean');
         await loadScriptOnce('js/admin-criar-socio.js?v=20260820-clean');
+        await loadScriptOnce('js/admin-import-socios-excel.js?v=20260823-final');
         await loadScriptOnce('js/admin-quotas-manual.js?v=20260820-clean');
         await loadScriptOnce('js/admin-excel.js?v=20260820-clean');
         await loadScriptOnce('js/dr-arbitro.js?v=20260820-clean');
+        await loadScriptOnce('js/acoes-admin.js?v=20260823-final');
+        try { await import(`./admin-questoes.js?v=20260823-final`); } catch (questionError) { console.error('Questões administrativas:', questionError); }
         window.bindAdminExcel?.();
         window.bindAdminQuotasManual?.();
 
@@ -529,52 +534,66 @@ function buildIntegratedAdminTabs() {
     const app = host.querySelector('#admin-app');
     if (!app) return;
 
-    const panelSocios = app.querySelector('#panel-socios');
-    const panelQuotas = app.querySelector('#panel-quotas');
-    const panelEmail = app.querySelector('#panel-email');
-    const panelFun = app.querySelector('#panel-funlearn');
-    const panelDr = app.querySelector('#panel-dr-arbitro');
-    const panelAdmins = app.querySelector('#panel-admins');
+    const panels = {
+        socios: app.querySelector('#panel-socios'),
+        email: app.querySelector('#panel-email'),
+        funlearn: app.querySelector('#panel-funlearn'),
+        dr: app.querySelector('#panel-dr-arbitro'),
+        questoes: app.querySelector('#panel-questoes'),
+        acoes: app.querySelector('#panel-acoes'),
+        quotas: app.querySelector('#panel-quotas'),
+        admins: app.querySelector('#panel-admins')
+    };
 
-    if (!panelSocios || !panelFun || !panelDr) {
+    if (!panels.socios || !panels.email || !panels.funlearn || !panels.dr || !panels.questoes || !panels.acoes) {
         throw new Error('A estrutura administrativa esperada não foi encontrada.');
     }
 
-    if (panelAdmins) panelAdmins.hidden = true;
+    if (panels.admins) panels.admins.hidden = true;
 
     const subtabs = document.createElement('div');
     subtabs.className = 'socio-admin-subtabs';
+    subtabs.setAttribute('role', 'tablist');
+    subtabs.setAttribute('aria-label', 'Secções da administração');
     subtabs.innerHTML = `
-        <button type="button" class="socio-admin-subtab active" data-admin-section="socios">Sócios</button>
-        <button type="button" class="socio-admin-subtab" data-admin-section="funlearn">Fun&amp;Learn</button>
-        <button type="button" class="socio-admin-subtab" data-admin-section="dr-arbitro">Drº Árbitro</button>
+        <button type="button" class="socio-admin-subtab active" role="tab" aria-selected="true" data-admin-section="socios">Sócios</button>
+        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="email">Email</button>
+        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="funlearn">Fun&amp;Learn</button>
+        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="dr-arbitro">Drº Árbitro</button>
+        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="questoes">Questões</button>
+        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="acoes">Ações</button>
     `;
 
-    const groupSocios = document.createElement('div');
-    groupSocios.className = 'integrated-admin-group active';
-    groupSocios.dataset.adminGroup = 'socios';
-    groupSocios.append(panelSocios);
-    if (panelQuotas) groupSocios.append(panelQuotas);
-    if (panelEmail) groupSocios.append(panelEmail);
+    const groups = {};
+    for (const name of ['socios','email','funlearn','dr','questoes','acoes']) {
+        const group = document.createElement('div');
+        const sectionName = name === 'dr' ? 'dr-arbitro' : name;
+        group.className = `integrated-admin-group${name === 'socios' ? ' active' : ''}`;
+        group.dataset.adminGroup = sectionName;
+        group.appendChild(panels[name]);
+        if (name === 'socios' && panels.quotas) group.appendChild(panels.quotas);
+        groups[sectionName] = group;
+    }
 
-    const groupFun = document.createElement('div');
-    groupFun.className = 'integrated-admin-group';
-    groupFun.dataset.adminGroup = 'funlearn';
-    groupFun.append(panelFun);
+    app.append(subtabs, ...Object.values(groups));
 
-    const groupDr = document.createElement('div');
-    groupDr.className = 'integrated-admin-group';
-    groupDr.dataset.adminGroup = 'dr-arbitro';
-    groupDr.append(panelDr);
+    const activate = (name) => {
+        subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
+            const active = button.dataset.adminSection === name;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', String(active));
+        });
+        Object.values(groups).forEach(group => {
+            group.classList.toggle('active', group.dataset.adminGroup === name);
+        });
 
-    app.append(subtabs, groupSocios, groupFun, groupDr);
+        if (name === 'acoes') window.loadAcoesAdmin?.();
+        if (name === 'questoes') window.loadAdminQuestions?.();
+        if (name === 'dr-arbitro') window.NAF_DR_ARBITRO_START?.();
+    };
 
     subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
-        button.addEventListener('click', () => {
-            const name = button.dataset.adminSection;
-            subtabs.querySelectorAll('.socio-admin-subtab').forEach(b => b.classList.toggle('active', b === button));
-            host.querySelectorAll('.integrated-admin-group').forEach(g => g.classList.toggle('active', g.dataset.adminGroup === name));
-        });
+        button.addEventListener('click', () => activate(button.dataset.adminSection));
     });
 }
 

@@ -1,1784 +1,644 @@
 (() => {
   'use strict';
 
-  /*
-   * ============================================================
-   * AÇÕES — ADMINISTRAÇÃO
-   * ============================================================
-   *
-   * Compatível com o admin.html atual.
-   *
-   * Não depende de:
-   *   - acoes-admin-tab-fix.js
-   *   - outro ficheiro de fix
-   *
-   * Tabelas Supabase:
-   *   - acoes
-   *   - acoes_inscricoes
-   *
-   * ============================================================
-   */
-
   const state = {
     sb: null,
     actions: [],
-    initialized: false,
-    loading: false,
-    editing: false
+    registrations: new Map()
   };
 
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
-  /* ============================================================
-     UTILITÁRIOS
-  ============================================================ */
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#039;'
+  }[c]));
 
-  function esc(value) {
-    return String(value ?? '').replace(
-      /[&<>"']/g,
-      (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      }[c])
-    );
-  }
-
-  function money(value) {
-    return `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
-  }
-
-  function formatDate(value) {
-    if (!value) return '—';
-
-    const d = new Date(value);
-
-    if (Number.isNaN(d.getTime())) {
-      return String(value);
-    }
-
-    return d.toLocaleDateString('pt-PT');
-  }
-
-  function formatDateTime(value) {
-    if (!value) return '—';
-
-    const d = new Date(value);
-
-    if (Number.isNaN(d.getTime())) {
-      return String(value);
-    }
-
-    return d.toLocaleString('pt-PT');
-  }
-
-  function showResult(message, type = 'success') {
+  const showResult = (text, type='success') => {
     const el = $('acoes-admin-result');
-
     if (!el) return;
-
-    el.textContent = message;
+    el.textContent = text;
     el.className = `admin-result ${type}`;
     el.hidden = false;
-  }
+  };
 
-  function hideResult() {
+  const hideResult = () => {
     const el = $('acoes-admin-result');
+    if (el) el.hidden = true;
+  };
 
-    if (!el) return;
-
-    el.hidden = true;
-    el.textContent = '';
+  function syncToggle(button, input) {
+    const active = input?.checked === true;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
-
-  function errorMessage(error) {
-    if (!error) return 'Ocorreu um erro.';
-
-    if (error.message) {
-      return error.message;
-    }
-
-    return String(error);
-  }
-
-  function fail(error) {
-    console.error('[AÇÕES ADMIN]', error);
-    showResult(errorMessage(error), 'error');
-  }
-
-  /* ============================================================
-     SUPABASE
-  ============================================================ */
-
-  function getSupabase() {
-    if (state.sb) {
-      return state.sb;
-    }
-
-    /*
-     * Primeiro tenta reutilizar o cliente que já possa ter
-     * sido criado pelo restante da aplicação.
-     */
-    if (
-      window.__NAF_SUPABASE &&
-      typeof window.__NAF_SUPABASE.from === 'function'
-    ) {
-      state.sb = window.__NAF_SUPABASE;
-      return state.sb;
-    }
-
-    if (
-      window.supabaseClient &&
-      typeof window.supabaseClient.from === 'function'
-    ) {
-      state.sb = window.supabaseClient;
-      return state.sb;
-    }
-
-    /*
-     * Caso ainda não exista cliente, cria um utilizando
-     * admin-config.js.
-     */
-    const config = window.NAF_ADMIN_CONFIG || {};
-
-    if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
-      throw new Error(
-        'Configuração do Supabase incompleta.'
-      );
-    }
-
-    if (
-      !window.supabase ||
-      typeof window.supabase.createClient !== 'function'
-    ) {
-      throw new Error(
-        'A biblioteca Supabase não foi carregada.'
-      );
-    }
-
-    state.sb = window.supabase.createClient(
-      config.SUPABASE_URL,
-      config.SUPABASE_ANON_KEY
-    );
-
-    return state.sb;
-  }
-
-  /* ============================================================
-     BOTÕES DE TOGGLE
-  ============================================================ */
 
   function setupToggleButtons() {
-    const buttons = document.querySelectorAll(
-      '#panel-acoes .acao-toggle[data-toggle]'
-    );
-
-    buttons.forEach((button) => {
-      const inputId = button.dataset.toggle;
-      const input = $(inputId);
-
+    document.querySelectorAll('#panel-acoes .acao-toggle[data-toggle]').forEach(button => {
+      const input = $(button.dataset.toggle);
       if (!input) return;
-
-      if (button.dataset.acoesReady !== '1') {
-        button.dataset.acoesReady = '1';
-
-        button.addEventListener('click', (event) => {
-          event.preventDefault();
-
-          input.checked = !input.checked;
-
-          syncToggle(button, input);
-
-          input.dispatchEvent(
-            new Event('change', {
-              bubbles: true
-            })
-          );
-        });
-
-        input.addEventListener('change', () => {
-          syncToggle(button, input);
-        });
+      if (button.dataset.bound === '1') {
+        syncToggle(button, input);
+        return;
       }
-
+      button.dataset.bound = '1';
+      button.addEventListener('click', () => {
+        input.checked = !input.checked;
+        if (input.id === 'acao-aberta' && !input.checked) syncToggle(button, input);
+        syncToggle(button, input);
+      });
+      input.addEventListener('change', () => syncToggle(button, input));
       syncToggle(button, input);
     });
   }
 
-  function syncToggle(button, input) {
-    const active = input.checked === true;
+  const datePt = value => {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('pt-PT');
+  };
 
-    button.classList.toggle('active', active);
+  const dateTimePt = value => {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('pt-PT');
+  };
 
-    button.setAttribute(
-      'aria-pressed',
-      active ? 'true' : 'false'
-    );
+  const money = value =>
+    `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
+
+  async function loadXlsx() {
+    if (window.XLSX) return window.XLSX;
+
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Não foi possível carregar o módulo Excel.'));
+      document.head.appendChild(script);
+    });
+
+    return window.XLSX;
   }
-
-  /* ============================================================
-     FORMULÁRIO
-  ============================================================ */
 
   function resetForm() {
-    const form = $('acao-form');
-
-    if (form) {
-      form.reset();
-    }
-
-    if ($('acao-id')) {
-      $('acao-id').value = '';
-    }
-
-    if ($('acao-valor')) {
-      $('acao-valor').value = '0';
-    }
-
-    if ($('acao-ativa')) {
-      $('acao-ativa').checked = false;
-    }
-
-    if ($('acao-aberta')) {
-      $('acao-aberta').checked = false;
-    }
-
-    if ($('acao-pagamento')) {
-      $('acao-pagamento').checked = false;
-    }
-
-    if ($('acao-comprovativo')) {
-      $('acao-comprovativo').checked = false;
-    }
-
-    if ($('acoes-form-title')) {
-      $('acoes-form-title').textContent =
-        'Criar nova atividade';
-    }
-
-    if ($('acao-save')) {
-      $('acao-save').textContent =
-        'Criar atividade';
-
-      $('acao-save').disabled = false;
-    }
-
-    if ($('acao-cancel-edit')) {
-      $('acao-cancel-edit').hidden = true;
-    }
-
-    state.editing = false;
-
+    $('acao-form').reset();
+    $('acao-id').value = '';
+    $('acao-valor').value = '0';
+    $('acoes-form-title').textContent = 'Criar nova atividade';
+    $('acao-save').textContent = 'Criar atividade';
+    $('acao-cancel-edit').hidden = true;
     setupToggleButtons();
   }
 
-  function editAction(action) {
-    if (!action) return;
+  function fillForm(action) {
+    $('acao-id').value = action.id;
+    $('acao-titulo').value = action.titulo || '';
+    $('acao-local').value = action.local || '';
+    $('acao-data').value = action.data || '';
+    $('acao-hora').value = action.hora ? String(action.hora).slice(0, 5) : '';
+    $('acao-prazo').value = action.prazo_inscricao
+      ? new Date(action.prazo_inscricao).toISOString().slice(0, 16)
+      : '';
+    $('acao-limite').value = action.limite_inscricoes ?? '';
+    $('acao-valor').value = action.valor ?? 0;
+    $('acao-ativa').checked = !!action.ativa;
+    $('acao-aberta').checked = !!action.inscricoes_abertas;
+    $('acao-pagamento').checked = !!action.pagamento_obrigatorio;
+    $('acao-comprovativo').checked = !!action.comprovativo_obrigatorio;
+    $('acao-descricao').value = action.descricao || '';
 
-    state.editing = true;
-
-    $('acao-id').value = action.id || '';
-
-    $('acao-titulo').value =
-      action.titulo || '';
-
-    $('acao-local').value =
-      action.local || '';
-
-    $('acao-data').value =
-      action.data || '';
-
-    $('acao-hora').value =
-      action.hora
-        ? String(action.hora).slice(0, 5)
-        : '';
-
-    if (action.prazo_inscricao) {
-      const d = new Date(action.prazo_inscricao);
-
-      if (!Number.isNaN(d.getTime())) {
-        const local = new Date(
-          d.getTime() -
-          d.getTimezoneOffset() * 60000
-        );
-
-        $('acao-prazo').value =
-          local.toISOString().slice(0, 16);
-      } else {
-        $('acao-prazo').value = '';
-      }
-    } else {
-      $('acao-prazo').value = '';
-    }
-
-    $('acao-limite').value =
-      action.limite_inscricoes ?? '';
-
-    $('acao-valor').value =
-      action.valor ?? 0;
-
-    $('acao-ativa').checked =
-      action.ativa === true;
-
-    $('acao-aberta').checked =
-      action.inscricoes_abertas === true;
-
-    $('acao-pagamento').checked =
-      action.pagamento_obrigatorio === true;
-
-    $('acao-comprovativo').checked =
-      action.comprovativo_obrigatorio === true;
-
-    $('acao-descricao').value =
-      action.descricao || '';
-
-    $('acoes-form-title').textContent =
-      `Editar: ${action.titulo || 'atividade'}`;
-
-    $('acao-save').textContent =
-      'Guardar alterações';
-
+    $('acoes-form-title').textContent = `Editar: ${action.titulo}`;
+    $('acao-save').textContent = 'Guardar alterações';
     $('acao-cancel-edit').hidden = false;
-
     setupToggleButtons();
 
-    $('panel-acoes')?.scrollIntoView({
+    document.querySelector('#panel-acoes')?.scrollIntoView({
       behavior: 'smooth',
       block: 'start'
     });
   }
 
-  function readForm() {
-    const titulo =
-      $('acao-titulo')?.value?.trim();
+  async function loadActions() {
+    const { data, error } = await state.sb
+      .from('acoes')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (!titulo) {
-      throw new Error(
-        'Indica o nome da atividade.'
-      );
-    }
+    if (error) throw error;
 
-    const ativa =
-      $('acao-ativa')?.checked === true;
-
-    let inscricoesAbertas =
-      $('acao-aberta')?.checked === true;
-
-    const pagamento =
-      $('acao-pagamento')?.checked === true;
-
-    const comprovativo =
-      $('acao-comprovativo')?.checked === true;
-
-    /*
-     * Se a atividade estiver fechada/inativa,
-     * não faz sentido manter inscrições abertas.
-     */
-    if (!ativa) {
-      inscricoesAbertas = false;
-    }
-
-    /*
-     * O comprovativo só faz sentido com pagamento.
-     */
-    if (comprovativo && !pagamento) {
-      throw new Error(
-        'O comprovativo obrigatório só pode ser utilizado quando o pagamento é obrigatório.'
-      );
-    }
-
-    let limite = null;
-
-    const limiteRaw =
-      $('acao-limite')?.value?.trim();
-
-    if (limiteRaw) {
-      limite = Number(limiteRaw);
-
-      if (
-        !Number.isInteger(limite) ||
-        limite <= 0
-      ) {
-        throw new Error(
-          'O limite de inscrições tem de ser um número inteiro positivo.'
-        );
-      }
-    }
-
-    let valor = Number(
-      $('acao-valor')?.value || 0
-    );
-
-    if (!Number.isFinite(valor) || valor < 0) {
-      throw new Error(
-        'O valor da atividade não é válido.'
-      );
-    }
-
-    /*
-     * Se não houver pagamento, o valor fica 0.
-     */
-    if (!pagamento) {
-      valor = 0;
-    }
-
-    let prazo = null;
-
-    const prazoRaw =
-      $('acao-prazo')?.value?.trim();
-
-    if (prazoRaw) {
-      const d = new Date(prazoRaw);
-
-      if (Number.isNaN(d.getTime())) {
-        throw new Error(
-          'O prazo de inscrição não é válido.'
-        );
-      }
-
-      prazo = d.toISOString();
-    }
-
-    return {
-      titulo,
-
-      descricao:
-        $('acao-descricao')?.value?.trim() ||
-        null,
-
-      local:
-        $('acao-local')?.value?.trim() ||
-        null,
-
-      data:
-        $('acao-data')?.value ||
-        null,
-
-      hora:
-        $('acao-hora')?.value ||
-        null,
-
-      prazo_inscricao: prazo,
-
-      limite_inscricoes: limite,
-
-      ativa,
-
-      inscricoes_abertas:
-        inscricoesAbertas,
-
-      pagamento_obrigatorio:
-        pagamento,
-
-      valor,
-
-      comprovativo_obrigatorio:
-        pagamento && comprovativo
-    };
+    state.actions = data || [];
+    renderActions();
   }
 
-  /* ============================================================
-     GUARDAR ATIVIDADE
-  ============================================================ */
+  function renderActions() {
+    const root = $('acoes-admin-list');
+    if (!root) return;
+
+    if (!state.actions.length) {
+      root.innerHTML = '<div class="acao-empty">Ainda não existem atividades criadas.</div>';
+      return;
+    }
+
+    root.innerHTML = state.actions.map(action => {
+      const payment = action.pagamento_obrigatorio
+        ? `Pagamento: ${money(action.valor)}`
+        : 'Sem pagamento';
+
+      return `
+        <article class="acao-admin-item">
+          <div class="acao-admin-item-head">
+            <div>
+              <h4>${esc(action.titulo)}</h4>
+              <div class="acao-admin-meta">
+                <span>📅 ${datePt(action.data)}</span>
+                ${action.hora ? `<span>🕐 ${esc(String(action.hora).slice(0,5))}</span>` : ''}
+                ${action.local ? `<span>📍 ${esc(action.local)}</span>` : ''}
+                <span>💶 ${esc(payment)}</span>
+                ${action.limite_inscricoes ? `<span>👥 Limite: ${esc(action.limite_inscricoes)}</span>` : ''}
+              </div>
+            </div>
+            <div class="acao-badges">
+              <span class="acao-badge ${action.ativa ? 'ok' : ''}">
+                ${action.ativa ? 'Ativa' : 'Inativa'}
+              </span>
+              <span class="acao-badge ${action.inscricoes_abertas ? 'ok' : ''}">
+                ${action.inscricoes_abertas ? 'Inscrições abertas' : 'Inscrições fechadas'}
+              </span>
+              ${action.comprovativo_obrigatorio
+                ? '<span class="acao-badge warn">Comprovativo obrigatório</span>'
+                : ''}
+            </div>
+          </div>
+
+          <p class="acao-admin-description">${esc(action.descricao || 'Sem descrição.')}</p>
+
+          <div class="acao-admin-buttons">
+            <button type="button" class="admin-small-btn primary" data-action-edit="${esc(action.id)}">Editar</button>
+            <button type="button" class="admin-small-btn" data-action-toggle="${esc(action.id)}">
+              ${action.ativa ? 'Desativar' : 'Ativar'}
+            </button>
+            <button type="button" class="admin-small-btn" data-action-open="${esc(action.id)}">
+              ${action.inscricoes_abertas ? 'Fechar inscrições' : 'Abrir inscrições'}
+            </button>
+            <button type="button" class="admin-small-btn" data-action-registrations="${esc(action.id)}">Ver inscritos</button>
+            <button type="button" class="admin-small-btn" data-action-export="${esc(action.id)}">Exportar Excel</button>
+          </div>
+
+          <div id="acao-inscricoes-${esc(action.id)}" class="acao-inscricoes-wrap" hidden></div>
+        </article>
+      `;
+    }).join('');
+
+    root.querySelectorAll('[data-action-edit]').forEach(btn => {
+      btn.onclick = () => {
+        const action = state.actions.find(a => a.id === btn.dataset.actionEdit);
+        if (action) fillForm(action);
+      };
+    });
+
+    root.querySelectorAll('[data-action-toggle]').forEach(btn => {
+      btn.onclick = () => toggleAction(btn.dataset.actionToggle, 'ativa');
+    });
+
+    root.querySelectorAll('[data-action-open]').forEach(btn => {
+      btn.onclick = () => toggleAction(btn.dataset.actionOpen, 'inscricoes_abertas');
+    });
+
+    root.querySelectorAll('[data-action-registrations]').forEach(btn => {
+      btn.onclick = () => toggleRegistrations(btn.dataset.actionRegistrations);
+    });
+
+    root.querySelectorAll('[data-action-export]').forEach(btn => {
+      btn.onclick = () => exportRegistrations(btn.dataset.actionExport);
+    });
+  }
+
+  async function notifyActivation(tipo, recursoId) {
+    if (!recursoId) return;
+    const token = crypto.randomUUID();
+    const { data, error } = await state.sb.functions.invoke('notificar-ativacao', {
+      body: {
+        tipo,
+        recurso_id: recursoId,
+        activation_token: token
+      }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function toggleAction(id, field) {
+    try {
+      const action = state.actions.find(a => a.id === id);
+      if (!action) return;
+
+      if (field === 'inscricoes_abertas' && action.ativa !== true) {
+        showResult('Não é possível abrir inscrições numa atividade inativa.', 'error');
+        return;
+      }
+
+      const next = !action[field];
+      const payload = { [field]: next };
+
+      // Não faz sentido deixar inscrições abertas numa atividade inativa.
+      if (field === 'ativa' && !next) payload.inscricoes_abertas = false;
+
+      const { error } = await state.sb
+        .from('acoes')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      let notification = null;
+      if (field === 'ativa' && next) {
+        try {
+          notification = await notifyActivation('acao', id);
+        } catch (mailError) {
+          console.error('[AÇÕES ADMIN] Atividade ativada, mas a notificação não foi enviada:', mailError);
+        }
+      }
+
+      showResult(field === 'ativa'
+        ? (next ? 'Atividade ativada.' : 'Atividade desativada.')
+        : (next ? 'Inscrições abertas.' : 'Inscrições fechadas.')
+      );
+
+      await loadActions();
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
+    }
+  }
 
   async function saveAction(event) {
-    event?.preventDefault();
-
+    event.preventDefault();
     hideResult();
 
     const button = $('acao-save');
-
-    if (button) {
-      button.disabled = true;
-    }
+    button.disabled = true;
 
     try {
-      const sb = getSupabase();
+      const id = $('acao-id').value || null;
+      const ativa = $('acao-ativa').checked;
+      const inscricoesAbertas = ativa && $('acao-aberta').checked;
+      const pagamento = $('acao-pagamento').checked;
+      const comprovativo = $('acao-comprovativo').checked;
 
-      const payload = readForm();
+      if (comprovativo && !pagamento) {
+        throw new Error('O comprovativo só pode ser obrigatório quando existe pagamento.');
+      }
 
-      const id =
-        $('acao-id')?.value?.trim();
+      const payload = {
+        titulo: $('acao-titulo').value.trim(),
+        descricao: $('acao-descricao').value.trim() || null,
+        local: $('acao-local').value.trim() || null,
+        data: $('acao-data').value || null,
+        hora: $('acao-hora').value || null,
+        prazo_inscricao: $('acao-prazo').value
+          ? new Date($('acao-prazo').value).toISOString()
+          : null,
+        limite_inscricoes: $('acao-limite').value
+          ? Number($('acao-limite').value)
+          : null,
+        ativa,
+        inscricoes_abertas: inscricoesAbertas,
+        pagamento_obrigatorio: pagamento,
+        valor: pagamento ? Number($('acao-valor').value || 0) : 0,
+        comprovativo_obrigatorio: pagamento && comprovativo
+      };
 
-      let result;
+      if (!payload.titulo) throw new Error('Indica o nome da atividade.');
 
       if (id) {
-        result = await sb
+        const { error } = await state.sb
           .from('acoes')
           .update(payload)
-          .eq('id', id)
-          .select('*')
-          .single();
+          .eq('id', id);
+
+        if (error) throw error;
+        showResult('Atividade atualizada com sucesso.');
       } else {
-        result = await sb
+        const { data: created, error } = await state.sb
           .from('acoes')
           .insert(payload)
           .select('*')
           .single();
-      }
 
-      if (result.error) {
-        throw result.error;
-      }
+        if (error) throw error;
 
-      showResult(
-        id
-          ? 'Atividade atualizada com sucesso.'
-          : 'Atividade criada com sucesso.',
-        'success'
-      );
+        let notificationError = null;
+        if (created?.ativa === true) {
+          try {
+            await notifyActivation('acao', created.id);
+          } catch (mailError) {
+            notificationError = mailError;
+            console.error('[AÇÕES ADMIN] Atividade criada, mas a notificação não foi enviada:', mailError);
+          }
+        }
+
+        showResult(
+          notificationError
+            ? 'Atividade criada, mas não foi possível enviar a notificação aos sócios.'
+            : 'Atividade criada com sucesso.'
+        );
+      }
 
       resetForm();
-
       await loadActions();
-
     } catch (error) {
-      fail(error);
+      showResult(error.message || String(error), 'error');
     } finally {
-      if (button) {
-        button.disabled = false;
-      }
+      button.disabled = false;
     }
   }
 
-  /* ============================================================
-     CARREGAR ATIVIDADES
-  ============================================================ */
+  async function getRegistrations(actionId = null) {
+    let query = state.sb
+      .from('acoes_inscricoes')
+      .select(`
+        id,
+        acao_id,
+        socio_id,
+        data_inscricao,
+        estado,
+        pagamento_confirmado,
+        comprovativo_path,
+        comprovativo_nome,
+        observacoes,
+        socios(numero_socio,nome,email,telemovel),
+        acoes(titulo,data,hora,local,valor,pagamento_obrigatorio)
+      `)
+      .order('data_inscricao', { ascending: false });
 
-  async function loadActions() {
-    if (state.loading) return;
+    if (actionId) query = query.eq('acao_id', actionId);
 
-    state.loading = true;
+    const { data, error } = await query;
+    if (error) throw error;
 
-    const container = $('acoes-admin-list');
+    return data || [];
+  }
 
-    if (container) {
-      container.innerHTML =
-        '<div class="admin-loading">A carregar atividades…</div>';
+  async function toggleRegistrations(actionId) {
+    const root = $(`acao-inscricoes-${actionId}`);
+    if (!root) return;
+
+    if (!root.hidden) {
+      root.hidden = true;
+      return;
     }
+
+    root.hidden = false;
+    root.innerHTML = '<div class="admin-loading">A carregar inscrições…</div>';
 
     try {
-      const sb = getSupabase();
-
-      const result = await sb
-        .from('acoes')
-        .select('*')
-        .order('data', {
-          ascending: true,
-          nullsFirst: false
-        })
-        .order('created_at', {
-          ascending: false,
-          nullsFirst: false
-        });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      state.actions =
-        result.data || [];
-
-      await loadRegistrationCounts();
-
-      renderActions();
-
+      const rows = await getRegistrations(actionId);
+      state.registrations.set(actionId, rows);
+      renderRegistrations(root, rows);
     } catch (error) {
-      if (container) {
-        container.innerHTML = `
-          <div class="admin-result error">
-            ${esc(errorMessage(error))}
-          </div>
-        `;
-      }
-
-      console.error(
-        '[AÇÕES ADMIN] Erro ao carregar atividades:',
-        error
-      );
-
-    } finally {
-      state.loading = false;
+      root.innerHTML = `<div class="admin-result error">${esc(error.message || String(error))}</div>`;
     }
   }
 
-  /* ============================================================
-     CONTAGEM DE INSCRIÇÕES
-  ============================================================ */
-
-  async function loadRegistrationCounts() {
-    if (!state.actions.length) {
-      state.actions.forEach((action) => {
-        action.__inscritos = 0;
-      });
-
+  function renderRegistrations(root, rows) {
+    if (!rows.length) {
+      root.innerHTML = '<div class="acao-empty">Ainda não existem inscrições.</div>';
       return;
     }
 
-    const sb = getSupabase();
+    root.innerHTML = `
+      <table class="acao-inscricoes-table">
+        <thead>
+          <tr>
+            <th>Nº</th>
+            <th>Sócio</th>
+            <th>Inscrito em</th>
+            <th>Pagamento</th>
+            <th>Comprovativo</th>
+            <th>Estado</th>
+            <th>Gestão</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => {
+            const paid = row.pagamento_confirmado;
+            const needsPayment = !!row.acoes?.pagamento_obrigatorio;
+            return `
+              <tr>
+                <td>${esc(row.socios?.numero_socio)}</td>
+                <td>
+                  <strong>${esc(row.socios?.nome)}</strong><br>
+                  <span class="acao-small-note">${esc(row.socios?.email || '')}</span>
+                </td>
+                <td>${dateTimePt(row.data_inscricao)}</td>
+                <td>${needsPayment ? (paid ? '✅ Confirmado' : '⏳ Pendente') : 'Sem pagamento'}</td>
+                <td>
+                  ${row.comprovativo_path
+                    ? `<button type="button" class="admin-small-btn" data-proof="${esc(row.id)}">Abrir</button>`
+                    : '—'}
+                </td>
+                <td>
+                  <span class="acao-status acao-status-${esc(row.estado)}">${esc(row.estado)}</span>
+                </td>
+                <td>
+                  <select class="acao-state" data-state="${esc(row.id)}">
+                    ${['pendente','confirmada','cancelada','rejeitada'].map(status =>
+                      `<option value="${status}" ${row.estado === status ? 'selected' : ''}>${status}</option>`
+                    ).join('')}
+                  </select>
+                  ${needsPayment && !paid
+                    ? `<button type="button" class="admin-small-btn primary" data-pay="${esc(row.id)}">Confirmar pagamento</button>`
+                    : ''}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
 
-    const ids =
-      state.actions.map(
-        (action) => action.id
-      );
+    root.querySelectorAll('[data-proof]').forEach(btn => {
+      btn.onclick = () => openProof(btn.dataset.proof);
+    });
 
-    const result = await sb
-      .from('acoes_inscricoes')
-      .select('id,acao_id,estado')
-      .in('acao_id', ids);
+    root.querySelectorAll('[data-state]').forEach(select => {
+      select.onchange = () => changeRegistrationState(select.dataset.state, select.value);
+    });
 
-    if (result.error) {
-      /*
-       * A lista de atividades continua a funcionar
-       * mesmo que a contagem falhe.
-       */
-      console.warn(
-        '[AÇÕES ADMIN] Não foi possível carregar contagens:',
-        result.error
-      );
-
-      state.actions.forEach((action) => {
-        action.__inscritos = null;
-      });
-
-      return;
-    }
-
-    const counts = new Map();
-
-    for (const row of result.data || []) {
-      /*
-       * Canceladas não contam como inscrições ativas.
-       */
-      if (
-        String(row.estado || '').toLowerCase() ===
-        'cancelada'
-      ) {
-        continue;
-      }
-
-      const key = String(row.acao_id);
-
-      counts.set(
-        key,
-        (counts.get(key) || 0) + 1
-      );
-    }
-
-    state.actions.forEach((action) => {
-      action.__inscritos =
-        counts.get(String(action.id)) || 0;
+    root.querySelectorAll('[data-pay]').forEach(btn => {
+      btn.onclick = () => confirmPayment(btn.dataset.pay);
     });
   }
 
-  /* ============================================================
-     RENDER DA LISTA
-  ============================================================ */
-
-  function renderActions() {
-    const container =
-      $('acoes-admin-list');
-
-    if (!container) return;
-
-    if (!state.actions.length) {
-      container.innerHTML = `
-        <div class="acao-empty">
-          Ainda não existem atividades criadas.
-        </div>
-      `;
-
-      return;
-    }
-
-    container.innerHTML =
-      state.actions.map(renderActionCard).join('');
-
-    /*
-     * Botões editar
-     */
-    container
-      .querySelectorAll('[data-action-edit]')
-      .forEach((button) => {
-        button.addEventListener(
-          'click',
-          () => {
-            const id =
-              button.dataset.actionEdit;
-
-            const action =
-              state.actions.find(
-                (item) =>
-                  String(item.id) ===
-                  String(id)
-              );
-
-            editAction(action);
-          }
-        );
-      });
-
-    /*
-     * Botões ativar/desativar
-     */
-    container
-      .querySelectorAll('[data-action-toggle-active]')
-      .forEach((button) => {
-        button.addEventListener(
-          'click',
-          () => {
-            toggleActive(
-              button.dataset.actionToggleActive
-            );
-          }
-        );
-      });
-
-    /*
-     * Botões abrir/fechar inscrições
-     */
-    container
-      .querySelectorAll('[data-action-toggle-open]')
-      .forEach((button) => {
-        button.addEventListener(
-          'click',
-          () => {
-            toggleOpen(
-              button.dataset.actionToggleOpen
-            );
-          }
-        );
-      });
-
-    /*
-     * Botões ver inscrições
-     */
-    container
-      .querySelectorAll('[data-action-registrations]')
-      .forEach((button) => {
-        button.addEventListener(
-          'click',
-          () => {
-            showRegistrations(
-              button.dataset.actionRegistrations
-            );
-          }
-        );
-      });
-
-    /*
-     * Botões exportar atividade
-     */
-    container
-      .querySelectorAll('[data-action-export]')
-      .forEach((button) => {
-        button.addEventListener(
-          'click',
-          () => {
-            exportRegistrations(
-              button.dataset.actionExport
-            );
-          }
-        );
-      });
-  }
-
-  function renderActionCard(action) {
-    const active =
-      action.ativa === true;
-
-    const open =
-      action.inscricoes_abertas === true;
-
-    const paid =
-      action.pagamento_obrigatorio === true;
-
-    const proof =
-      action.comprovativo_obrigatorio === true;
-
-    const count =
-      action.__inscritos === null
-        ? '—'
-        : action.__inscritos;
-
-    const limit =
-      action.limite_inscricoes
-        ? ` / ${action.limite_inscricoes}`
-        : '';
-
-    return `
-      <article
-        class="acao-admin-item"
-        data-action-id="${esc(action.id)}"
-      >
-
-        <div class="acao-admin-item-head">
-
-          <div>
-            <span class="admin-badge">
-              ${active ? 'Ativa' : 'Inativa'}
-            </span>
-
-            <h3>
-              ${esc(action.titulo || 'Sem título')}
-            </h3>
-          </div>
-
-          <div class="acao-admin-status">
-            <span class="${active ? 'is-active' : 'is-inactive'}">
-              ${active ? 'Ativa' : 'Inativa'}
-            </span>
-
-            <span class="${open ? 'is-active' : 'is-inactive'}">
-              ${open ? 'Inscrições abertas' : 'Inscrições fechadas'}
-            </span>
-          </div>
-
-        </div>
-
-        <div class="acao-admin-meta">
-
-          <span>
-            📅 ${formatDate(action.data)}
-          </span>
-
-          ${
-            action.hora
-              ? `<span>🕐 ${esc(String(action.hora).slice(0, 5))}</span>`
-              : ''
-          }
-
-          ${
-            action.local
-              ? `<span>📍 ${esc(action.local)}</span>`
-              : ''
-          }
-
-          <span>
-            👥 ${count}${limit}
-          </span>
-
-        </div>
-
-        ${
-          action.descricao
-            ? `
-              <p class="acao-admin-description">
-                ${esc(action.descricao)}
-              </p>
-            `
-            : ''
-        }
-
-        <div class="acao-admin-options">
-
-          <span class="acao-admin-option ${
-            paid ? 'active' : ''
-          }">
-            ${paid ? '✓' : '○'} Pagamento
-          </span>
-
-          <span class="acao-admin-option ${
-            proof ? 'active' : ''
-          }">
-            ${proof ? '✓' : '○'} Comprovativo
-          </span>
-
-          ${
-            paid
-              ? `<span class="acao-admin-option">
-                   ${money(action.valor)}
-                 </span>`
-              : `<span class="acao-admin-option">
-                   Gratuita
-                 </span>`
-          }
-
-        </div>
-
-        <div class="admin-actions">
-
-          <button
-            type="button"
-            class="admin-small-btn"
-            data-action-edit="${esc(action.id)}"
-          >
-            Editar
-          </button>
-
-          <button
-            type="button"
-            class="admin-small-btn ${
-              active ? 'danger' : 'primary'
-            }"
-            data-action-toggle-active="${esc(action.id)}"
-          >
-            ${active ? 'Desativar' : 'Ativar'}
-          </button>
-
-          <button
-            type="button"
-            class="admin-small-btn ${
-              open ? 'danger' : 'primary'
-            }"
-            data-action-toggle-open="${esc(action.id)}"
-            ${!active ? 'disabled' : ''}
-          >
-            ${
-              open
-                ? 'Fechar inscrições'
-                : 'Abrir inscrições'
-            }
-          </button>
-
-          <button
-            type="button"
-            class="admin-small-btn"
-            data-action-registrations="${esc(action.id)}"
-          >
-            Ver inscritos (${count})
-          </button>
-
-          <button
-            type="button"
-            class="admin-small-btn"
-            data-action-export="${esc(action.id)}"
-          >
-            Exportar Excel
-          </button>
-
-        </div>
-
-        <div
-          id="acoes-registrations-${esc(action.id)}"
-          class="acao-admin-registrations"
-          hidden
-        ></div>
-
-      </article>
-    `;
-  }
-
-  /* ============================================================
-     ATIVAR / DESATIVAR
-  ============================================================ */
-
-  async function toggleActive(id) {
-    const action =
-      state.actions.find(
-        (item) =>
-          String(item.id) === String(id)
-      );
-
-    if (!action) return;
-
-    const newValue =
-      action.ativa !== true;
-
+  async function openProof(registrationId) {
     try {
-      const sb = getSupabase();
+      const rows = [...state.registrations.values()].flat();
+      const row = rows.find(r => r.id === registrationId);
+      if (!row?.comprovativo_path) throw new Error('Comprovativo não encontrado.');
 
-      const update = {
-        ativa: newValue
-      };
+      const { data, error } = await state.sb.storage
+        .from('comprovativos-acoes')
+        .createSignedUrl(row.comprovativo_path, 300);
 
-      /*
-       * Se desativarmos a atividade,
-       * fechamos também as inscrições.
-       */
-      if (!newValue) {
-        update.inscricoes_abertas = false;
-      }
+      if (error) throw error;
 
-      const result = await sb
-        .from('acoes')
-        .update(update)
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
+    }
+  }
+
+  async function changeRegistrationState(id, estado) {
+    try {
+      const { error } = await state.sb
+        .from('acoes_inscricoes')
+        .update({ estado })
         .eq('id', id);
 
-      if (result.error) {
-        throw result.error;
-      }
+      if (error) throw error;
 
-      showResult(
-        newValue
-          ? 'Atividade ativada.'
-          : 'Atividade desativada.',
-        'success'
-      );
-
-      await loadActions();
-
+      showResult('Estado da inscrição atualizado.');
     } catch (error) {
-      fail(error);
+      showResult(error.message || String(error), 'error');
     }
   }
 
-  /* ============================================================
-     ABRIR / FECHAR INSCRIÇÕES
-  ============================================================ */
-
-  async function toggleOpen(id) {
-    const action =
-      state.actions.find(
-        (item) =>
-          String(item.id) === String(id)
-      );
-
-    if (!action) return;
-
-    if (!action.ativa) {
-      showResult(
-        'Não é possível abrir inscrições numa atividade inativa.',
-        'error'
-      );
-
-      return;
-    }
-
-    const newValue =
-      action.inscricoes_abertas !== true;
-
+  async function confirmPayment(id) {
     try {
-      const sb = getSupabase();
-
-      const result = await sb
-        .from('acoes')
+      const { error } = await state.sb
+        .from('acoes_inscricoes')
         .update({
-          inscricoes_abertas: newValue
+          pagamento_confirmado: true,
+          estado: 'confirmada'
         })
         .eq('id', id);
 
-      if (result.error) {
-        throw result.error;
+      if (error) throw error;
+
+      showResult('Pagamento confirmado e inscrição marcada como confirmada.');
+
+      // Atualiza a lista aberta sem fechar o cartão.
+      const row = [...state.registrations.values()].flat().find(r => r.id === id);
+      if (row) {
+        const root = $(`acao-inscricoes-${row.acao_id}`);
+        if (root && !root.hidden) {
+          const rows = await getRegistrations(row.acao_id);
+          state.registrations.set(row.acao_id, rows);
+          renderRegistrations(root, rows);
+        }
       }
-
-      showResult(
-        newValue
-          ? 'Inscrições abertas.'
-          : 'Inscrições fechadas.',
-        'success'
-      );
-
-      await loadActions();
-
     } catch (error) {
-      fail(error);
+      showResult(error.message || String(error), 'error');
     }
   }
 
-  /* ============================================================
-     INSCRIÇÕES
-  ============================================================ */
-
-  async function showRegistrations(id) {
-    const container =
-      $(`acoes-registrations-${id}`);
-
-    if (!container) return;
-
-    if (!container.hidden) {
-      container.hidden = true;
-      return;
-    }
-
-    container.hidden = false;
-
-    container.innerHTML =
-      '<div class="admin-loading">A carregar inscritos…</div>';
-
+  async function exportRegistrations(actionId = null) {
     try {
-      const sb = getSupabase();
-
-      const result = await sb
-        .from('acoes_inscricoes')
-        .select(`
-          id,
-          acao_id,
-          socio_id,
-          data_inscricao,
-          estado,
-          pagamento_confirmado,
-          comprovativo_nome,
-          comprovativo_path,
-          comprovativo_tipo,
-          comprovativo_tamanho,
-          socios (
-            id,
-            numero_socio,
-            nome,
-            email,
-            telemovel
-          )
-        `)
-        .eq('acao_id', id)
-        .order('data_inscricao', {
-          ascending: false
-        });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      renderRegistrations(
-        container,
-        result.data || [],
-        id
-      );
-
-    } catch (error) {
-      console.error(
-        '[AÇÕES ADMIN] Erro nas inscrições:',
-        error
-      );
-
-      /*
-       * Se a relação socios não existir no schema,
-       * tentamos novamente sem a relação.
-       */
-      try {
-        const sb = getSupabase();
-
-        const fallback =
-          await sb
-            .from('acoes_inscricoes')
-            .select(`
-              id,
-              acao_id,
-              socio_id,
-              data_inscricao,
-              estado,
-              pagamento_confirmado,
-              comprovativo_nome,
-              comprovativo_path,
-              comprovativo_tipo,
-              comprovativo_tamanho
-            `)
-            .eq('acao_id', id)
-            .order('data_inscricao', {
-              ascending: false
-            });
-
-        if (fallback.error) {
-          throw fallback.error;
-        }
-
-        renderRegistrations(
-          container,
-          fallback.data || [],
-          id
-        );
-
-      } catch (fallbackError) {
-        container.innerHTML = `
-          <div class="admin-result error">
-            ${esc(errorMessage(fallbackError))}
-          </div>
-        `;
-      }
-    }
-  }
-
-  function renderRegistrations(
-    container,
-    registrations,
-    actionId
-  ) {
-    if (!registrations.length) {
-      container.innerHTML = `
-        <div class="acao-empty">
-          Ainda não existem inscrições nesta atividade.
-        </div>
-      `;
-
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="acao-admin-registrations-inner">
-
-        <div class="acoes-section-head">
-          <div>
-            <h4>Inscritos</h4>
-            <p class="admin-help">
-              ${registrations.length}
-              inscrição(ões) registada(s).
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="admin-small-btn primary"
-            data-export-inline="${esc(actionId)}"
-          >
-            Exportar Excel
-          </button>
-        </div>
-
-        <div class="admin-table-wrap">
-
-          <table class="admin-table">
-
-            <thead>
-              <tr>
-                <th>Nº</th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Inscrição</th>
-                <th>Estado</th>
-                <th>Pagamento</th>
-                <th>Comprovativo</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${registrations.map((row) => {
-
-                const socio =
-                  row.socios || {};
-
-                const estado =
-                  row.estado || 'pendente';
-
-                const pagamento =
-                  row.pagamento_confirmado === true
-                    ? 'Confirmado'
-                    : 'Pendente';
-
-                const comprovativo =
-                  row.comprovativo_nome
-                    ? esc(row.comprovativo_nome)
-                    : '—';
-
-                return `
-                  <tr>
-
-                    <td>
-                      ${esc(
-                        socio.numero_socio ??
-                        row.socio_id ??
-                        ''
-                      )}
-                    </td>
-
-                    <td>
-                      ${esc(
-                        socio.nome ||
-                        '—'
-                      )}
-                    </td>
-
-                    <td>
-                      ${esc(
-                        socio.email ||
-                        '—'
-                      )}
-                    </td>
-
-                    <td>
-                      ${formatDateTime(
-                        row.data_inscricao
-                      )}
-                    </td>
-
-                    <td>
-                      ${esc(estado)}
-                    </td>
-
-                    <td>
-                      ${esc(pagamento)}
-                    </td>
-
-                    <td>
-                      ${comprovativo}
-                    </td>
-
-                  </tr>
-                `;
-              }).join('')}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-    `;
-
-    container
-      .querySelector('[data-export-inline]')
-      ?.addEventListener(
-        'click',
-        () => {
-          exportRegistrations(actionId);
-        }
-      );
-  }
-
-  /* ============================================================
-     EXPORTAÇÃO EXCEL
-  ============================================================ */
-
-  async function exportRegistrations(
-    actionId = null
-  ) {
-    try {
-      const sb = getSupabase();
-
-      let query =
-        sb
-          .from('acoes_inscricoes')
-          .select(`
-            id,
-            acao_id,
-            socio_id,
-            data_inscricao,
-            estado,
-            pagamento_confirmado,
-            comprovativo_nome,
-            comprovativo_tipo,
-            comprovativo_tamanho,
-            acoes (
-              titulo,
-              data,
-              hora,
-              local,
-              valor,
-              pagamento_obrigatorio,
-              comprovativo_obrigatorio
-            ),
-            socios (
-              numero_socio,
-              nome,
-              email,
-              telemovel,
-              nif,
-              data_nascimento,
-              naturalidade,
-              profissao,
-              morada,
-              localidade,
-              codigo_postal
-            )
-          `);
-
-      if (actionId) {
-        query = query.eq(
-          'acao_id',
-          actionId
-        );
-      }
-
-      query = query.order(
-        'data_inscricao',
-        {
-          ascending: true
-        }
-      );
-
-      let result =
-        await query;
-
-      /*
-       * Fallback caso alguma relação adicional
-       * não exista ou seja diferente.
-       */
-      if (result.error) {
-        let fallback =
-          sb
-            .from('acoes_inscricoes')
-            .select(`
-              id,
-              acao_id,
-              socio_id,
-              data_inscricao,
-              estado,
-              pagamento_confirmado,
-              comprovativo_nome
-            `);
-
-        if (actionId) {
-          fallback =
-            fallback.eq(
-              'acao_id',
-              actionId
-            );
-        }
-
-        fallback =
-          fallback.order(
-            'data_inscricao',
-            {
-              ascending: true
-            }
-          );
-
-        result =
-          await fallback;
-      }
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      const rows =
-        result.data || [];
+      const XLSX = await loadXlsx();
+      const rows = await getRegistrations(actionId);
 
       if (!rows.length) {
-        showResult(
-          'Não existem inscrições para exportar.',
-          'error'
-        );
-
-        return;
+        throw new Error('Não existem inscrições para exportar.');
       }
 
-      const action =
-        actionId
-          ? state.actions.find(
-              (item) =>
-                String(item.id) ===
-                String(actionId)
-            )
-          : null;
-
-      const csv =
-        buildExcelCsv(
-          rows,
-          action
-        );
-
-      downloadExcel(
-        csv,
-        action
-          ? `inscricoes-${safeFileName(action.titulo)}.xls`
-          : 'inscricoes-acoes.xls'
-      );
-
-      showResult(
-        `${rows.length} inscrição(ões) exportada(s).`,
-        'success'
-      );
-
-    } catch (error) {
-      fail(error);
-    }
-  }
-
-  async function exportAllRegistrations() {
-    await exportRegistrations(null);
-  }
-
-  function buildExcelCsv(
-    rows,
-    selectedAction
-  ) {
-    const header = [
-      'Atividade',
-      'Data da atividade',
-      'Hora',
-      'Local',
-      'Valor',
-      'Pagamento obrigatório',
-      'Comprovativo obrigatório',
-      'Nº Sócio',
-      'Nome',
-      'Email',
-      'Telemóvel',
-      'NIF',
-      'Data de nascimento',
-      'Naturalidade',
-      'Profissão',
-      'Morada',
-      'Localidade',
-      'Código postal',
-      'Data de inscrição',
-      'Estado',
-      'Pagamento confirmado',
-      'Comprovativo'
-    ];
-
-    const lines = [
-      header
-        .map(excelCell)
-        .join('\t')
-    ];
-
-    for (const row of rows) {
-      const action =
-        row.acoes || selectedAction || {};
-
-      const socio =
-        row.socios || {};
-
-      const values = [
-        action.titulo || '',
-        action.data || '',
-        action.hora
-          ? String(action.hora).slice(0, 5)
+      const data = rows.map(row => ({
+        'Nº Sócio': row.socios?.numero_socio ?? '',
+        'Nome': row.socios?.nome ?? '',
+        'Email': row.socios?.email ?? '',
+        'Telemóvel': row.socios?.telemovel ?? '',
+        'Atividade': row.acoes?.titulo ?? '',
+        'Data da atividade': row.acoes?.data ?? '',
+        'Hora': row.acoes?.hora ? String(row.acoes.hora).slice(0,5) : '',
+        'Local': row.acoes?.local ?? '',
+        'Data da inscrição': row.data_inscricao
+          ? new Date(row.data_inscricao).toLocaleString('pt-PT')
           : '',
-        action.local || '',
-        action.valor ?? '',
-        action.pagamento_obrigatorio
-          ? 'Sim'
-          : 'Não',
-        action.comprovativo_obrigatorio
-          ? 'Sim'
-          : 'Não',
+        'Valor (€)': row.acoes?.pagamento_obrigatorio
+          ? Number(row.acoes?.valor || 0)
+          : 0,
+        'Pagamento confirmado': row.pagamento_confirmado ? 'Sim' : 'Não',
+        'Comprovativo': row.comprovativo_nome || '',
+        'Estado': row.estado || '',
+        'Observações': row.observacoes || ''
+      }));
 
-        socio.numero_socio ??
-          row.socio_id ??
-          '',
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = Object.keys(data[0]).map(key => ({
+        wch: Math.min(42, Math.max(14, key.length + 4))
+      }));
 
-        socio.nome || '',
-        socio.email || '',
-        socio.telemovel || '',
-        socio.nif || '',
-        socio.data_nascimento || '',
-        socio.naturalidade || '',
-        socio.profissao || '',
-        socio.morada ||
-          socio.morada_completa ||
-          '',
-        socio.localidade || '',
-        socio.codigo_postal || '',
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inscrições');
 
-        row.data_inscricao || '',
-        row.estado || '',
-        row.pagamento_confirmado
-          ? 'Sim'
-          : 'Não',
-        row.comprovativo_nome || ''
-      ];
+      const action = actionId
+        ? state.actions.find(a => a.id === actionId)
+        : null;
 
-      lines.push(
-        values
-          .map(excelCell)
-          .join('\t')
-      );
-    }
+      const safe = (action?.titulo || 'todas')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
 
-    /*
-     * UTF-8 BOM para o Excel reconhecer
-     * corretamente os acentos portugueses.
-     */
-    return '\uFEFF' + lines.join('\r\n');
-  }
-
-  function excelCell(value) {
-    let text =
-      String(value ?? '');
-
-    /*
-     * Impede que Excel interprete valores
-     * iniciados por =, +, -, @ como fórmulas.
-     */
-    if (
-      /^[=+\-@]/.test(text)
-    ) {
-      text = `'${text}`;
-    }
-
-    return text
-      .replace(/\t/g, ' ')
-      .replace(/\r?\n/g, ' ')
-      .replace(/\r/g, ' ');
-  }
-
-  function safeFileName(value) {
-    return String(value || 'atividade')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase()
-      .slice(0, 80) || 'atividade';
-  }
-
-  function downloadExcel(
-    content,
-    filename
-  ) {
-    const blob =
-      new Blob(
-        [content],
-        {
-          type:
-            'application/vnd.ms-excel;charset=utf-8;'
-        }
+      XLSX.writeFile(
+        wb,
+        `inscricoes-${safe || 'todas'}-${new Date().toISOString().slice(0,10)}.xlsx`
       );
 
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement('a');
-
-    link.href = url;
-    link.download = filename;
-
-    document.body.appendChild(link);
-
-    link.click();
-
-    link.remove();
-
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
-  }
-
-  /* ============================================================
-     INICIALIZAÇÃO
-  ============================================================ */
-
-  function bindEvents() {
-    const form =
-      $('acao-form');
-
-    if (
-      form &&
-      form.dataset.acoesFormReady !== '1'
-    ) {
-      form.dataset.acoesFormReady = '1';
-
-      form.addEventListener(
-        'submit',
-        saveAction
-      );
+      showResult('Ficheiro Excel exportado com sucesso.');
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
     }
-
-    const refresh =
-      $('acoes-refresh');
-
-    if (
-      refresh &&
-      refresh.dataset.acoesReady !== '1'
-    ) {
-      refresh.dataset.acoesReady = '1';
-
-      refresh.addEventListener(
-        'click',
-        () => {
-          loadActions().catch(fail);
-        }
-      );
-    }
-
-    const exportAll =
-      $('acoes-export-all');
-
-    if (
-      exportAll &&
-      exportAll.dataset.acoesReady !== '1'
-    ) {
-      exportAll.dataset.acoesReady = '1';
-
-      exportAll.addEventListener(
-        'click',
-        () => {
-          exportAllRegistrations();
-        }
-      );
-    }
-
-    const cancel =
-      $('acao-cancel-edit');
-
-    if (
-      cancel &&
-      cancel.dataset.acoesReady !== '1'
-    ) {
-      cancel.dataset.acoesReady = '1';
-
-      cancel.addEventListener(
-        'click',
-        () => {
-          resetForm();
-          hideResult();
-        }
-      );
-    }
-
-    setupToggleButtons();
-  }
-
-  function isAdminPanelReady() {
-    return Boolean(
-      $('panel-acoes') &&
-      $('acoes-admin-module')
-    );
   }
 
   async function init() {
-    if (state.initialized) {
+    const module = $('acoes-admin-module');
+    if (!module) return;
+
+    state.sb = window.__NAF_SUPABASE || window.supabaseClient;
+    if (!state.sb) {
+      showResult('Ligação ao Supabase ainda não está disponível. Atualiza a página.', 'error');
       return;
     }
 
-    if (!isAdminPanelReady()) {
-      return;
-    }
+    $('acao-form')?.addEventListener('submit', saveAction);
+    setupToggleButtons();
 
-    state.initialized = true;
+    $('acao-cancel-edit')?.addEventListener('click', resetForm);
+
+    $('acoes-refresh')?.addEventListener('click', async () => {
+      try {
+        await loadActions();
+        showResult('Lista de atividades atualizada.');
+      } catch (error) {
+        showResult(error.message || String(error), 'error');
+      }
+    });
+
+    $('acoes-export-all')?.addEventListener('click', () => exportRegistrations(null));
 
     try {
-      bindEvents();
-
-      /*
-       * Não dependemos da aba estar ativa.
-       * Carregamos as atividades logo que o módulo
-       * administrativo existe.
-       */
       await loadActions();
-
     } catch (error) {
-      state.initialized = false;
-
-      console.error(
-        '[AÇÕES ADMIN] Inicialização falhou:',
-        error
-      );
-
-      showResult(
-        errorMessage(error),
-        'error'
-      );
+      showResult(error.message || String(error), 'error');
     }
   }
 
-  /*
-   * DOM já carregado.
-   */
-  if (
-    document.readyState ===
-    'loading'
-  ) {
-    document.addEventListener(
-      'DOMContentLoaded',
-      init,
-      {
-        once: true
-      }
-    );
+  window.loadAcoesAdmin = async () => {
+    if (!state.sb) state.sb = window.__NAF_SUPABASE || window.supabaseClient || null;
+    if (!state.sb) throw new Error('Ligação ao Supabase ainda não está disponível.');
+    if (!$('acoes-admin-module')) return;
+    await loadActions();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
     init();
   }
-
-  /*
-   * Disponibilizamos uma inicialização pública
-   * caso o admin.js precise de voltar a inicializar
-   * os módulos depois do login.
-   */
-  window.initAcoesAdmin = init;
-
-  /*
-   * Também disponibilizamos funções úteis
-   * sem obrigar outros ficheiros a importá-las.
-   */
-  window.loadAcoesAdmin = loadActions;
-  window.exportAcoesAdmin = exportAllRegistrations;
-
 })();

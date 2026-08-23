@@ -66,6 +66,21 @@
     return data;
   }
 
+  async function notifyDrActivation(editionId) {
+    const c = getClient();
+    if (!c || !editionId) return;
+    const { data, error } = await c.functions.invoke('notificar-ativacao', {
+      body: {
+        tipo: 'dr_arbitro',
+        recurso_id: editionId,
+        activation_token: crypto.randomUUID()
+      }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
   async function cacheSession() {
     const c = getClient();
     if (!c) return;
@@ -98,18 +113,12 @@
     return value ? new Date(value).toISOString() : null;
   }
 
-  async function nextEditionNumber(c, modalidadeId = null) {
-    let query = c
+  async function nextEditionNumber(c) {
+    const { data, error } = await c
       .from('dr_arbitro_edicoes')
       .select('numero_edicao')
       .order('numero_edicao', { ascending: false })
       .limit(1);
-
-    if (modalidadeId) {
-      query = query.eq('modalidade_id', modalidadeId);
-    }
-
-    const { data, error } = await query;
 
     if (error) throw error;
     return Number(data?.[0]?.numero_edicao || 0) + 1;
@@ -665,10 +674,18 @@
 
     document.getElementById('dr-toggle-ed').onclick = async () => {
       try {
+        const nextActive = !edition.ativo;
         await rpc('dr_arbitro_admin_definir_ativo', {
           p_edicao_id: edition.id,
-          p_ativo: !edition.ativo
+          p_ativo: nextActive
         });
+        if (nextActive) {
+          try {
+            await notifyDrActivation(edition.id);
+          } catch (mailError) {
+            console.error('Drº Árbitro ativado, mas a notificação não foi enviada:', mailError);
+          }
+        }
         await renderIntegratedAdmin();
       } catch (error) {
         alert(error.message || String(error));
@@ -778,17 +795,14 @@
 
       if (mError) throw mError;
 
-      const nextByModalidade = {};
-      for (const m of modalidades || []) {
-        nextByModalidade[m.id] = await nextEditionNumber(c, m.id);
-      }
+      const next = await nextEditionNumber(c);
 
       root.innerHTML = modalidades.map(m => `
         <div class="dr-modalidade">
           <h4>${esc(m.nome)}</h4>
           <div class="dr-actions">
             <button class="admin-small-btn" type="button" data-create-ed="${esc(m.id)}">
-              + Criar ${esc(editionLabel(nextByModalidade[m.id]))}
+              Criar ${esc(editionLabel(next))}
             </button>
           </div>
           <div class="dr-admin-grid" data-editions="${esc(m.id)}">
@@ -832,7 +846,7 @@
       root.querySelectorAll('[data-create-ed]').forEach(btn => {
         btn.onclick = async () => {
           try {
-            const numero = await nextEditionNumber(c, btn.dataset.createEd);
+            const numero = await nextEditionNumber(c);
 
             const { error } = await c.from('dr_arbitro_edicoes').insert({
               modalidade_id: btn.dataset.createEd,
@@ -866,6 +880,7 @@
     const futsal = document.getElementById('dr-futsal');
     if (!c || (!futebol && !futsal) || !(await isAdmin())) return;
 
+    // Mantém o admin.html existente compatível, mas usa o mesmo editor.
     const { data: modalidades, error } = await c
       .from('dr_arbitro_modalidades')
       .select('id,codigo,nome,ativo')
@@ -875,8 +890,7 @@
     if (error) throw error;
 
     for (const m of modalidades || []) {
-      const codigo = String(m.codigo || '').toLowerCase();
-      const target = codigo === 'futsal' ? futsal : futebol;
+      const target = String(m.codigo).toLowerCase() === 'futsal' ? futsal : futebol;
       if (!target) continue;
 
       const { data: editions, error: e } = await c
@@ -887,25 +901,10 @@
 
       if (e) throw e;
 
-      const nextNumber = await nextEditionNumber(c, m.id);
-
       target.innerHTML = `
-        <div class="dr-row" style="margin-bottom:12px;">
-          <div>
-            <h4 style="margin:0;">${esc(m.nome)}</h4>
-            <div class="dr-muted">Gerir as edições e configurar os testes.</div>
-          </div>
-
-          <button
-            type="button"
-            class="admin-small-btn primary"
-            data-create-ed-dedicated="${esc(m.id)}">
-            + Criar ${esc(editionLabel(nextNumber))}
-          </button>
-        </div>
-
+        <h4>${esc(m.nome)}</h4>
         <div class="dr-admin-grid">
-          ${(editions || []).length ? editions.map(ed => `
+          ${(editions || []).map(ed => `
             <div class="dr-row">
               <div>
                 <strong>${esc(ed.nome)}</strong>
@@ -914,73 +913,21 @@
                   · ${ed.inscricoes_abertas ? 'Inscrições abertas' : 'Inscrições fechadas'}
                 </div>
               </div>
-
-              <div class="dr-actions">
-                <button
-                  type="button"
-                  class="admin-small-btn"
-                  data-config-ed="${esc(ed.id)}">
-                  Editar
-                </button>
-              </div>
+              <button type="button" class="admin-small-btn" data-config-ed="${esc(ed.id)}">Editar</button>
             </div>
-          `).join('') : '<div class="dr-muted">Sem edições. Cria a primeira edição acima.</div>'}
+          `).join('')}
         </div>
       `;
 
       target.querySelectorAll('[data-config-ed]').forEach(btn => {
         btn.onclick = () => {
           const ed = editions.find(item => item.id === btn.dataset.configEd);
-          if (!ed) return;
-
           target.innerHTML = '';
           renderEditionAdmin(target, ed).catch(error => {
-            target.innerHTML = `
-              <div class="dr-test-error">
-                ${esc(error.message || String(error))}
-              </div>
-            `;
+            target.innerHTML = `<div class="dr-test-error">${esc(error.message || String(error))}</div>`;
           });
         };
       });
-
-      const createButton = target.querySelector('[data-create-ed-dedicated]');
-      if (createButton) {
-        createButton.onclick = async () => {
-          const originalText = createButton.textContent;
-          createButton.disabled = true;
-          createButton.textContent = 'A criar…';
-
-          try {
-            // Recalcular imediatamente antes do INSERT para evitar
-            // usar um número antigo se outra edição tiver sido criada.
-            const numero = await nextEditionNumber(c, m.id);
-
-            const { data: created, error: createError } = await c
-              .from('dr_arbitro_edicoes')
-              .insert({
-                modalidade_id: m.id,
-                numero_edicao: numero,
-                nome: `Drº Árbitro - ${editionLabel(numero)}`,
-                ativo: false,
-                numero_testes: 1,
-                inscricoes_abertas: false
-              })
-              .select('*')
-              .single();
-
-            if (createError) throw createError;
-
-            // Abre imediatamente o editor da edição recém-criada.
-            target.innerHTML = '';
-            await renderEditionAdmin(target, created);
-          } catch (error) {
-            alert(error.message || String(error));
-            createButton.disabled = false;
-            createButton.textContent = originalText;
-          }
-        };
-      }
     }
   }
 

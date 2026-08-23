@@ -135,6 +135,7 @@
         <td><strong>${m.pontos}</strong></td>
         <td class="member-actions">
           <button type="button" class="admin-small-btn primary manual-quota-open" data-id="${esc(m.id)}">Pagamento</button>
+          <button type="button" class="admin-small-btn member-photo-open" data-id="${esc(m.id)}">Fotografia</button>
           <button type="button" class="admin-small-btn member-number-open" data-id="${esc(m.id)}" data-number="${esc(m.numero)}">Editar nº</button>
         </td>
       </tr>`;
@@ -404,13 +405,86 @@
       }
     }
 
-    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.admin-tab-panel').forEach(x => x.classList.remove('active'));
-    const tab = document.querySelector('.admin-tab[data-panel="quotas"]');
-    if (tab) tab.classList.add('active');
-    $('panel-quotas')?.classList.add('active');
+    const panel = $('panel-quotas');
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     $('manual-quota-valor')?.focus();
     $('manual-quota-valor')?.select();
+  }
+
+  function openMemberPhoto(id) {
+    const input = $('admin-photo-input');
+    if (!input) throw new Error('O seletor de fotografia não está disponível.');
+    input.dataset.memberId = String(id);
+    input.value = '';
+    input.click();
+  }
+
+  async function uploadMemberPhoto(id, file) {
+    if (!file) return;
+    const member = state.members.find(m => String(m.id) === String(id));
+    if (!member) throw new Error('Sócio não encontrado.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      throw new Error('A fotografia deve ser JPG, PNG ou WEBP.');
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error('A fotografia não pode ultrapassar 8 MB.');
+    }
+
+    const sb = state.supabase;
+    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+    const path = `${member.id}/fotografia.${ext}`;
+
+    show(`A carregar fotografia de ${member.nome}…`);
+
+    const { error: uploadError } = await sb.storage
+      .from('fotografias-socios')
+      .upload(path, file, { contentType: file.type, upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { error: dbError } = await sb
+      .from('socios')
+      .update({ fotografia_path: path })
+      .eq('id', member.id);
+
+    if (dbError) throw dbError;
+
+    member.raw = { ...(member.raw || {}), fotografia_path: path };
+    show(`Fotografia de ${member.nome} atualizada com sucesso.`);
+  }
+
+  function excelCell(value) {
+    let text = String(value ?? '');
+    if (/^[=+\-@]/.test(text)) text = `'${text}`;
+    return text.replace(/\t/g, ' ').replace(/\r?\n/g, ' ').replace(/\r/g, ' ');
+  }
+
+  function exportMembersExcel() {
+    if (!state.members.length) {
+      show('Não existem sócios para exportar.', 'error');
+      return;
+    }
+
+    const headers = ['Nº Sócio','Nome','Email','Telemóvel','Estado','Administrador','Pontos Fun&Learn','Meses em atraso','Valor em atraso'];
+    const lines = [headers.map(excelCell).join('\t')];
+    for (const m of state.members) {
+      lines.push([
+        m.numero, m.nome, m.email, m.raw?.telemovel || '',
+        m.ativo ? 'Ativo' : 'Inativo', m.is_admin ? 'Sim' : 'Não',
+        m.pontos, m.meses_atraso, Number(m.valor_atraso || 0).toFixed(2)
+      ].map(excelCell).join('\t'));
+    }
+
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `socios-${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    show(`${state.members.length} sócio(s) exportado(s) para Excel.`);
   }
 
   function selectedOverdueIds() {
@@ -423,14 +497,32 @@
     const ids = selectedOverdueIds();
     if (!ids.length) throw new Error('Seleciona pelo menos um sócio com quotas em atraso e email.');
 
-    const result = await invokeEdge(cfg.EMAIL_FUNCTION, {
-      action: 'quotas_em_atraso',
-      subject: $('quota-subject').value.trim(),
-      message: $('quota-message').value.trim(),
-      socio_ids: ids
-    });
+    const subject = $('quota-subject')?.value?.trim() || 'Quotas em atraso';
+    const message = $('quota-message')?.value?.trim() || '';
+    if (!message) throw new Error('Escreve a mensagem do aviso de quotas.');
 
-    show(`Avisos processados: ${result.sent ?? ids.length} enviados.`);
+    let sent = 0;
+    const failures = [];
+    for (const id of ids) {
+      const member = state.members.find(m => String(m.id) === id);
+      if (!member?.email) continue;
+      try {
+        await invokeEdge(cfg.EMAIL_FUNCTION, {
+          to: member.email,
+          subject,
+          text: message.replaceAll('{NOME}', member.nome || 'sócio')
+        });
+        sent += 1;
+      } catch (error) {
+        failures.push(`${member.nome}: ${error.message || error}`);
+      }
+    }
+
+    if (failures.length) {
+      throw new Error(`${sent} aviso(s) enviado(s); ${failures.length} falharam. ${failures.slice(0,3).join(' | ')}`);
+    }
+
+    show(`Avisos processados: ${sent} enviado(s).`);
   }
 
   async function fileToBase64(file) {
@@ -465,18 +557,37 @@
     const message = $('mail-message').value.trim();
     if (!subject || !message) throw new Error('Indica o assunto e escreve a mensagem.');
 
-    const result = await invokeEdge(cfg.EMAIL_FUNCTION, {
-      action: 'documento_todos',
-      subject,
-      message,
-      attachment: {
-        name: file.name,
-        mime: file.type || 'application/pdf',
-        base64: await fileToBase64(file)
-      }
-    });
+    const recipients = state.members.filter(m => m.ativo && m.email).map(m => m.email);
+    if (!recipients.length) throw new Error('Não existem sócios ativos com email.');
 
-    show(`Documento processado para ${result.sent ?? 0} sócio(s).`);
+    let sent = 0;
+    const failures = [];
+    const base64 = await fileToBase64(file);
+
+    for (const email of recipients) {
+      try {
+        await invokeEdge(cfg.EMAIL_FUNCTION, {
+          to: email,
+          subject,
+          text: message,
+          attachment: {
+            name: file.name,
+            mime: file.type || 'application/octet-stream',
+            base64
+          }
+        });
+        sent += 1;
+      } catch (error) {
+        failures.push(`${email}: ${error.message || error}`);
+      }
+    }
+
+    if (failures.length) {
+      throw new Error(`${sent} email(s) enviado(s); ${failures.length} falharam.`);
+    }
+
+    show(`Documento enviado para ${sent} sócio(s).`);
+    $('mail-file').value = '';
   }
 
   async function loadAdminPermissions() {
@@ -554,9 +665,21 @@
       const payment = e.target.closest('.manual-quota-open');
       if (payment) openManualQuota(payment.dataset.id);
 
+      const photo = e.target.closest('.member-photo-open');
+      if (photo) openMemberPhoto(photo.dataset.id);
+
       const number = e.target.closest('.member-number-open');
       if (number) editMemberNumber(number.dataset.id, number.dataset.number).catch(fail);
     });
+
+    $('admin-photo-input')?.addEventListener('change', () => {
+      const input = $('admin-photo-input');
+      const id = input?.dataset.memberId;
+      const file = input?.files?.[0];
+      if (id && file) uploadMemberPhoto(id, file).catch(fail);
+    });
+
+    $('btn-export-members-excel')?.addEventListener('click', exportMembersExcel);
 
     $('btn-send-overdue-selected').onclick = () => sendOverdueSelected().catch(fail);
     $('btn-send-document').onclick = () => sendDocument().catch(fail);
