@@ -1,147 +1,120 @@
-/* NAF — estilos do módulo Ações */
-#panel-acoes .admin-card {
-  margin-bottom: 18px;
+/* =========================================================
+   AÇÕES — ADMINISTRAÇÃO
+   Módulo visual autónomo e compatível com admin.css.
+========================================================= */
+
+#panel-acoes .admin-card { margin-bottom: 18px; }
+
+#panel-acoes .admin-card-header,
+#panel-acoes .acao-admin-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
 }
 
-#panel-acoes .admin-card-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:18px;
-}
+#panel-acoes .admin-card-header h3,
+#panel-acoes .acao-admin-item-head h3 { margin: 8px 0 4px; }
 
-#panel-acoes .admin-card-header h3 {
-  margin:8px 0 4px;
-}
+#panel-acoes .admin-form-grid { margin-top: 18px; }
 
-#panel-acoes .admin-form-grid {
-  margin-top:18px;
-}
-
+#panel-acoes .acoes-options,
 #panel-acoes .acao-toggle-grid {
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-  align-items:stretch;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  grid-column: 1 / -1;
 }
 
 #panel-acoes .acao-toggle {
-  border:1px solid #d9d2df;
-  background:#fff;
-  color:#5b2a72;
-  border-radius:10px;
-  padding:11px 12px;
-  font:inherit;
-  font-size:13px;
-  font-weight:700;
-  cursor:pointer;
-  transition:.15s ease;
+  border: 1px solid #d9d2df;
+  background: #fff;
+  color: #5b2a72;
+  border-radius: 10px;
+  padding: 11px 12px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s ease;
 }
 
-#panel-acoes .acao-toggle:hover {
-  border-color:#b99ac7;
-}
-
+#panel-acoes .acao-toggle:hover { border-color: #b99ac7; }
 #panel-acoes .acao-toggle.active {
-  background:#f1e9f5;
-  border-color:#5b2a72;
-  box-shadow:inset 0 0 0 1px #5b2a72;
+  background: #f1e9f5;
+  border-color: #5b2a72;
+  box-shadow: inset 0 0 0 1px #5b2a72;
 }
 
 #panel-acoes .acao-admin-item {
-  border:1px solid #e7e1ea;
-  border-radius:14px;
-  padding:18px;
-  margin-top:12px;
-  background:#fff;
-}
-
-#panel-acoes .acao-admin-item-head {
-  display:flex;
-  justify-content:space-between;
-  gap:16px;
-  align-items:flex-start;
-}
-
-#panel-acoes .acao-admin-item-head h3 {
-  margin:8px 0 0;
+  border: 1px solid #e7e1ea;
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 12px;
+  background: #fff;
 }
 
 #panel-acoes .acao-admin-status {
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 #panel-acoes .acao-admin-status span {
-  padding:5px 9px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:700;
-  background:#f1f1f1;
-  color:#666;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f1f1;
+  color: #666;
 }
 
-#panel-acoes .acao-admin-status .is-active {
-  background:#e6f6ee;
-  color:#18794e;
-}
-
-#panel-acoes .acao-admin-status .is-inactive {
-  background:#f2f2f2;
-  color:#666;
-}
+#panel-acoes .acao-admin-status .is-active { background: #e6f6ee; color: #18794e; }
+#panel-acoes .acao-admin-status .is-inactive { background: #f2f2f2; color: #666; }
 
 #panel-acoes .acao-admin-meta,
 #panel-acoes .acao-admin-options {
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px 18px;
-  margin-top:13px;
-  color:#666;
-  font-size:13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 13px;
+  color: #666;
+  font-size: 13px;
 }
 
-#panel-acoes .acao-admin-options .active {
-  color:#5b2a72;
-  font-weight:700;
-}
-
-#panel-acoes .acao-admin-description {
-  margin:14px 0 0;
-  color:#555;
-}
+#panel-acoes .acao-admin-options .active { color: #5b2a72; font-weight: 700; }
+#panel-acoes .acao-admin-description { margin: 14px 0 0; color: #555; }
 
 #panel-acoes .acao-empty {
-  padding:20px;
-  border:1px dashed #ddd;
-  border-radius:12px;
-  color:#777;
-  text-align:center;
+  padding: 20px;
+  border: 1px dashed #ddd;
+  border-radius: 12px;
+  color: #777;
+  text-align: center;
 }
 
 #panel-acoes .acao-admin-registrations {
-  margin-top:16px;
-  padding-top:16px;
-  border-top:1px solid #eee;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
 }
 
-@media (max-width:800px) {
+#panel-acoes .acoes-head-actions { margin-top: 0; }
+#panel-acoes .acoes-form-card,
+#panel-acoes .acoes-list-card { margin-top: 18px; }
+
+@media (max-width: 800px) {
   #panel-acoes .admin-card-header,
-  #panel-acoes .acao-admin-item-head {
-    flex-direction:column;
-  }
-  #panel-acoes .acao-admin-status {
-    justify-content:flex-start;
-  }
-  #panel-acoes .acao-toggle-grid {
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
+  #panel-acoes .acao-admin-item-head { flex-direction: column; }
+  #panel-acoes .acao-admin-status { justify-content: flex-start; }
+  #panel-acoes .acoes-options,
+  #panel-acoes .acao-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width:620px) {
-  #panel-acoes .acao-toggle-grid {
-    grid-template-columns:1fr;
-  }
+@media (max-width: 620px) {
+  #panel-acoes .acoes-options,
+  #panel-acoes .acao-toggle-grid { grid-template-columns: 1fr; }
 }
