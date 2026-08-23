@@ -297,14 +297,94 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
       </div>
     </section>
 
+
     <section id="panel-acoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-acoes">
-      <div id="acoes-admin-module" class="admin-card">
-        <div class="admin-card-header"><div><span class="admin-badge">Ações</span><h3>Atividades e inscrições</h3><p class="admin-help">Crie atividades, defina pagamento e comprovativo e controle as inscrições.</p></div><div class="admin-actions"><button id="acoes-refresh" type="button" class="admin-small-btn">Atualizar</button><button id="acoes-export-all" type="button" class="admin-small-btn primary">Exportar todas as inscrições</button></div></div>
+      <div id="acoes-admin-module" class="admin-card acoes-admin-card">
+        <div class="admin-card-header">
+          <div>
+            <span class="admin-badge">Ações</span>
+            <h3>Atividades e inscrições</h3>
+            <p class="admin-help">Crie uma atividade, abra ou feche inscrições, defina pagamento e consulte os inscritos.</p>
+          </div>
+          <div class="admin-actions acoes-head-actions">
+            <button id="acoes-refresh" type="button" class="admin-small-btn">Atualizar</button>
+            <button id="acoes-export-all" type="button" class="admin-small-btn primary">Exportar todas as inscrições</button>
+          </div>
+        </div>
+
         <div id="acoes-admin-result" class="admin-result" hidden aria-live="polite"></div>
-        <div class="admin-subpanel"><h3>Criar / editar ação</h3><div id="acoes-admin-form-wrap"></div></div>
-        <div class="admin-subpanel"><h3>Ações existentes</h3><div id="acoes-admin-list" class="acoes-admin-list"></div></div>
+
+        <div class="acoes-form-card">
+          <div class="acoes-section-head">
+            <div>
+              <h3 id="acoes-form-title">Criar nova atividade</h3>
+              <p class="admin-help">Os campos abaixo controlam exatamente o que aparece aos sócios.</p>
+            </div>
+          </div>
+
+          <form id="acao-form" class="admin-form-grid" novalidate>
+            <input type="hidden" id="acao-id">
+
+            <label><span>Nome da atividade</span>
+              <input id="acao-titulo" type="text" required placeholder="Ex.: Jantar de Natal 2026">
+            </label>
+
+            <label><span>Local</span>
+              <input id="acao-local" type="text" placeholder="Ex.: Coimbra">
+            </label>
+
+            <label><span>Data</span>
+              <input id="acao-data" type="date">
+            </label>
+
+            <label><span>Hora</span>
+              <input id="acao-hora" type="time">
+            </label>
+
+            <label><span>Prazo de inscrição</span>
+              <input id="acao-prazo" type="datetime-local">
+            </label>
+
+            <label><span>Limite de inscrições</span>
+              <input id="acao-limite" type="number" min="1" step="1" placeholder="Sem limite">
+            </label>
+
+            <label><span>Valor (€)</span>
+              <input id="acao-valor" type="number" min="0" step="0.01" value="0">
+            </label>
+
+            <div class="acoes-options">
+              <label><input id="acao-ativa" type="checkbox"> Atividade ativa</label>
+              <label><input id="acao-aberta" type="checkbox"> Inscrições abertas</label>
+              <label><input id="acao-pagamento" type="checkbox"> Pagamento obrigatório</label>
+              <label><input id="acao-comprovativo" type="checkbox"> Comprovativo obrigatório</label>
+            </div>
+
+            <label class="wide"><span>Descrição</span>
+              <textarea id="acao-descricao" placeholder="Informação que será apresentada aos sócios."></textarea>
+            </label>
+
+            <div class="admin-actions wide">
+              <button id="acao-save" class="admin-small-btn primary" type="submit">Criar atividade</button>
+              <button id="acao-cancel-edit" class="admin-small-btn" type="button" hidden>Cancelar edição</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="acoes-list-card">
+          <div class="acoes-section-head">
+            <div>
+              <h3>Atividades existentes</h3>
+              <p class="admin-help">Fechar uma atividade não apaga o histórico das inscrições.</p>
+            </div>
+          </div>
+          <div id="acoes-admin-list" class="acoes-admin-list">
+            <div class="admin-loading">A carregar…</div>
+          </div>
+        </div>
       </div>
     </section>
+
     <section id="panel-questoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-questoes">
       <section id="admin-questoes-card" class="admin-card admin-questoes-card">
         <div class="admin-card-header">
