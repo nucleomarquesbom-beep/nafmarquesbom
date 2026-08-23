@@ -1,85 +1,213 @@
 (() => {
   'use strict';
 
+  /*
+   * ============================================================
+   * AÇÕES — ADMINISTRAÇÃO
+   * ============================================================
+   *
+   * Compatível diretamente com o admin.html atual:
+   *
+   *   #panel-acoes
+   *   #acoes-admin-module
+   *   #acao-form
+   *   #acao-id
+   *   #acao-titulo
+   *   #acao-local
+   *   #acao-data
+   *   #acao-hora
+   *   #acao-prazo
+   *   #acao-limite
+   *   #acao-valor
+   *   #acao-ativa
+   *   #acao-aberta
+   *   #acao-pagamento
+   *   #acao-comprovativo
+   *   #acao-descricao
+   *   #acao-save
+   *   #acao-cancel-edit
+   *   #acoes-admin-list
+   *   #acoes-refresh
+   *   #acoes-export-all
+   *
+   * IMPORTANTE:
+   * - Não cria CSS.
+   * - Não cria a aba Ações.
+   * - Não altera outras áreas do administrador.
+   * - Não depende de acoes-admin-tab-fix.js.
+   * - Usa a configuração já existente em admin-config.js.
+   * ============================================================
+   */
+
+
   const state = {
-    sb: null,
+    supabase: null,
     actions: [],
     registrations: new Map()
   };
 
-  const $ = id => document.getElementById(id);
 
-  const esc = value =>
-    String(value ?? '').replace(/[&<>"']/g, c => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    }[c]));
+  /* ============================================================
+     HELPERS
+  ============================================================ */
 
-  const showResult = (text, type = 'success') => {
-    const el = $('acoes-admin-result');
+  const $ = (id) => document.getElementById(id);
 
-    if (!el) return;
 
-    el.textContent = text;
-    el.className = `admin-result ${type}`;
-    el.hidden = false;
+  const esc = (value) => {
+    return String(value ?? '').replace(
+      /[&<>"']/g,
+      (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[char]
+    );
   };
 
-  const hideResult = () => {
-    const el = $('acoes-admin-result');
 
-    if (el) {
-      el.hidden = true;
+  const money = (value) => {
+    const number = Number(value || 0);
+
+    return `${number.toFixed(2).replace('.', ',')} €`;
+  };
+
+
+  const datePt = (value) => {
+    if (!value) return '—';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
     }
+
+    return date.toLocaleDateString('pt-PT');
   };
 
-  const datePt = value => {
+
+  const dateTimePt = (value) => {
     if (!value) return '—';
 
-    const d = new Date(value);
+    const date = new Date(value);
 
-    return Number.isNaN(d.getTime())
-      ? String(value)
-      : d.toLocaleDateString('pt-PT');
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return date.toLocaleString('pt-PT');
   };
 
-  const dateTimePt = value => {
-    if (!value) return '—';
 
-    const d = new Date(value);
+  function showResult(message, type = 'success') {
 
-    return Number.isNaN(d.getTime())
-      ? String(value)
-      : d.toLocaleString('pt-PT');
-  };
+    const element = $('acoes-admin-result');
 
-  const money = value =>
-    `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
+    if (!element) return;
+
+    element.textContent = message;
+    element.className = `admin-result ${type}`;
+    element.hidden = false;
+  }
 
 
-  /* =========================================================
-     BOTÕES DE ESTADO DAS ATIVIDADES
-     
-     O HTML atual já possui:
-     
-     button.acao-toggle[data-toggle="acao-ativa"]
-     button.acao-toggle[data-toggle="acao-aberta"]
-     button.acao-toggle[data-toggle="acao-pagamento"]
-     button.acao-toggle[data-toggle="acao-comprovativo"]
+  function hideResult() {
 
-     E os respetivos checkboxes escondidos.
-  ========================================================= */
+    const element = $('acoes-admin-result');
+
+    if (!element) return;
+
+    element.hidden = true;
+    element.textContent = '';
+  }
+
+
+  function fail(error) {
+
+    console.error('[AÇÕES]', error);
+
+    showResult(
+      error?.message ||
+      String(error),
+      'error'
+    );
+  }
+
+
+  function getConfig() {
+
+    return window.NAF_ADMIN_CONFIG || {};
+  }
+
+
+  /* ============================================================
+     SUPABASE
+  ============================================================ */
+
+  function createSupabaseClient() {
+
+    if (state.supabase) {
+      return state.supabase;
+    }
+
+    /*
+     * admin-config.js é carregado antes deste ficheiro.
+     */
+
+    const config = getConfig();
+
+    if (
+      !config.SUPABASE_URL ||
+      !config.SUPABASE_ANON_KEY
+    ) {
+      throw new Error(
+        'Configuração do Supabase incompleta.'
+      );
+    }
+
+
+    /*
+     * O admin.html já carrega:
+     *
+     * https://cdn.jsdelivr.net/npm/@Supabase/supabase-js@2
+     *
+     */
+
+    if (
+      !window.supabase ||
+      typeof window.supabase.createClient !== 'function'
+    ) {
+      throw new Error(
+        'A biblioteca Supabase não foi carregada.'
+      );
+    }
+
+
+    state.supabase =
+      window.supabase.createClient(
+        config.SUPABASE_URL,
+        config.SUPABASE_ANON_KEY
+      );
+
+    return state.supabase;
+  }
+
+
+  /* ============================================================
+     BOTÕES DE ESTADO
+  ============================================================ */
 
   function setupToggleButtons() {
 
-    const buttons = document.querySelectorAll(
-      '.acao-toggle[data-toggle]'
-    );
+    const buttons =
+      document.querySelectorAll(
+        '#panel-acoes .acao-toggle[data-toggle]'
+      );
 
-    buttons.forEach(button => {
+
+    buttons.forEach((button) => {
 
       const inputId =
         button.dataset.toggle;
@@ -88,485 +216,347 @@
         $(inputId);
 
       if (!input) {
-        return;
-      }
-
-      /*
-        Evita ligar o mesmo botão duas vezes.
-      */
-      if (button.dataset.toggleBound === 'true') {
-        syncToggleButton(button, input);
-        return;
-      }
-
-      button.dataset.toggleBound = 'true';
-
-      /*
-        Estado inicial.
-      */
-      syncToggleButton(button, input);
-
-      /*
-        Clique no botão.
-      */
-      button.addEventListener('click', event => {
-
-        event.preventDefault();
-
-        input.checked = !input.checked;
-
-        syncToggleButton(button, input);
-
-        /*
-          Algumas partes da aplicação podem
-          estar a ouvir change no checkbox.
-        */
-        input.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
+        console.warn(
+          `[AÇÕES] Checkbox não encontrado: ${inputId}`
         );
-      });
+
+        return;
+      }
+
 
       /*
-        Acessibilidade por teclado.
-      */
-      button.addEventListener('keydown', event => {
+       * Evita registar o evento duas vezes.
+       */
 
-        if (
-          event.key !== 'Enter' &&
-          event.key !== ' '
-        ) {
-          return;
+      if (
+        button.dataset.acoesToggleReady === '1'
+      ) {
+        syncToggleButton(
+          button,
+          input
+        );
+
+        return;
+      }
+
+
+      button.dataset.acoesToggleReady = '1';
+
+
+      /*
+       * Estado inicial.
+       */
+
+      syncToggleButton(
+        button,
+        input
+      );
+
+
+      /*
+       * Clique.
+       */
+
+      button.addEventListener(
+        'click',
+        (event) => {
+
+          event.preventDefault();
+
+          input.checked =
+            !input.checked;
+
+          syncToggleButton(
+            button,
+            input
+          );
+
+
+          /*
+           * Dispara change para qualquer
+           * código externo que esteja a ouvir
+           * os checkboxes.
+           */
+
+          input.dispatchEvent(
+            new Event(
+              'change',
+              {
+                bubbles: true
+              }
+            )
+          );
         }
+      );
 
-        event.preventDefault();
-
-        input.checked = !input.checked;
-
-        syncToggleButton(button, input);
-
-        input.dispatchEvent(
-          new Event('change', {
-            bubbles: true
-          })
-        );
-      });
 
       /*
-        Se outro código alterar diretamente
-        o checkbox, o botão acompanha.
-      */
-      input.addEventListener('change', () => {
-        syncToggleButton(button, input);
-      });
+       * Alteração externa do checkbox.
+       */
+
+      input.addEventListener(
+        'change',
+        () => {
+
+          syncToggleButton(
+            button,
+            input
+          );
+        }
+      );
     });
   }
 
 
-  function syncToggleButton(button, input) {
+  function syncToggleButton(
+    button,
+    input
+  ) {
 
-    const active = !!input.checked;
+    const active =
+      input.checked === true;
+
 
     button.setAttribute(
       'aria-pressed',
-      active ? 'true' : 'false'
+      active
+        ? 'true'
+        : 'false'
     );
+
 
     button.classList.toggle(
       'active',
       active
     );
-
-    /*
-      Não substituímos o texto original do botão.
-      Apenas acrescentamos o indicador visual.
-    */
-
-    let check =
-      button.querySelector(
-        '.acao-toggle-check'
-      );
-
-    if (!check) {
-
-      check =
-        document.createElement('span');
-
-      check.className =
-        'acao-toggle-check';
-
-      check.setAttribute(
-        'aria-hidden',
-        'true'
-      );
-
-      button.appendChild(check);
-    }
-
-    check.textContent =
-      active ? '✓' : '';
   }
 
 
-  /* =========================================================
-     ESTILO DOS BOTÕES
-  ========================================================= */
-
-  function installToggleStyles() {
-
-    if ($('acoes-toggle-style')) {
-      return;
-    }
-
-    const style =
-      document.createElement('style');
-
-    style.id =
-      'acoes-toggle-style';
-
-    style.textContent = `
-
-      .acao-toggle {
-
-        position: relative;
-
-        display: inline-flex;
-
-        align-items: center;
-
-        justify-content: center;
-
-        gap: 9px;
-
-        min-height: 44px;
-
-        padding: 10px 15px;
-
-        border: 1px solid #e1d8e8;
-
-        border-radius: 12px;
-
-        background: #ffffff;
-
-        color: #51247a;
-
-        font-family: inherit;
-
-        font-size: 14px;
-
-        font-weight: 700;
-
-        line-height: 1.2;
-
-        cursor: pointer;
-
-        box-sizing: border-box;
-
-        transition:
-          background .18s ease,
-          border-color .18s ease,
-          color .18s ease,
-          box-shadow .18s ease,
-          transform .18s ease;
-      }
-
-
-      .acao-toggle:hover {
-
-        border-color: #cfa81a;
-
-        transform: translateY(-1px);
-
-        box-shadow:
-          0 4px 10px rgba(0,0,0,.07);
-      }
-
-
-      .acao-toggle:focus-visible {
-
-        outline: 3px solid rgba(207,168,26,.28);
-
-        outline-offset: 2px;
-      }
-
-
-      .acao-toggle[aria-pressed="true"],
-      .acao-toggle.active {
-
-        background: #cfa81a !important;
-
-        border-color: #cfa81a !important;
-
-        color: #ffffff !important;
-
-        box-shadow:
-          0 5px 14px rgba(0,0,0,.10);
-      }
-
-
-      .acao-toggle-check {
-
-        display: inline-flex;
-
-        align-items: center;
-
-        justify-content: center;
-
-        width: 21px;
-
-        height: 21px;
-
-        border: 1px solid currentColor;
-
-        border-radius: 50%;
-
-        font-size: 12px;
-
-        font-weight: 800;
-
-        line-height: 1;
-
-        flex: 0 0 21px;
-
-        box-sizing: border-box;
-      }
-
-
-      .acao-toggle[aria-pressed="true"]
-      .acao-toggle-check {
-
-        border-color:
-          rgba(255,255,255,.85);
-
-        background:
-          rgba(255,255,255,.15);
-      }
-
-
-      /*
-        Se o HTML utilizar a grelha .acoes-options,
-        mantemos os quatro botões organizados.
-      */
-
-      .acoes-options {
-
-        display: grid;
-
-        grid-template-columns:
-          repeat(2, minmax(220px, 1fr));
-
-        gap: 10px;
-
-        width: 100%;
-      }
-
-
-      @media (max-width: 720px) {
-
-        .acoes-options {
-
-          grid-template-columns: 1fr;
-        }
-      }
-
-
-      /*
-        Os checkboxes originais continuam a existir
-        para a lógica do formulário, mas ficam escondidos.
-      */
-
-      #acao-ativa,
-      #acao-aberta,
-      #acao-pagamento,
-      #acao-comprovativo {
-
-        display: none !important;
-      }
-
-    `;
-
-    document.head.appendChild(style);
-  }
-
-
-  /* =========================================================
-     INICIALIZAÇÃO VISUAL
-  ========================================================= */
-
-  function setupAcoesInterface() {
-
-    installToggleStyles();
-
-    setupToggleButtons();
-  }
-
-
-  /* =========================================================
-     EXCEL
-  ========================================================= */
-
-  async function loadXlsx() {
-
-    if (window.XLSX) {
-      return window.XLSX;
-    }
-
-    await new Promise((resolve, reject) => {
-
-      const script =
-        document.createElement('script');
-
-      script.src =
-        'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-
-      script.onload = resolve;
-
-      script.onerror = () => reject(
-        new Error(
-          'Não foi possível carregar o módulo Excel.'
-        )
-      );
-
-      document.head.appendChild(script);
-    });
-
-    return window.XLSX;
-  }
-
-
-  /* =========================================================
+  /* ============================================================
      FORMULÁRIO
-  ========================================================= */
+  ============================================================ */
 
   function resetForm() {
 
-    const form = $('acao-form');
+    const form =
+      $('acao-form');
 
     if (form) {
       form.reset();
     }
 
+
     if ($('acao-id')) {
       $('acao-id').value = '';
     }
 
+
     if ($('acao-valor')) {
       $('acao-valor').value = '0';
     }
+
+
+    /*
+     * Estado inicial recomendado:
+     *
+     * atividade ativa
+     * inscrições fechadas
+     * pagamento não obrigatório
+     * comprovativo não obrigatório
+     */
+
+    if ($('acao-ativa')) {
+      $('acao-ativa').checked = false;
+    }
+
+    if ($('acao-aberta')) {
+      $('acao-aberta').checked = false;
+    }
+
+    if ($('acao-pagamento')) {
+      $('acao-pagamento').checked = false;
+    }
+
+    if ($('acao-comprovativo')) {
+      $('acao-comprovativo').checked = false;
+    }
+
 
     if ($('acoes-form-title')) {
       $('acoes-form-title').textContent =
         'Criar nova atividade';
     }
 
+
     if ($('acao-save')) {
       $('acao-save').textContent =
         'Criar atividade';
+
+      $('acao-save').disabled =
+        false;
     }
+
 
     if ($('acao-cancel-edit')) {
-      $('acao-cancel-edit').hidden = true;
+      $('acao-cancel-edit').hidden =
+        true;
     }
 
-    setupAcoesInterface();
+
+    setupToggleButtons();
   }
 
 
-  function fillForm(action) {
+  function editAction(action) {
+
+    if (!action) {
+      return;
+    }
+
 
     if ($('acao-id')) {
       $('acao-id').value =
         action.id || '';
     }
 
+
     if ($('acao-titulo')) {
       $('acao-titulo').value =
         action.titulo || '';
     }
+
 
     if ($('acao-local')) {
       $('acao-local').value =
         action.local || '';
     }
 
+
     if ($('acao-data')) {
       $('acao-data').value =
         action.data || '';
     }
 
+
     if ($('acao-hora')) {
       $('acao-hora').value =
         action.hora
-          ? String(action.hora).slice(0, 5)
+          ? String(action.hora)
+              .substring(0, 5)
           : '';
     }
 
+
     if ($('acao-prazo')) {
-      $('acao-prazo').value =
-        action.prazo_inscricao
-          ? new Date(
-              action.prazo_inscricao
+
+      if (action.prazo_inscricao) {
+
+        const date =
+          new Date(
+            action.prazo_inscricao
+          );
+
+        if (!Number.isNaN(date.getTime())) {
+
+          /*
+           * datetime-local precisa do
+           * formato YYYY-MM-DDTHH:mm.
+           */
+
+          const local =
+            new Date(
+              date.getTime() -
+              date.getTimezoneOffset() * 60000
             )
               .toISOString()
-              .slice(0, 16)
-          : '';
+              .slice(0, 16);
+
+          $('acao-prazo').value =
+            local;
+        } else {
+          $('acao-prazo').value = '';
+        }
+
+      } else {
+
+        $('acao-prazo').value = '';
+      }
     }
+
 
     if ($('acao-limite')) {
       $('acao-limite').value =
-        action.limite_inscricoes ?? '';
+        action.limite_inscricoes ??
+        '';
     }
+
 
     if ($('acao-valor')) {
       $('acao-valor').value =
-        action.valor ?? 0;
+        action.valor ??
+        0;
     }
+
 
     if ($('acao-ativa')) {
       $('acao-ativa').checked =
-        !!action.ativa;
+        action.ativa === true;
     }
+
 
     if ($('acao-aberta')) {
       $('acao-aberta').checked =
-        !!action.inscricoes_abertas;
+        action.inscricoes_abertas === true;
     }
+
 
     if ($('acao-pagamento')) {
       $('acao-pagamento').checked =
-        !!action.pagamento_obrigatorio;
+        action.pagamento_obrigatorio === true;
     }
+
 
     if ($('acao-comprovativo')) {
       $('acao-comprovativo').checked =
-        !!action.comprovativo_obrigatorio;
+        action.comprovativo_obrigatorio === true;
     }
+
 
     if ($('acao-descricao')) {
       $('acao-descricao').value =
         action.descricao || '';
     }
 
+
     if ($('acoes-form-title')) {
       $('acoes-form-title').textContent =
-        `Editar: ${action.titulo}`;
+        `Editar: ${action.titulo || 'atividade'}`;
     }
+
 
     if ($('acao-save')) {
       $('acao-save').textContent =
         'Guardar alterações';
+
+      $('acao-save').disabled =
+        false;
     }
+
 
     if ($('acao-cancel-edit')) {
       $('acao-cancel-edit').hidden =
         false;
     }
 
-    setupAcoesInterface();
 
-    document
-      .querySelector('#panel-acoes')
+    setupToggleButtons();
+
+
+    /*
+     * Leva o administrador até ao formulário.
+     */
+
+    $('panel-acoes')
       ?.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
@@ -574,52 +564,370 @@
   }
 
 
-  /* =========================================================
+  /* ============================================================
+     VALIDAÇÃO DO FORMULÁRIO
+  ============================================================ */
+
+  function readActionForm() {
+
+    const titulo =
+      $('acao-titulo')
+        ?.value
+        ?.trim();
+
+
+    if (!titulo) {
+
+      throw new Error(
+        'Indica o nome da atividade.'
+      );
+    }
+
+
+    const pagamento =
+      $('acao-pagamento')
+        ?.checked === true;
+
+
+    const comprovativo =
+      $('acao-comprovativo')
+        ?.checked === true;
+
+
+    if (
+      comprovativo &&
+      !pagamento
+    ) {
+
+      throw new Error(
+        'O comprovativo só pode ser obrigatório quando o pagamento é obrigatório.'
+      );
+    }
+
+
+    const limiteRaw =
+      $('acao-limite')
+        ?.value
+        ?.trim();
+
+
+    let limite = null;
+
+    if (limiteRaw) {
+
+      limite =
+        Number(limiteRaw);
+
+      if (
+        !Number.isInteger(limite) ||
+        limite <= 0
+      ) {
+
+        throw new Error(
+          'O limite de inscrições tem de ser um número inteiro positivo.'
+        );
+      }
+    }
+
+
+    const valorRaw =
+      $('acao-valor')
+        ?.value
+        ?.trim();
+
+
+    const valor =
+      pagamento
+        ? Number(valorRaw || 0)
+        : 0;
+
+
+    if (
+      !Number.isFinite(valor) ||
+      valor < 0
+    ) {
+
+      throw new Error(
+        'O valor da atividade não é válido.'
+      );
+    }
+
+
+    let prazo = null;
+
+    const prazoRaw =
+      $('acao-prazo')
+        ?.value
+        ?.trim();
+
+
+    if (prazoRaw) {
+
+      const date =
+        new Date(prazoRaw);
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        throw new Error(
+          'O prazo de inscrição não é válido.'
+        );
+      }
+
+      prazo =
+        date.toISOString();
+    }
+
+
+    const ativa =
+      $('acao-ativa')
+        ?.checked === true;
+
+
+    let inscricoesAbertas =
+      $('acao-aberta')
+        ?.checked === true;
+
+
+    /*
+     * Uma atividade inativa não pode
+     * ter inscrições abertas.
+     */
+
+    if (!ativa) {
+      inscricoesAbertas = false;
+    }
+
+
+    return {
+
+      titulo,
+
+      descricao:
+        $('acao-descricao')
+          ?.value
+          ?.trim() ||
+        null,
+
+      local:
+        $('acao-local')
+          ?.value
+          ?.trim() ||
+        null,
+
+      data:
+        $('acao-data')
+          ?.value ||
+        null,
+
+      hora:
+        $('acao-hora')
+          ?.value ||
+        null,
+
+      prazo_inscricao:
+        prazo,
+
+      limite_inscricoes:
+        limite,
+
+      ativa,
+
+      inscricoes_abertas:
+        inscricoesAbertas,
+
+      pagamento_obrigatorio:
+        pagamento,
+
+      valor,
+
+      comprovativo_obrigatorio:
+        pagamento &&
+        comprovativo
+    };
+  }
+
+
+  /* ============================================================
+     CRIAR / EDITAR
+  ============================================================ */
+
+  async function saveAction(event) {
+
+    if (event) {
+      event.preventDefault();
+    }
+
+
+    hideResult();
+
+
+    const saveButton =
+      $('acao-save');
+
+
+    if (saveButton) {
+      saveButton.disabled = true;
+    }
+
+
+    try {
+
+      const client =
+        createSupabaseClient();
+
+
+      const id =
+        $('acao-id')
+          ?.value
+          ?.trim() ||
+        null;
+
+
+      const payload =
+        readActionForm();
+
+
+      if (id) {
+
+        /*
+         * EDIÇÃO
+         */
+
+        const {
+          error
+        } =
+          await client
+            .from('acoes')
+            .update(payload)
+            .eq(
+              'id',
+              id
+            );
+
+
+        if (error) {
+          throw error;
+        }
+
+
+        showResult(
+          'Atividade atualizada com sucesso.'
+        );
+
+      } else {
+
+        /*
+         * CRIAÇÃO
+         */
+
+        const {
+          error
+        } =
+          await client
+            .from('acoes')
+            .insert(payload);
+
+
+        if (error) {
+          throw error;
+        }
+
+
+        showResult(
+          'Atividade criada com sucesso.'
+        );
+      }
+
+
+      resetForm();
+
+      await loadActions();
+
+    } catch (error) {
+
+      fail(error);
+
+    } finally {
+
+      if (saveButton) {
+        saveButton.disabled =
+          false;
+      }
+    }
+  }
+
+
+  /* ============================================================
      CARREGAR ATIVIDADES
-  ========================================================= */
+  ============================================================ */
 
   async function loadActions() {
+
+    const client =
+      createSupabaseClient();
+
+
+    const list =
+      $('acoes-admin-list');
+
+
+    if (list) {
+
+      list.innerHTML =
+        '<div class="admin-loading">A carregar…</div>';
+    }
+
 
     const {
       data,
       error
-    } = await state.sb
-      .from('acoes')
-      .select('*')
-      .order(
-        'created_at',
-        {
-          ascending: false
-        }
-      );
+    } =
+      await client
+        .from('acoes')
+        .select('*')
+        .order(
+          'created_at',
+          {
+            ascending: false
+          }
+        );
+
 
     if (error) {
       throw error;
     }
 
+
     state.actions =
       data || [];
+
 
     renderActions();
   }
 
 
-  /* =========================================================
-     RENDERIZAR ATIVIDADES
-  ========================================================= */
+  /* ============================================================
+     RENDER DAS ATIVIDADES
+  ============================================================ */
 
   function renderActions() {
 
-    const root =
+    const list =
       $('acoes-admin-list');
 
-    if (!root) {
+
+    if (!list) {
       return;
     }
 
+
     if (!state.actions.length) {
 
-      root.innerHTML =
+      list.innerHTML =
         `
           <div class="acao-empty">
             Ainda não existem atividades criadas.
@@ -629,346 +937,442 @@
       return;
     }
 
-    root.innerHTML =
-      state.actions.map(action => {
 
-        const payment =
-          action.pagamento_obrigatorio
-            ? `Pagamento: ${money(action.valor)}`
-            : 'Sem pagamento';
+    list.innerHTML =
+      state.actions
+        .map(
+          renderActionCard
+        )
+        .join('');
 
-        return `
 
-          <article class="acao-admin-item">
+    bindActionButtons();
+  }
 
-            <div class="acao-admin-item-head">
 
-              <div>
+  function renderActionCard(action) {
 
-                <h4>
-                  ${esc(action.titulo)}
-                </h4>
+    const payment =
+      action.pagamento_obrigatorio
+        ? `Pagamento: ${money(action.valor)}`
+        : 'Sem pagamento';
 
-                <div class="acao-admin-meta">
 
-                  <span>
-                    📅 ${datePt(action.data)}
-                  </span>
+    const activeClass =
+      action.ativa
+        ? 'ok'
+        : '';
 
-                  ${
-                    action.hora
-                      ? `
-                        <span>
-                          🕐 ${esc(
-                            String(
-                              action.hora
-                            ).slice(0, 5)
-                          )}
-                        </span>
-                      `
-                      : ''
-                  }
 
-                  ${
-                    action.local
-                      ? `
-                        <span>
-                          📍 ${esc(action.local)}
-                        </span>
-                      `
-                      : ''
-                  }
+    const openClass =
+      action.inscricoes_abertas
+        ? 'ok'
+        : '';
 
-                  <span>
-                    💶 ${esc(payment)}
-                  </span>
 
-                  ${
-                    action.limite_inscricoes
-                      ? `
-                        <span>
-                          👥 Limite:
-                          ${esc(
-                            action.limite_inscricoes
-                          )}
-                        </span>
-                      `
-                      : ''
-                  }
+    return `
+      <article
+        class="acao-admin-item"
+        data-action-id="${esc(action.id)}"
+      >
 
-                </div>
+        <div class="acao-admin-item-head">
 
-              </div>
+          <div>
 
-              <div class="acao-badges">
+            <h4>
+              ${esc(action.titulo)}
+            </h4>
 
-                <span
-                  class="
-                    acao-badge
-                    ${action.ativa ? 'ok' : ''}
-                  "
-                >
-                  ${
-                    action.ativa
-                      ? 'Ativa'
-                      : 'Inativa'
-                  }
-                </span>
+            <div class="acao-admin-meta">
 
-                <span
-                  class="
-                    acao-badge
-                    ${
-                      action.inscricoes_abertas
-                        ? 'ok'
-                        : ''
-                    }
-                  "
-                >
-                  ${
-                    action.inscricoes_abertas
-                      ? 'Inscrições abertas'
-                      : 'Inscrições fechadas'
-                  }
-                </span>
+              <span>
+                📅 ${datePt(action.data)}
+              </span>
 
-                ${
-                  action.comprovativo_obrigatorio
-                    ? `
-                      <span
-                        class="acao-badge warn"
-                      >
-                        Comprovativo obrigatório
-                      </span>
-                    `
-                    : ''
-                }
-
-              </div>
-
-            </div>
-
-            <p class="acao-admin-description">
               ${
-                esc(
-                  action.descricao ||
-                  'Sem descrição.'
-                )
+                action.hora
+                  ? `
+                    <span>
+                      🕐 ${esc(
+                        String(
+                          action.hora
+                        ).substring(0, 5)
+                      )}
+                    </span>
+                  `
+                  : ''
               }
-            </p>
 
-            <div class="acao-admin-buttons">
+              ${
+                action.local
+                  ? `
+                    <span>
+                      📍 ${esc(
+                        action.local
+                      )}
+                    </span>
+                  `
+                  : ''
+              }
 
-              <button
-                type="button"
-                class="admin-small-btn primary"
-                data-action-edit="${esc(action.id)}"
-              >
-                Editar
-              </button>
+              <span>
+                💶 ${esc(payment)}
+              </span>
 
-              <button
-                type="button"
-                class="admin-small-btn"
-                data-action-toggle="${esc(action.id)}"
-              >
-                ${
-                  action.ativa
-                    ? 'Desativar'
-                    : 'Ativar'
-                }
-              </button>
-
-              <button
-                type="button"
-                class="admin-small-btn"
-                data-action-open="${esc(action.id)}"
-              >
-                ${
-                  action.inscricoes_abertas
-                    ? 'Fechar inscrições'
-                    : 'Abrir inscrições'
-                }
-              </button>
-
-              <button
-                type="button"
-                class="admin-small-btn"
-                data-action-registrations="${esc(action.id)}"
-              >
-                Ver inscritos
-              </button>
-
-              <button
-                type="button"
-                class="admin-small-btn"
-                data-action-export="${esc(action.id)}"
-              >
-                Exportar Excel
-              </button>
+              ${
+                action.limite_inscricoes
+                  ? `
+                    <span>
+                      👥 Limite:
+                      ${esc(
+                        action.limite_inscricoes
+                      )}
+                    </span>
+                  `
+                  : ''
+              }
 
             </div>
 
-            <div
-              id="acao-inscricoes-${esc(action.id)}"
-              class="acao-inscricoes-wrap"
-              hidden
-            ></div>
-
-          </article>
-        `;
-      }).join('');
+          </div>
 
 
-    /*
-      EDITAR
-    */
+          <div class="acao-badges">
 
-    root
+            <span
+              class="acao-badge ${activeClass}"
+            >
+              ${
+                action.ativa
+                  ? 'Ativa'
+                  : 'Inativa'
+              }
+            </span>
+
+
+            <span
+              class="acao-badge ${openClass}"
+            >
+              ${
+                action.inscricoes_abertas
+                  ? 'Inscrições abertas'
+                  : 'Inscrições fechadas'
+              }
+            </span>
+
+
+            ${
+              action.pagamento_obrigatorio
+                ? `
+                  <span class="acao-badge">
+                    Pagamento
+                  </span>
+                `
+                : ''
+            }
+
+
+            ${
+              action.comprovativo_obrigatorio
+                ? `
+                  <span class="acao-badge warn">
+                    Comprovativo obrigatório
+                  </span>
+                `
+                : ''
+            }
+
+          </div>
+
+        </div>
+
+
+        <p class="acao-admin-description">
+          ${
+            esc(
+              action.descricao ||
+              'Sem descrição.'
+            )
+          }
+        </p>
+
+
+        <div class="acao-admin-buttons">
+
+          <button
+            type="button"
+            class="admin-small-btn primary"
+            data-action-edit="${esc(action.id)}"
+          >
+            Editar
+          </button>
+
+
+          <button
+            type="button"
+            class="admin-small-btn"
+            data-action-toggle="${esc(action.id)}"
+          >
+            ${
+              action.ativa
+                ? 'Desativar'
+                : 'Ativar'
+            }
+          </button>
+
+
+          <button
+            type="button"
+            class="admin-small-btn"
+            data-action-open="${esc(action.id)}"
+          >
+            ${
+              action.inscricoes_abertas
+                ? 'Fechar inscrições'
+                : 'Abrir inscrições'
+            }
+          </button>
+
+
+          <button
+            type="button"
+            class="admin-small-btn"
+            data-action-registrations="${esc(action.id)}"
+          >
+            Ver inscritos
+          </button>
+
+
+          <button
+            type="button"
+            class="admin-small-btn"
+            data-action-export="${esc(action.id)}"
+          >
+            Exportar Excel
+          </button>
+
+        </div>
+
+
+        <div
+          id="acao-inscricoes-${esc(action.id)}"
+          class="acao-inscricoes-wrap"
+          hidden
+        ></div>
+
+      </article>
+    `;
+  }
+
+
+  /* ============================================================
+     BOTÕES DAS ATIVIDADES
+  ============================================================ */
+
+  function bindActionButtons() {
+
+
+    document
       .querySelectorAll(
         '[data-action-edit]'
       )
-      .forEach(btn => {
+      .forEach((button) => {
 
-        btn.onclick = () => {
+        button.addEventListener(
+          'click',
+          () => {
 
-          const action =
-            state.actions.find(
-              a =>
-                a.id ===
-                btn.dataset.actionEdit
-            );
+            const action =
+              state.actions.find(
+                (item) =>
+                  String(item.id) ===
+                  String(
+                    button.dataset.actionEdit
+                  )
+              );
 
-          if (action) {
-            fillForm(action);
+
+            if (action) {
+              editAction(action);
+            }
           }
-        };
+        );
       });
 
 
-    /*
-      ATIVAR / DESATIVAR
-    */
-
-    root
+    document
       .querySelectorAll(
         '[data-action-toggle]'
       )
-      .forEach(btn => {
+      .forEach((button) => {
 
-        btn.onclick = () =>
-          toggleAction(
-            btn.dataset.actionToggle,
-            'ativa'
-          );
+        button.addEventListener(
+          'click',
+          () => {
+
+            toggleAction(
+              button.dataset.actionToggle,
+              'ativa'
+            );
+          }
+        );
       });
 
 
-    /*
-      ABRIR / FECHAR
-    */
-
-    root
+    document
       .querySelectorAll(
         '[data-action-open]'
       )
-      .forEach(btn => {
+      .forEach((button) => {
 
-        btn.onclick = () =>
-          toggleAction(
-            btn.dataset.actionOpen,
-            'inscricoes_abertas'
-          );
+        button.addEventListener(
+          'click',
+          () => {
+
+            toggleAction(
+              button.dataset.actionOpen,
+              'inscricoes_abertas'
+            );
+          }
+        );
       });
 
 
-    /*
-      INSCRITOS
-    */
-
-    root
+    document
       .querySelectorAll(
         '[data-action-registrations]'
       )
-      .forEach(btn => {
+      .forEach((button) => {
 
-        btn.onclick = () =>
-          toggleRegistrations(
-            btn.dataset.actionRegistrations
-          );
+        button.addEventListener(
+          'click',
+          () => {
+
+            toggleRegistrations(
+              button.dataset.actionRegistrations
+            );
+          }
+        );
       });
 
 
-    /*
-      EXPORTAR
-    */
-
-    root
+    document
       .querySelectorAll(
         '[data-action-export]'
       )
-      .forEach(btn => {
+      .forEach((button) => {
 
-        btn.onclick = () =>
-          exportRegistrations(
-            btn.dataset.actionExport
-          );
+        button.addEventListener(
+          'click',
+          () => {
+
+            exportRegistrations(
+              button.dataset.actionExport
+            );
+          }
+        );
       });
   }
 
 
-  /* =========================================================
+  /* ============================================================
      ATIVAR / DESATIVAR
-  ========================================================= */
+  ============================================================ */
 
   async function toggleAction(
-    id,
+    actionId,
     field
   ) {
 
     try {
 
+      const client =
+        createSupabaseClient();
+
+
       const action =
         state.actions.find(
-          a => a.id === id
+          (item) =>
+            String(item.id) ===
+            String(actionId)
         );
 
+
       if (!action) {
-        return;
+
+        throw new Error(
+          'Atividade não encontrada.'
+        );
       }
 
-      const next =
-        !action[field];
 
-      const payload = {
+      const next =
+        !Boolean(
+          action[field]
+        );
+
+
+      const update = {
         [field]: next
       };
 
+
+      /*
+       * Se a atividade for desativada,
+       * fechamos também as inscrições.
+       */
+
       if (
         field === 'ativa' &&
-        !next
+        next === false
       ) {
-        payload.inscricoes_abertas =
+
+        update.inscricoes_abertas =
           false;
       }
 
+
+      /*
+       * Não é possível abrir inscrições
+       * numa atividade inativa.
+       */
+
+      if (
+        field === 'inscricoes_abertas' &&
+        next === true &&
+        action.ativa !== true
+      ) {
+
+        throw new Error(
+          'A atividade tem de estar ativa antes de abrir as inscrições.'
+        );
+      }
+
+
       const {
         error
-      } = await state.sb
-        .from('acoes')
-        .update(payload)
-        .eq('id', id);
+      } =
+        await client
+          .from('acoes')
+          .update(update)
+          .eq(
+            'id',
+            actionId
+          );
+
 
       if (error) {
         throw error;
       }
+
 
       showResult(
         field === 'ativa'
           ? (
               next
                 ? 'Atividade ativada.'
-                : 'Atividade desativada.'
+                : 'Atividade desativada e inscrições fechadas.'
             )
           : (
               next
@@ -977,193 +1381,828 @@
             )
       );
 
+
       await loadActions();
 
     } catch (error) {
 
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
+      fail(error);
     }
   }
 
 
-  /* =========================================================
-     GUARDAR ATIVIDADE
-  ========================================================= */
+  /* ============================================================
+     INSCRIÇÕES
+  ============================================================ */
 
-  async function saveAction(event) {
+  async function loadRegistrations(
+    actionId
+  ) {
 
-    event.preventDefault();
+    const client =
+      createSupabaseClient();
 
-    hideResult();
 
-    const button =
-      $('acao-save');
+    const {
+      data,
+      error
+    } =
+      await client
+        .from('acoes_inscricoes')
+        .select(`
+          id,
+          acao_id,
+          socio_id,
+          data_inscricao,
+          estado,
+          pagamento_confirmado,
+          comprovativo_path,
+          comprovativo_nome,
+          observacoes,
+          socios(
+            numero_socio,
+            nome,
+            email,
+            telemovel
+          ),
+          acoes(
+            titulo,
+            data,
+            hora,
+            local,
+            valor,
+            pagamento_obrigatorio
+          )
+        `)
+        .eq(
+          'acao_id',
+          actionId
+        )
+        .order(
+          'data_inscricao',
+          {
+            ascending: false
+          }
+        );
 
-    if (button) {
-      button.disabled = true;
+
+    if (error) {
+      throw error;
     }
+
+
+    return data || [];
+  }
+
+
+  async function toggleRegistrations(
+    actionId
+  ) {
+
+    const container =
+      $(
+        `acao-inscricoes-${actionId}`
+      );
+
+
+    if (!container) {
+      return;
+    }
+
+
+    if (!container.hidden) {
+
+      container.hidden =
+        true;
+
+      return;
+    }
+
+
+    container.hidden =
+      false;
+
+
+    container.innerHTML =
+      `
+        <div class="admin-loading">
+          A carregar inscrições…
+        </div>
+      `;
+
 
     try {
 
-      const id =
-        $('acao-id')?.value ||
-        null;
-
-      const pagamento =
-        !!$('acao-pagamento')?.checked;
-
-      const comprovativo =
-        !!$('acao-comprovativo')?.checked;
-
-      if (
-        comprovativo &&
-        !pagamento
-      ) {
-
-        throw new Error(
-          'O comprovativo só pode ser obrigatório quando existe pagamento.'
-        );
-      }
-
-      const payload = {
-
-        titulo:
-          $('acao-titulo')
-            ?.value
-            .trim(),
-
-        descricao:
-          $('acao-descricao')
-            ?.value
-            .trim() ||
-          null,
-
-        local:
-          $('acao-local')
-            ?.value
-            .trim() ||
-          null,
-
-        data:
-          $('acao-data')?.value ||
-          null,
-
-        hora:
-          $('acao-hora')?.value ||
-          null,
-
-        prazo_inscricao:
-          $('acao-prazo')?.value
-            ? new Date(
-                $('acao-prazo').value
-              ).toISOString()
-            : null,
-
-        limite_inscricoes:
-          $('acao-limite')?.value
-            ? Number(
-                $('acao-limite').value
-              )
-            : null,
-
-        ativa:
-          !!$('acao-ativa')?.checked,
-
-        inscricoes_abertas:
-          !!$('acao-aberta')?.checked,
-
-        pagamento_obrigatorio:
-          pagamento,
-
-        valor:
-          pagamento
-            ? Number(
-                $('acao-valor')?.value ||
-                0
-              )
-            : 0,
-
-        comprovativo_obrigatorio:
-          pagamento &&
-          comprovativo
-      };
-
-      if (!payload.titulo) {
-
-        throw new Error(
-          'Indica o nome da atividade.'
-        );
-      }
-
-      if (id) {
-
-        const {
-          error
-        } = await state.sb
-          .from('acoes')
-          .update(payload)
-          .eq('id', id);
-
-        if (error) {
-          throw error;
-        }
-
-        showResult(
-          'Atividade atualizada com sucesso.'
+      const rows =
+        await loadRegistrations(
+          actionId
         );
 
-      } else {
 
-        const {
-          error
-        } = await state.sb
-          .from('acoes')
-          .insert(payload);
+      state.registrations.set(
+        String(actionId),
+        rows
+      );
 
-        if (error) {
-          throw error;
-        }
 
-        showResult(
-          'Atividade criada com sucesso.'
-        );
-      }
-
-      resetForm();
-
-      await loadActions();
+      renderRegistrations(
+        container,
+        rows
+      );
 
     } catch (error) {
 
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
-
-    } finally {
-
-      if (button) {
-        button.disabled = false;
-      }
+      container.innerHTML =
+        `
+          <div class="admin-result error">
+            ${esc(
+              error?.message ||
+              String(error)
+            )}
+          </div>
+        `;
     }
   }
 
 
-  /* =========================================================
-     INSCRIÇÕES
-  ========================================================= */
+  /* ============================================================
+     RENDER INSCRIÇÕES
+  ============================================================ */
 
-  async function getRegistrations(
+  function renderRegistrations(
+    container,
+    rows
+  ) {
+
+    if (!rows.length) {
+
+      container.innerHTML =
+        `
+          <div class="acao-empty">
+            Ainda não existem inscrições nesta atividade.
+          </div>
+        `;
+
+      return;
+    }
+
+
+    container.innerHTML =
+      `
+        <table class="acao-inscricoes-table">
+
+          <thead>
+
+            <tr>
+              <th>Nº</th>
+              <th>Sócio</th>
+              <th>Inscrito em</th>
+              <th>Pagamento</th>
+              <th>Comprovativo</th>
+              <th>Estado</th>
+              <th>Gestão</th>
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            ${
+              rows
+                .map(
+                  renderRegistrationRow
+                )
+                .join('')
+            }
+
+          </tbody>
+
+        </table>
+      `;
+
+
+    /*
+     * Comprovativos.
+     */
+
+    container
+      .querySelectorAll(
+        '[data-proof]'
+      )
+      .forEach((button) => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            openProof(
+              button.dataset.proof
+            );
+          }
+        );
+      });
+
+
+    /*
+     * Estado.
+     */
+
+    container
+      .querySelectorAll(
+        '[data-state]'
+      )
+      .forEach((select) => {
+
+        select.addEventListener(
+          'change',
+          () => {
+
+            changeRegistrationState(
+              select.dataset.state,
+              select.value
+            );
+          }
+        );
+      });
+
+
+    /*
+     * Pagamento.
+     */
+
+    container
+      .querySelectorAll(
+        '[data-pay]'
+      )
+      .forEach((button) => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            confirmPayment(
+              button.dataset.pay
+            );
+          }
+        );
+      });
+  }
+
+
+  function renderRegistrationRow(
+    row
+  ) {
+
+    const paymentRequired =
+      row.acoes
+        ?.pagamento_obrigatorio === true;
+
+
+    const paymentConfirmed =
+      row.pagamento_confirmado === true;
+
+
+    return `
+      <tr>
+
+        <td>
+          ${esc(
+            row.socios
+              ?.numero_socio ??
+            ''
+          )}
+        </td>
+
+
+        <td>
+
+          <strong>
+            ${esc(
+              row.socios
+                ?.nome ??
+              ''
+            )}
+          </strong>
+
+          ${
+            row.socios?.email
+              ? `
+                <br>
+                <span class="acao-small-note">
+                  ${esc(
+                    row.socios.email
+                  )}
+                </span>
+              `
+              : ''
+          }
+
+        </td>
+
+
+        <td>
+          ${dateTimePt(
+            row.data_inscricao
+          )}
+        </td>
+
+
+        <td>
+
+          ${
+            !paymentRequired
+
+              ? 'Sem pagamento'
+
+              : (
+                  paymentConfirmed
+                    ? '✅ Confirmado'
+                    : '⏳ Pendente'
+                )
+          }
+
+        </td>
+
+
+        <td>
+
+          ${
+            row.comprovativo_path
+
+              ? `
+                <button
+                  type="button"
+                  class="admin-small-btn"
+                  data-proof="${esc(row.id)}"
+                >
+                  Abrir
+                </button>
+              `
+
+              : '—'
+          }
+
+        </td>
+
+
+        <td>
+
+          <span
+            class="
+              acao-status
+              acao-status-${esc(
+                row.estado ||
+                'pendente'
+              )}
+            "
+          >
+            ${esc(
+              row.estado ||
+              'pendente'
+            )}
+          </span>
+
+        </td>
+
+
+        <td>
+
+          <select
+            class="acao-state"
+            data-state="${esc(row.id)}"
+          >
+
+            ${renderStateOptions(
+              row.estado
+            )}
+
+          </select>
+
+
+          ${
+            paymentRequired &&
+            !paymentConfirmed
+
+              ? `
+                <button
+                  type="button"
+                  class="admin-small-btn primary"
+                  data-pay="${esc(row.id)}"
+                >
+                  Confirmar pagamento
+                </button>
+              `
+
+              : ''
+          }
+
+        </td>
+
+      </tr>
+    `;
+  }
+
+
+  function renderStateOptions(
+    current
+  ) {
+
+    const states = [
+      'pendente',
+      'confirmada',
+      'cancelada',
+      'rejeitada'
+    ];
+
+
+    return states
+      .map(
+        (status) =>
+          `
+            <option
+              value="${status}"
+              ${
+                String(current || 'pendente') ===
+                status
+                  ? 'selected'
+                  : ''
+              }
+            >
+              ${status}
+            </option>
+          `
+      )
+      .join('');
+  }
+
+
+  /* ============================================================
+     ALTERAR ESTADO DA INSCRIÇÃO
+  ============================================================ */
+
+  async function changeRegistrationState(
+    registrationId,
+    estado
+  ) {
+
+    try {
+
+      const client =
+        createSupabaseClient();
+
+
+      const {
+        error
+      } =
+        await client
+          .from('acoes_inscricoes')
+          .update({
+            estado
+          })
+          .eq(
+            'id',
+            registrationId
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      showResult(
+        'Estado da inscrição atualizado.'
+      );
+
+
+      /*
+       * Atualiza os dados em memória.
+       */
+
+      for (
+        const rows
+        of state.registrations.values()
+      ) {
+
+        const row =
+          rows.find(
+            (item) =>
+              String(item.id) ===
+              String(registrationId)
+          );
+
+
+        if (row) {
+          row.estado =
+            estado;
+        }
+      }
+
+    } catch (error) {
+
+      fail(error);
+    }
+  }
+
+
+  /* ============================================================
+     CONFIRMAR PAGAMENTO
+  ============================================================ */
+
+  async function confirmPayment(
+    registrationId
+  ) {
+
+    try {
+
+      const client =
+        createSupabaseClient();
+
+
+      const {
+        error
+      } =
+        await client
+          .from('acoes_inscricoes')
+          .update({
+            pagamento_confirmado: true,
+            estado: 'confirmada'
+          })
+          .eq(
+            'id',
+            registrationId
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      showResult(
+        'Pagamento confirmado e inscrição marcada como confirmada.'
+      );
+
+
+      /*
+       * Descobrir a atividade à qual
+       * pertence a inscrição.
+       */
+
+      let actionId = null;
+
+
+      for (
+        const [
+          key,
+          rows
+        ]
+        of state.registrations.entries()
+      ) {
+
+        if (
+          rows.some(
+            (row) =>
+              String(row.id) ===
+              String(registrationId)
+          )
+        ) {
+
+          actionId =
+            key;
+
+          break;
+        }
+      }
+
+
+      if (actionId) {
+
+        const container =
+          $(
+            `acao-inscricoes-${actionId}`
+          );
+
+
+        if (
+          container &&
+          !container.hidden
+        ) {
+
+          const rows =
+            await loadRegistrations(
+              actionId
+            );
+
+
+          state.registrations.set(
+            String(actionId),
+            rows
+          );
+
+
+          renderRegistrations(
+            container,
+            rows
+          );
+        }
+      }
+
+    } catch (error) {
+
+      fail(error);
+    }
+  }
+
+
+  /* ============================================================
+     COMPROVATIVO
+  ============================================================ */
+
+  async function openProof(
+    registrationId
+  ) {
+
+    try {
+
+      const client =
+        createSupabaseClient();
+
+
+      let row = null;
+
+
+      for (
+        const rows
+        of state.registrations.values()
+      ) {
+
+        row =
+          rows.find(
+            (item) =>
+              String(item.id) ===
+              String(registrationId)
+          );
+
+
+        if (row) {
+          break;
+        }
+      }
+
+
+      if (
+        !row ||
+        !row.comprovativo_path
+      ) {
+
+        throw new Error(
+          'Comprovativo não encontrado.'
+        );
+      }
+
+
+      /*
+       * O caminho depende do bucket utilizado
+       * pela área de Ações.
+       *
+       * Primeiro tentamos o bucket específico.
+       */
+
+      const buckets = [
+        'comprovativos-acoes',
+        'comprovativos'
+      ];
+
+
+      let signedUrl = null;
+      let lastError = null;
+
+
+      for (
+        const bucket
+        of buckets
+      ) {
+
+        try {
+
+          const {
+            data,
+            error
+          } =
+            await client.storage
+              .from(bucket)
+              .createSignedUrl(
+                row.comprovativo_path,
+                300
+              );
+
+
+          if (
+            !error &&
+            data?.signedUrl
+          ) {
+
+            signedUrl =
+              data.signedUrl;
+
+            break;
+          }
+
+
+          lastError =
+            error;
+
+        } catch (error) {
+
+          lastError =
+            error;
+        }
+      }
+
+
+      if (!signedUrl) {
+
+        throw (
+          lastError ||
+          new Error(
+            'Não foi possível abrir o comprovativo.'
+          )
+        );
+      }
+
+
+      window.open(
+        signedUrl,
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+    } catch (error) {
+
+      fail(error);
+    }
+  }
+
+
+  /* ============================================================
+     EXCEL
+  ============================================================ */
+
+  async function loadXlsx() {
+
+    if (window.XLSX) {
+      return window.XLSX;
+    }
+
+
+    await new Promise(
+      (resolve, reject) => {
+
+        const script =
+          document.createElement(
+            'script'
+          );
+
+
+        script.src =
+          'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+
+
+        script.onload =
+          resolve;
+
+
+        script.onerror =
+          () =>
+            reject(
+              new Error(
+                'Não foi possível carregar o módulo Excel.'
+              )
+            );
+
+
+        document.head.appendChild(
+          script
+        );
+      }
+    );
+
+
+    return window.XLSX;
+  }
+
+
+  async function getAllRegistrations(
     actionId = null
   ) {
 
+    const client =
+      createSupabaseClient();
+
+
     let query =
-      state.sb
+      client
         .from('acoes_inscricoes')
         .select(`
           id,
@@ -1197,6 +2236,7 @@
           }
         );
 
+
     if (actionId) {
 
       query =
@@ -1206,526 +2246,140 @@
         );
     }
 
+
     const {
       data,
       error
-    } = await query;
+    } =
+      await query;
+
 
     if (error) {
       throw error;
     }
 
+
     return data || [];
   }
 
 
-  async function toggleRegistrations(
-    actionId
+  function registrationToExcelRow(
+    row
   ) {
 
-    const root =
-      $(
-        `acao-inscricoes-${actionId}`
-      );
+    return {
 
-    if (!root) {
-      return;
-    }
+      'Nº Sócio':
+        row.socios
+          ?.numero_socio ??
+        '',
 
-    if (!root.hidden) {
+      'Nome':
+        row.socios
+          ?.nome ??
+        '',
 
-      root.hidden = true;
+      'Email':
+        row.socios
+          ?.email ??
+        '',
 
-      return;
-    }
+      'Telemóvel':
+        row.socios
+          ?.telemovel ??
+        '',
 
-    root.hidden = false;
+      'Atividade':
+        row.acoes
+          ?.titulo ??
+        '',
 
-    root.innerHTML =
-      `
-        <div class="admin-loading">
-          A carregar inscrições…
-        </div>
-      `;
+      'Data da atividade':
+        row.acoes
+          ?.data ??
+        '',
 
-    try {
+      'Hora':
+        row.acoes?.hora
+          ? String(
+              row.acoes.hora
+            ).substring(0, 5)
+          : '',
 
-      const rows =
-        await getRegistrations(
-          actionId
-        );
+      'Local':
+        row.acoes
+          ?.local ??
+        '',
 
-      state.registrations.set(
-        actionId,
-        rows
-      );
+      'Data da inscrição':
+        row.data_inscricao
+          ? new Date(
+              row.data_inscricao
+            ).toLocaleString(
+              'pt-PT'
+            )
+          : '',
 
-      renderRegistrations(
-        root,
-        rows
-      );
+      'Valor (€)':
+        row.acoes
+          ?.pagamento_obrigatorio
+          ? Number(
+              row.acoes.valor ||
+              0
+            )
+          : 0,
 
-    } catch (error) {
+      'Pagamento obrigatório':
+        row.acoes
+          ?.pagamento_obrigatorio
+          ? 'Sim'
+          : 'Não',
 
-      root.innerHTML =
-        `
-          <div class="admin-result error">
-            ${esc(
-              error.message ||
-              String(error)
-            )}
-          </div>
-        `;
-    }
+      'Pagamento confirmado':
+        row.pagamento_confirmado
+          ? 'Sim'
+          : 'Não',
+
+      'Comprovativo':
+        row.comprovativo_nome ||
+        '',
+
+      'Estado':
+        row.estado ||
+        'pendente',
+
+      'Observações':
+        row.observacoes ||
+        ''
+    };
   }
 
 
-  /* =========================================================
-     MOSTRAR INSCRIÇÕES
-  ========================================================= */
-
-  function renderRegistrations(
-    root,
-    rows
+  function safeFilename(
+    text
   ) {
 
-    if (!rows.length) {
-
-      root.innerHTML =
-        `
-          <div class="acao-empty">
-            Ainda não existem inscrições.
-          </div>
-        `;
-
-      return;
-    }
-
-    root.innerHTML = `
-
-      <table class="acao-inscricoes-table">
-
-        <thead>
-
-          <tr>
-            <th>Nº</th>
-            <th>Sócio</th>
-            <th>Inscrito em</th>
-            <th>Pagamento</th>
-            <th>Comprovativo</th>
-            <th>Estado</th>
-            <th>Gestão</th>
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          ${
-            rows.map(row => {
-
-              const paid =
-                !!row.pagamento_confirmado;
-
-              const needsPayment =
-                !!row.acoes
-                  ?.pagamento_obrigatorio;
-
-              return `
-
-                <tr>
-
-                  <td>
-                    ${esc(
-                      row.socios
-                        ?.numero_socio
-                    )}
-                  </td>
-
-                  <td>
-
-                    <strong>
-                      ${esc(
-                        row.socios
-                          ?.nome
-                      )}
-                    </strong>
-
-                    <br>
-
-                    <span class="acao-small-note">
-                      ${esc(
-                        row.socios
-                          ?.email ||
-                        ''
-                      )}
-                    </span>
-
-                  </td>
-
-                  <td>
-                    ${dateTimePt(
-                      row.data_inscricao
-                    )}
-                  </td>
-
-                  <td>
-
-                    ${
-                      needsPayment
-                        ? (
-                            paid
-                              ? '✅ Confirmado'
-                              : '⏳ Pendente'
-                          )
-                        : 'Sem pagamento'
-                    }
-
-                  </td>
-
-                  <td>
-
-                    ${
-                      row.comprovativo_path
-
-                        ? `
-                          <button
-                            type="button"
-                            class="admin-small-btn"
-                            data-proof="${esc(row.id)}"
-                          >
-                            Abrir
-                          </button>
-                        `
-
-                        : '—'
-                    }
-
-                  </td>
-
-                  <td>
-
-                    <span
-                      class="
-                        acao-status
-                        acao-status-${esc(
-                          row.estado
-                        )}
-                      "
-                    >
-                      ${esc(
-                        row.estado
-                      )}
-                    </span>
-
-                  </td>
-
-                  <td>
-
-                    <select
-                      class="acao-state"
-                      data-state="${esc(row.id)}"
-                    >
-
-                      ${
-                        [
-                          'pendente',
-                          'confirmada',
-                          'cancelada',
-                          'rejeitada'
-                        ]
-                        .map(
-                          status =>
-                            `
-                              <option
-                                value="${status}"
-                                ${
-                                  row.estado === status
-                                    ? 'selected'
-                                    : ''
-                                }
-                              >
-                                ${status}
-                              </option>
-                            `
-                        )
-                        .join('')
-                      }
-
-                    </select>
-
-                    ${
-                      needsPayment &&
-                      !paid
-
-                        ? `
-                          <button
-                            type="button"
-                            class="admin-small-btn primary"
-                            data-pay="${esc(row.id)}"
-                          >
-                            Confirmar pagamento
-                          </button>
-                        `
-
-                        : ''
-                    }
-
-                  </td>
-
-                </tr>
-              `;
-
-            }).join('')
-          }
-
-        </tbody>
-
-      </table>
-    `;
-
-
-    root
-      .querySelectorAll(
-        '[data-proof]'
+    return String(
+      text ||
+      'todas'
+    )
+      .normalize('NFD')
+      .replace(
+        /[\u0300-\u036f]/g,
+        ''
       )
-      .forEach(btn => {
-
-        btn.onclick =
-          () =>
-            openProof(
-              btn.dataset.proof
-            );
-      });
-
-
-    root
-      .querySelectorAll(
-        '[data-state]'
+      .replace(
+        /[^a-zA-Z0-9]+/g,
+        '-'
       )
-      .forEach(select => {
-
-        select.onchange =
-          () =>
-            changeRegistrationState(
-              select.dataset.state,
-              select.value
-            );
-      });
-
-
-    root
-      .querySelectorAll(
-        '[data-pay]'
+      .replace(
+        /^-+|-+$/g,
+        ''
       )
-      .forEach(btn => {
-
-        btn.onclick =
-          () =>
-            confirmPayment(
-              btn.dataset.pay
-            );
-      });
+      .toLowerCase() ||
+      'todas';
   }
 
-
-  /* =========================================================
-     COMPROVATIVO
-  ========================================================= */
-
-  async function openProof(
-    registrationId
-  ) {
-
-    try {
-
-      const rows =
-        [
-          ...state.registrations.values()
-        ].flat();
-
-      const row =
-        rows.find(
-          r =>
-            r.id ===
-            registrationId
-        );
-
-      if (
-        !row?.comprovativo_path
-      ) {
-
-        throw new Error(
-          'Comprovativo não encontrado.'
-        );
-      }
-
-      const {
-        data,
-        error
-      } =
-        await state.sb.storage
-          .from(
-            'comprovativos-acoes'
-          )
-          .createSignedUrl(
-            row.comprovativo_path,
-            300
-          );
-
-      if (error) {
-        throw error;
-      }
-
-      window.open(
-        data.signedUrl,
-        '_blank',
-        'noopener,noreferrer'
-      );
-
-    } catch (error) {
-
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
-    }
-  }
-
-
-  /* =========================================================
-     ALTERAR ESTADO
-  ========================================================= */
-
-  async function changeRegistrationState(
-    id,
-    estado
-  ) {
-
-    try {
-
-      const {
-        error
-      } =
-        await state.sb
-          .from(
-            'acoes_inscricoes'
-          )
-          .update({
-            estado
-          })
-          .eq(
-            'id',
-            id
-          );
-
-      if (error) {
-        throw error;
-      }
-
-      showResult(
-        'Estado da inscrição atualizado.'
-      );
-
-    } catch (error) {
-
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
-    }
-  }
-
-
-  /* =========================================================
-     CONFIRMAR PAGAMENTO
-  ========================================================= */
-
-  async function confirmPayment(
-    id
-  ) {
-
-    try {
-
-      const {
-        error
-      } =
-        await state.sb
-          .from(
-            'acoes_inscricoes'
-          )
-          .update({
-            pagamento_confirmado: true,
-            estado: 'confirmada'
-          })
-          .eq(
-            'id',
-            id
-          );
-
-      if (error) {
-        throw error;
-      }
-
-      showResult(
-        'Pagamento confirmado e inscrição marcada como confirmada.'
-      );
-
-      const row =
-        [
-          ...state.registrations.values()
-        ]
-        .flat()
-        .find(
-          r =>
-            r.id === id
-        );
-
-      if (row) {
-
-        const root =
-          $(
-            `acao-inscricoes-${row.acao_id}`
-          );
-
-        if (
-          root &&
-          !root.hidden
-        ) {
-
-          const rows =
-            await getRegistrations(
-              row.acao_id
-            );
-
-          state.registrations.set(
-            row.acao_id,
-            rows
-          );
-
-          renderRegistrations(
-            root,
-            rows
-          );
-        }
-      }
-
-    } catch (error) {
-
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
-    }
-  }
-
-
-  /* =========================================================
-     EXPORTAR EXCEL
-  ========================================================= */
 
   async function exportRegistrations(
     actionId = null
@@ -1736,10 +2390,12 @@
       const XLSX =
         await loadXlsx();
 
+
       const rows =
-        await getRegistrations(
+        await getAllRegistrations(
           actionId
         );
+
 
       if (!rows.length) {
 
@@ -1748,155 +2404,81 @@
         );
       }
 
-      const data =
+
+      const excelRows =
         rows.map(
-          row => ({
-
-            'Nº Sócio':
-              row.socios
-                ?.numero_socio ??
-              '',
-
-            'Nome':
-              row.socios
-                ?.nome ??
-              '',
-
-            'Email':
-              row.socios
-                ?.email ??
-              '',
-
-            'Telemóvel':
-              row.socios
-                ?.telemovel ??
-              '',
-
-            'Atividade':
-              row.acoes
-                ?.titulo ??
-              '',
-
-            'Data da atividade':
-              row.acoes
-                ?.data ??
-              '',
-
-            'Hora':
-              row.acoes?.hora
-                ? String(
-                    row.acoes.hora
-                  ).slice(0, 5)
-                : '',
-
-            'Local':
-              row.acoes
-                ?.local ??
-              '',
-
-            'Data da inscrição':
-              row.data_inscricao
-                ? new Date(
-                    row.data_inscricao
-                  ).toLocaleString(
-                    'pt-PT'
-                  )
-                : '',
-
-            'Valor (€)':
-              row.acoes
-                ?.pagamento_obrigatorio
-                ? Number(
-                    row.acoes?.valor ||
-                    0
-                  )
-                : 0,
-
-            'Pagamento confirmado':
-              row.pagamento_confirmado
-                ? 'Sim'
-                : 'Não',
-
-            'Comprovativo':
-              row.comprovativo_nome ||
-              '',
-
-            'Estado':
-              row.estado ||
-              '',
-
-            'Observações':
-              row.observacoes ||
-              ''
-          })
+          registrationToExcelRow
         );
 
-      const ws =
+
+      const worksheet =
         XLSX.utils.json_to_sheet(
-          data
+          excelRows
         );
 
-      ws['!cols'] =
-        Object.keys(
-          data[0]
-        ).map(
-          key => ({
-            wch:
-              Math.min(
-                42,
-                Math.max(
-                  14,
-                  key.length + 4
-                )
-              )
-          })
-        );
 
-      const wb =
+      /*
+       * Larguras das colunas.
+       */
+
+      worksheet['!cols'] = [
+        { wch: 12 },
+        { wch: 30 },
+        { wch: 34 },
+        { wch: 16 },
+        { wch: 30 },
+        { wch: 18 },
+        { wch: 10 },
+        { wch: 24 },
+        { wch: 22 },
+        { wch: 14 },
+        { wch: 20 },
+        { wch: 22 },
+        { wch: 28 },
+        { wch: 16 },
+        { wch: 35 }
+      ];
+
+
+      const workbook =
         XLSX.utils.book_new();
 
+
       XLSX.utils.book_append_sheet(
-        wb,
-        ws,
+        workbook,
+        worksheet,
         'Inscrições'
       );
+
 
       const action =
         actionId
           ? state.actions.find(
-              a =>
-                a.id ===
-                actionId
+              (item) =>
+                String(item.id) ===
+                String(actionId)
             )
           : null;
 
-      const safe =
-        (action?.titulo || 'todas')
-          .normalize('NFD')
-          .replace(
-            /[\u0300-\u036f]/g,
-            ''
-          )
-          .replace(
-            /[^a-zA-Z0-9]+/g,
-            '-'
-          )
-          .replace(
-            /^-|-$/g,
-            ''
-          )
-          .toLowerCase();
 
-      XLSX.writeFile(
-        wb,
+      const filename =
         `inscricoes-${
-          safe || 'todas'
+          safeFilename(
+            action?.titulo ||
+            'todas'
+          )
         }-${
           new Date()
             .toISOString()
             .slice(0, 10)
-        }.xlsx`
+        }.xlsx`;
+
+
+      XLSX.writeFile(
+        workbook,
+        filename
       );
+
 
       showResult(
         'Ficheiro Excel exportado com sucesso.'
@@ -1904,80 +2486,54 @@
 
     } catch (error) {
 
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
+      fail(error);
     }
   }
 
 
-  /* =========================================================
+  /* ============================================================
      INICIALIZAÇÃO
-  ========================================================= */
+  ============================================================ */
 
-  async function init() {
+  function bindEvents() {
+
 
     /*
-      IMPORTANTE:
-      Não criamos a aba Ações aqui.
+     * Formulário.
+     */
 
-      A aba já existe no admin.html
-      e é controlada pelo admin.js principal.
-
-      Este ficheiro trata apenas do conteúdo
-      e dos botões da função Ações.
-    */
-
-    setupAcoesInterface();
-
-    const module =
-      $('acoes-admin-module');
-
-    if (!module) {
-      return;
-    }
-
-    /*
-      Utiliza a ligação Supabase já criada
-      pelo administrador.
-    */
-
-    state.sb =
-      window.__NAF_SUPABASE ||
-      window.supabaseClient;
-
-    if (!state.sb) {
-
-      showResult(
-        'Ligação ao Supabase ainda não está disponível. Atualiza a página.',
-        'error'
-      );
-
-      return;
-    }
+    const form =
+      $('acao-form');
 
 
-    /* FORMULÁRIO */
+    if (form) {
 
-    $('acao-form')
-      ?.addEventListener(
+      form.addEventListener(
         'submit',
         saveAction
       );
+    }
 
 
-    /* CANCELAR */
+    /*
+     * Cancelar edição.
+     */
 
     $('acao-cancel-edit')
       ?.addEventListener(
         'click',
-        resetForm
+        () => {
+
+          resetForm();
+
+          hideResult();
+        }
       );
 
 
-    /* ATUALIZAR */
+    /*
+     * Atualizar atividades.
+     */
 
     $('acoes-refresh')
       ?.addEventListener(
@@ -1985,6 +2541,8 @@
         async () => {
 
           try {
+
+            hideResult();
 
             await loadActions();
 
@@ -1994,47 +2552,72 @@
 
           } catch (error) {
 
-            showResult(
-              error.message ||
-              String(error),
-              'error'
-            );
+            fail(error);
           }
         }
       );
 
 
-    /* EXPORTAR TODAS */
+    /*
+     * Exportar todas.
+     */
 
     $('acoes-export-all')
       ?.addEventListener(
         'click',
-        () =>
-          exportRegistrations(null)
+        () => {
+
+          exportRegistrations(
+            null
+          );
+        }
       );
 
 
-    /* CARREGAR ATIVIDADES */
+    /*
+     * Botões dos quatro estados.
+     */
+
+    setupToggleButtons();
+  }
+
+
+  async function init() {
+
+    /*
+     * Não fazemos nada se esta página não
+     * tiver a área Ações.
+     *
+     * Isto permite que o ficheiro seja carregado
+     * sem interferir com outras páginas.
+     */
+
+    if (
+      !$('panel-acoes') ||
+      !$('acoes-admin-module')
+    ) {
+      return;
+    }
+
 
     try {
+
+      createSupabaseClient();
+
+      bindEvents();
 
       await loadActions();
 
     } catch (error) {
 
-      showResult(
-        error.message ||
-        String(error),
-        'error'
-      );
+      fail(error);
     }
   }
 
 
-  /*
-    O ficheiro é carregado com defer,
-    mas mantemos DOMContentLoaded para segurança.
-  */
+  /* ============================================================
+     ARRANQUE
+  ============================================================ */
 
   if (
     document.readyState ===
