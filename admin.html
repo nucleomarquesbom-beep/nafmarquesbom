@@ -353,11 +353,15 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
               <input id="acao-valor" type="number" min="0" step="0.01" value="0">
             </label>
 
-            <div class="acoes-options">
-              <label><input id="acao-ativa" type="checkbox"> Atividade ativa</label>
-              <label><input id="acao-aberta" type="checkbox"> Inscrições abertas</label>
-              <label><input id="acao-pagamento" type="checkbox"> Pagamento obrigatório</label>
-              <label><input id="acao-comprovativo" type="checkbox"> Comprovativo obrigatório</label>
+            <div class="acoes-options" aria-label="Opções da atividade">
+              <button type="button" class="acao-toggle" data-toggle="acao-ativa" aria-pressed="false">Atividade ativa</button>
+              <button type="button" class="acao-toggle" data-toggle="acao-aberta" aria-pressed="false">Inscrições abertas</button>
+              <button type="button" class="acao-toggle" data-toggle="acao-pagamento" aria-pressed="false">Pagamento obrigatório</button>
+              <button type="button" class="acao-toggle" data-toggle="acao-comprovativo" aria-pressed="false">Comprovativo obrigatório</button>
+              <input id="acao-ativa" type="checkbox" hidden>
+              <input id="acao-aberta" type="checkbox" hidden>
+              <input id="acao-pagamento" type="checkbox" hidden>
+              <input id="acao-comprovativo" type="checkbox" hidden>
             </div>
 
             <label class="wide"><span>Descrição</span>
