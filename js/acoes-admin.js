@@ -59,10 +59,30 @@
     return window.XLSX;
   }
 
+  function syncToggleButtons() {
+    document.querySelectorAll('[data-toggle]').forEach(button => {
+      const input = $(button.dataset.toggle);
+      if (!input) return;
+      const active = !!input.checked;
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
+  function setToggle(id, value) {
+    const input = $(id);
+    if (!input) return;
+    input.checked = !!value;
+    syncToggleButtons();
+  }
+
   function resetForm() {
     $('acao-form').reset();
     $('acao-id').value = '';
     $('acao-valor').value = '0';
+    setToggle('acao-ativa', false);
+    setToggle('acao-aberta', false);
+    setToggle('acao-pagamento', false);
+    setToggle('acao-comprovativo', false);
     $('acoes-form-title').textContent = 'Criar nova atividade';
     $('acao-save').textContent = 'Criar atividade';
     $('acao-cancel-edit').hidden = true;
@@ -79,10 +99,10 @@
       : '';
     $('acao-limite').value = action.limite_inscricoes ?? '';
     $('acao-valor').value = action.valor ?? 0;
-    $('acao-ativa').checked = !!action.ativa;
-    $('acao-aberta').checked = !!action.inscricoes_abertas;
-    $('acao-pagamento').checked = !!action.pagamento_obrigatorio;
-    $('acao-comprovativo').checked = !!action.comprovativo_obrigatorio;
+    setToggle('acao-ativa', action.ativa);
+    setToggle('acao-aberta', action.inscricoes_abertas);
+    setToggle('acao-pagamento', action.pagamento_obrigatorio);
+    setToggle('acao-comprovativo', action.comprovativo_obrigatorio);
     $('acao-descricao').value = action.descricao || '';
 
     $('acoes-form-title').textContent = `Editar: ${action.titulo}`;
@@ -530,6 +550,17 @@
       showResult('Ligação ao Supabase ainda não está disponível. Atualiza a página.', 'error');
       return;
     }
+
+    document.querySelectorAll('[data-toggle]').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = $(button.dataset.toggle);
+        if (!input) return;
+        input.checked = !input.checked;
+        syncToggleButtons();
+      });
+    });
+
+    syncToggleButtons();
 
     $('acao-form')?.addEventListener('submit', saveAction);
 
