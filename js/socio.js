@@ -1595,10 +1595,6 @@ async function init() {
 
     $('#logout-btn')?.addEventListener('click', logout);
 
-    $('#photo-trigger')?.addEventListener('click', () => {
-        $('#photo-input')?.click();
-    });
-
     $('#photo-input')?.addEventListener('change', async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
