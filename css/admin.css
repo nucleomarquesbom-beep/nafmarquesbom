@@ -1,99 +1,991 @@
-/* Extensão administrativa — layout consolidado. */
-.admin-modern{margin-top:34px;width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
-.admin-modern *{box-sizing:border-box}
-.admin-page-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:20px}
-.admin-page-head h1{color:var(--roxo);font-size:42px;margin:8px 0}
-.admin-modern .admin-help{color:#666;font-size:14px;margin:0 0 18px}
-.admin-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin:24px 0}
-.admin-kpi{background:#fff;border-top:4px solid var(--dourado);border-radius:18px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.07)}
-.admin-kpi span{display:block;color:#666;font-size:13px}
-.admin-kpi strong{display:block;color:var(--roxo);font-size:32px;margin-top:5px}
-.admin-card{background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.07);border-top:4px solid var(--dourado);margin-bottom:22px}
-.admin-card h2,.admin-card h3{color:var(--roxo)}
-.admin-card h3{font-size:24px;margin-bottom:6px}
-.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
-.admin-tab,.admin-small-btn{border:0;border-radius:999px;padding:11px 16px;background:#eee;color:var(--roxo);font-weight:700;cursor:pointer}
-.admin-tab.active{background:var(--roxo);color:#fff}
-.admin-tab-panel{display:none}
-.admin-tab-panel.active{display:block}
-.admin-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
-.admin-toolbar input,.admin-toolbar select,.admin-form-grid input,.admin-form-grid textarea,.admin-form-grid select{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:12px;font:inherit;background:#fff}
-.admin-search{flex:1;min-width:220px}
-.admin-filter{width:170px!important}
-.admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
-.admin-small-btn.primary{background:var(--dourado);color:#111}
-.admin-small-btn.danger{background:#f8d7da;color:#842029}
-.admin-table-wrap{overflow:auto;border:1px solid #eee;border-radius:14px}
-.admin-table{width:100%;border-collapse:collapse;min-width:1080px}
-.admin-table th,.admin-table td{padding:12px 13px;text-align:left;border-bottom:1px solid #eee;font-size:14px;vertical-align:middle}
-.admin-table th{background:#faf8fb;color:var(--roxo);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-.admin-table tr:last-child td{border-bottom:0}
-.admin-table tr:hover td{background:#fcfbfd}
-.admin-check{width:18px;height:18px;accent-color:var(--roxo)}
-.admin-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.admin-form-grid .wide{grid-column:1/-1}
-.admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-weight:600;color:#444;font-size:14px}
-.admin-form-grid textarea{min-height:130px;resize:vertical}
-.admin-file{border:2px dashed #d8c8dd;border-radius:14px;padding:18px;background:#fbf8fc}
-.admin-result{margin-top:15px;padding:12px 14px;border-radius:12px;background:#f4f0f6;color:#4c3158}
-.admin-result.success{background:#d1e7dd;color:#0f5132}
-.admin-result.error{background:#f8d7da;color:#842029}
-.admin-preview{margin-top:16px;max-height:320px;overflow:auto;border:1px solid #eee;border-radius:12px}
-.admin-preview-row{display:grid;grid-template-columns:30px 90px 1fr 1fr;gap:10px;padding:10px 12px;border-bottom:1px solid #eee;align-items:center;font-size:13px}
-.admin-preview-row:last-child{border-bottom:0}
-.admin-selected-count{font-weight:700;color:var(--roxo);margin:8px 0 12px}
-.admin-import-note,.admin-inline-note{font-size:12px;color:#777}
-.admin-danger-box{background:#fff8f8;border:1px solid #f0c8cc;border-radius:14px;padding:14px;margin:15px 0}
-.admin-badge{display:inline-flex;align-items:center;gap:6px;background:#f4edf7;color:var(--roxo);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
-.admin-progress{height:8px;background:#eee;border-radius:20px;overflow:hidden;margin-top:10px}
-.admin-progress span{display:block;height:100%;width:0;background:var(--dourado);transition:width .2s}
-.admin-card-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
-.admin-subsection{border-top:1px solid #eee;margin-top:24px;padding-top:22px}
-.member-actions{white-space:nowrap}
-.member-actions .admin-small-btn{padding:8px 11px;font-size:12px}
-.quota-debt{display:flex;flex-direction:column;gap:2px}
-.quota-debt strong{color:#a33;font-size:15px}
-.quota-debt span{color:#777;font-size:11px}
-.quota-ok{color:#18794e;font-weight:700}
-.status-ok{display:inline-block;background:#e6f6ee;color:#18794e;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700}
-.status-off{display:inline-block;background:#f2f2f2;color:#666;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700}
-.admin-permission-row{display:grid;grid-template-columns:90px 1fr 1.4fr 150px auto;gap:12px;align-items:center}
-.manual-quota{margin-top:24px}
-.manual-quota-result{margin-top:14px}
+/* =========================================================
+   ADMINISTRAÇÃO — ESTILOS GERAIS
+   Núcleo de Árbitros de Futebol Marques Bom
 
-.admin-excel-socios-panel{background:linear-gradient(180deg,#fff,#fcf9fd)}
-.admin-excel-format{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
-.admin-excel-format>div{border:1px solid #eee;border-radius:12px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:3px}
-.admin-excel-format strong{color:var(--roxo)}
-.admin-excel-format span{font-size:11px;color:#777}
-.admin-excel-upload{margin-top:12px}
-.admin-excel-progress-row{display:flex;align-items:center;gap:12px;margin-top:14px}
-.admin-excel-progress-row progress{width:260px;height:10px}
-.admin-excel-progress-row span{font-size:12px;color:#666}
-.admin-excel-socios-preview{max-height:360px}
-.admin-excel-preview-row{display:grid;grid-template-columns:90px minmax(180px,1fr) minmax(220px,1fr) 140px;gap:12px;padding:10px 12px;border-bottom:1px solid #eee;align-items:center;font-size:13px}
-.admin-excel-preview-row.admin-excel-error{grid-template-columns:90px 1fr;background:#fff7f7;color:#842029}
-.admin-excel-panel{margin-top:24px}
-.admin-legacy-hidden{display:none!important}
+   Este ficheiro controla a estrutura visual geral da
+   Administração.
 
-@media(max-width:1100px){
-  .admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .admin-modern{max-width:100%}
+   As regras específicas de Ações estão em:
+   css/acoes.css
+
+   IMPORTANTE:
+   Nenhuma aba individual deve ter CSS próprio neste ficheiro.
+========================================================= */
+
+
+/* =========================================================
+   PÁGINA ADMINISTRATIVA
+========================================================= */
+
+.admin-modern {
+  width: 100%;
+  max-width: 1400px;
+
+  margin: 34px auto 0;
 }
-@media(max-width:800px){
-  .admin-excel-format{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .admin-excel-preview-row{grid-template-columns:70px 1fr;gap:6px}
-  .admin-excel-preview-row span:nth-child(3),.admin-excel-preview-row span:nth-child(4){grid-column:2}
-  .admin-page-head{align-items:flex-start}
+
+.admin-modern * {
+  box-sizing: border-box;
 }
-@media(max-width:620px){
-  .admin-kpis{grid-template-columns:1fr}
-  .admin-page-head{flex-direction:column;align-items:stretch}
-  .admin-form-grid{grid-template-columns:1fr}
-  .admin-form-grid .wide{grid-column:auto}
-  .admin-card{padding:18px;border-radius:16px}
-  .admin-toolbar .admin-small-btn{width:100%}
-  .admin-excel-format{grid-template-columns:1fr}
-  .admin-excel-progress-row{align-items:flex-start;flex-direction:column}
-  .admin-excel-progress-row progress{width:100%}
+
+
+/* =========================================================
+   CABEÇALHO
+========================================================= */
+
+.admin-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+}
+
+.admin-page-head h1 {
+  margin: 8px 0;
+
+  color: var(--roxo);
+
+  font-size: 42px;
+}
+
+.admin-modern .admin-help {
+  margin: 0 0 18px;
+
+  color: #666;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   INDICADORES
+========================================================= */
+
+.admin-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin: 24px 0;
+}
+
+.admin-kpi {
+  background: #fff;
+
+  border-top: 4px solid var(--dourado);
+  border-radius: 18px;
+
+  padding: 20px;
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.admin-kpi span {
+  display: block;
+
+  color: #666;
+
+  font-size: 13px;
+}
+
+.admin-kpi strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: var(--roxo);
+
+  font-size: 32px;
+}
+
+
+/* =========================================================
+   CARTÕES ADMINISTRATIVOS
+========================================================= */
+
+.admin-card {
+  background: #fff;
+
+  border-top: 4px solid var(--dourado);
+  border-radius: 20px;
+
+  padding: 24px;
+
+  margin-bottom: 22px;
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.admin-card h2,
+.admin-card h3 {
+  color: var(--roxo);
+}
+
+.admin-card h3 {
+  margin-bottom: 6px;
+
+  font-size: 24px;
+}
+
+
+/* =========================================================
+   BARRA DE NAVEGAÇÃO DA ADMINISTRAÇÃO
+
+   Todas as abas utilizam exatamente as mesmas regras.
+
+   Não existe nenhuma exceção para:
+   - Ações
+   - Drº Árbitro
+   - Fun&Learn
+   - Questões
+   - etc.
+========================================================= */
+
+.admin-tabs {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  width: 100%;
+
+  margin: 22px 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: thin;
+
+  padding-bottom: 3px;
+}
+
+
+/* =========================================================
+   TODAS AS ABAS
+========================================================= */
+
+.admin-tab {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+
+  padding: 11px 16px;
+
+  border: 0;
+  border-radius: 999px;
+
+  background: #eee;
+
+  color: var(--roxo);
+
+  font: inherit;
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.08s ease;
+}
+
+
+/* Hover */
+
+.admin-tab:hover {
+  background: #e6e1e8;
+}
+
+
+/* Clique */
+
+.admin-tab:active {
+  transform: translateY(1px);
+}
+
+
+/* Foco */
+
+.admin-tab:focus-visible {
+  outline: 3px solid rgba(201, 157, 23, 0.25);
+  outline-offset: 2px;
+}
+
+
+/* Aba ativa */
+
+.admin-tab.active {
+  background: var(--roxo);
+
+  color: #fff;
+
+  box-shadow:
+    0 4px 12px rgba(81, 35, 122, 0.18);
+}
+
+
+/* =========================================================
+   PAINÉIS DAS ABAS
+========================================================= */
+
+.admin-tab-panel {
+  display: none;
+}
+
+.admin-tab-panel.active {
+  display: block;
+}
+
+
+/* =========================================================
+   BOTÕES ADMINISTRATIVOS
+========================================================= */
+
+.admin-small-btn {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+
+  padding: 11px 16px;
+
+  border: 0;
+  border-radius: 999px;
+
+  background: #eee;
+
+  color: var(--roxo);
+
+  font: inherit;
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  cursor: pointer;
+
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.08s ease;
+}
+
+.admin-small-btn:hover {
+  background: #e6e1e8;
+}
+
+.admin-small-btn:active {
+  transform: translateY(1px);
+}
+
+.admin-small-btn:focus-visible {
+  outline: 3px solid rgba(201, 157, 23, 0.25);
+  outline-offset: 2px;
+}
+
+.admin-small-btn.primary {
+  background: var(--dourado);
+
+  color: #111;
+}
+
+.admin-small-btn.danger {
+  background: #f8d7da;
+
+  color: #842029;
+}
+
+
+/* =========================================================
+   BARRAS DE FERRAMENTAS
+========================================================= */
+
+.admin-toolbar {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+
+  margin: 18px 0;
+}
+
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.admin-toolbar input,
+.admin-toolbar select,
+.admin-form-grid input,
+.admin-form-grid textarea,
+.admin-form-grid select {
+  width: 100%;
+
+  padding: 12px 14px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: #fff;
+
+  font: inherit;
+}
+
+.admin-search {
+  flex: 1;
+
+  min-width: 220px;
+}
+
+.admin-filter {
+  width: 170px !important;
+}
+
+
+/* =========================================================
+   FORMULÁRIOS
+========================================================= */
+
+.admin-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+.admin-form-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.admin-form-grid label {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+
+  color: #444;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-form-grid textarea {
+  min-height: 130px;
+
+  resize: vertical;
+}
+
+
+/* =========================================================
+   GRUPOS DE BOTÕES
+========================================================= */
+
+.admin-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin-top: 15px;
+}
+
+
+/* =========================================================
+   RESULTADOS / MENSAGENS
+========================================================= */
+
+.admin-result {
+  margin-top: 15px;
+
+  padding: 12px 14px;
+
+  border-radius: 12px;
+
+  background: #f4f0f6;
+
+  color: #4c3158;
+}
+
+.admin-result.success {
+  background: #d1e7dd;
+
+  color: #0f5132;
+}
+
+.admin-result.error {
+  background: #f8d7da;
+
+  color: #842029;
+}
+
+
+/* =========================================================
+   PREVIEW
+========================================================= */
+
+.admin-preview {
+  margin-top: 16px;
+
+  max-height: 320px;
+
+  overflow: auto;
+
+  border: 1px solid #eee;
+  border-radius: 12px;
+}
+
+.admin-preview-row {
+  display: grid;
+
+  grid-template-columns:
+    30px 90px 1fr 1fr;
+
+  gap: 10px;
+
+  align-items: center;
+
+  padding: 10px 12px;
+
+  border-bottom: 1px solid #eee;
+
+  font-size: 13px;
+}
+
+.admin-preview-row:last-child {
+  border-bottom: 0;
+}
+
+
+/* =========================================================
+   CONTADORES
+========================================================= */
+
+.admin-selected-count {
+  margin: 8px 0 12px;
+
+  color: var(--roxo);
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   TEXTOS AUXILIARES
+========================================================= */
+
+.admin-import-note,
+.admin-inline-note {
+  color: #777;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   CAIXA DE ALERTA
+========================================================= */
+
+.admin-danger-box {
+  margin: 15px 0;
+
+  padding: 14px;
+
+  border: 1px solid #f0c8cc;
+  border-radius: 14px;
+
+  background: #fff8f8;
+}
+
+
+/* =========================================================
+   BADGES
+========================================================= */
+
+.admin-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  background: #f4edf7;
+
+  color: var(--roxo);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   PROGRESSO
+========================================================= */
+
+.admin-progress {
+  height: 8px;
+
+  margin-top: 10px;
+
+  overflow: hidden;
+
+  border-radius: 20px;
+
+  background: #eee;
+}
+
+.admin-progress span {
+  display: block;
+
+  width: 0;
+  height: 100%;
+
+  background: var(--dourado);
+
+  transition: width 0.2s;
+}
+
+
+/* =========================================================
+   CABEÇALHOS DE CARTÃO
+========================================================= */
+
+.admin-card-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+}
+
+
+/* =========================================================
+   SUBSECÇÕES
+========================================================= */
+
+.admin-subsection {
+  margin-top: 24px;
+
+  padding-top: 22px;
+
+  border-top: 1px solid #eee;
+}
+
+
+/* =========================================================
+   TABELA DE SÓCIOS
+========================================================= */
+
+.admin-table-wrap {
+  overflow: auto;
+
+  border: 1px solid #eee;
+  border-radius: 14px;
+}
+
+.admin-table {
+  width: 100%;
+
+  min-width: 1080px;
+
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 13px;
+
+  border-bottom: 1px solid #eee;
+
+  text-align: left;
+  vertical-align: middle;
+
+  font-size: 14px;
+}
+
+.admin-table th {
+  background: #faf8fb;
+
+  color: var(--roxo);
+
+  font-size: 12px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table tr:hover td {
+  background: #fcfbfd;
+}
+
+.admin-check {
+  width: 18px;
+  height: 18px;
+
+  accent-color: var(--roxo);
+}
+
+
+/* =========================================================
+   AÇÕES DE SÓCIOS
+========================================================= */
+
+.member-actions {
+  white-space: nowrap;
+}
+
+.member-actions .admin-small-btn {
+  padding: 8px 11px;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   QUOTAS
+========================================================= */
+
+.quota-debt {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.quota-debt strong {
+  color: #a33;
+
+  font-size: 15px;
+}
+
+.quota-debt span {
+  color: #777;
+
+  font-size: 11px;
+}
+
+.quota-ok {
+  color: #18794e;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   ESTADOS
+========================================================= */
+
+.status-ok {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: #e6f6ee;
+
+  color: #18794e;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-off {
+  display: inline-block;
+
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: #f2f2f2;
+
+  color: #666;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   PERMISSÕES
+========================================================= */
+
+.admin-permission-row {
+  display: grid;
+
+  grid-template-columns:
+    90px 1fr 1.4fr 150px auto;
+
+  gap: 12px;
+
+  align-items: center;
+}
+
+
+/* =========================================================
+   QUOTAS MANUAIS
+========================================================= */
+
+.manual-quota {
+  margin-top: 24px;
+}
+
+.manual-quota-result {
+  margin-top: 14px;
+}
+
+
+/* =========================================================
+   IMPORTAÇÃO / EXPORTAÇÃO DE SÓCIOS
+========================================================= */
+
+.admin-excel-socios-panel {
+  background: linear-gradient(
+    180deg,
+    #fff,
+    #fcf9fd
+  );
+}
+
+.admin-excel-format {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 10px;
+
+  margin: 18px 0;
+}
+
+.admin-excel-format > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #eee;
+  border-radius: 12px;
+
+  background: #fff;
+}
+
+.admin-excel-format strong {
+  color: var(--roxo);
+}
+
+.admin-excel-format span {
+  color: #777;
+
+  font-size: 11px;
+}
+
+.admin-excel-upload {
+  margin-top: 12px;
+}
+
+.admin-excel-progress-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-top: 14px;
+}
+
+.admin-excel-progress-row progress {
+  width: 260px;
+
+  height: 10px;
+}
+
+.admin-excel-progress-row span {
+  color: #666;
+
+  font-size: 12px;
+}
+
+.admin-excel-socios-preview {
+  max-height: 360px;
+}
+
+.admin-excel-preview-row {
+  display: grid;
+
+  grid-template-columns:
+    90px minmax(180px, 1fr)
+    minmax(220px, 1fr) 140px;
+
+  gap: 12px;
+
+  align-items: center;
+
+  padding: 10px 12px;
+
+  border-bottom: 1px solid #eee;
+
+  font-size: 13px;
+}
+
+.admin-excel-preview-row.admin-excel-error {
+  grid-template-columns:
+    90px 1fr;
+
+  background: #fff7f7;
+
+  color: #842029;
+}
+
+.admin-excel-panel {
+  margin-top: 24px;
+}
+
+
+/* =========================================================
+   ELEMENTOS LEGADOS
+========================================================= */
+
+.admin-legacy-hidden {
+  display: none !important;
+}
+
+
+/* =========================================================
+   RESPONSIVO — TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+
+  .admin-kpis {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-modern {
+    max-width: 100%;
+  }
+
+}
+
+
+/* =========================================================
+   RESPONSIVO — ECRÃS MÉDIOS
+========================================================= */
+
+@media (max-width: 800px) {
+
+  .admin-excel-format {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-excel-preview-row {
+    grid-template-columns:
+      70px 1fr;
+
+    gap: 6px;
+  }
+
+  .admin-excel-preview-row span:nth-child(3),
+  .admin-excel-preview-row span:nth-child(4) {
+    grid-column: 2;
+  }
+
+  .admin-page-head {
+    align-items: flex-start;
+  }
+
+}
+
+
+/* =========================================================
+   RESPONSIVO — TELEMÓVEL
+========================================================= */
+
+@media (max-width: 620px) {
+
+  .admin-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page-head {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-grid .wide {
+    grid-column: auto;
+  }
+
+  .admin-card {
+    padding: 18px;
+
+    border-radius: 16px;
+  }
+
+  .admin-toolbar .admin-small-btn {
+    width: 100%;
+  }
+
+  .admin-excel-format {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-excel-progress-row {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .admin-excel-progress-row progress {
+    width: 100%;
+  }
+
 }
