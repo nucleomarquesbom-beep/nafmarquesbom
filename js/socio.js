@@ -918,10 +918,10 @@ function ensureQuotaUploadStatus() {
     const input = $('#quota-comprovativo');
     if (!input) return null;
 
-    let status = $('#quota-comprovativo-file-name');
+    let status = $('#quota-upload-status') || $('#quota-comprovativo-file-name');
     if (!status) {
         status = document.createElement('div');
-        status.id = 'quota-comprovativo-file-name';
+        status.id = 'quota-upload-status';
         status.className = 'admin-result';
         status.hidden = true;
         input.closest('.upload-box')?.insertAdjacentElement('afterend', status);
