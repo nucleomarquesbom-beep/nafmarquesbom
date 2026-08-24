@@ -70,31 +70,23 @@
         totals.set(key, (totals.get(key) || 0) + Number(p.pontos || 0));
       }
 
+      const current = new Date();
+      const currentMonth = new Date(current.getFullYear(), current.getMonth(), 1);
       const overdue = new Map();
 
-      /*
-       * No módulo administrativo uma quota não paga é dívida do sócio.
-       * A informação deve ser coerente com a área do próprio sócio e com
-       * a regra anual usada pelo Núcleo. Não excluímos o mês de dezembro
-       * do ano corrente só porque a data do navegador ainda não chegou lá.
-       */
       for (const q of quotas || []) {
         if (!q.mes) continue;
+        const d = new Date(Number(q.ano), Number(q.mes) - 1, 1);
+        const estado = String(q.estado || 'pendente').toLowerCase();
+        const unpaid = q.pago !== true && !['pago', 'paga', 'isento', 'anulado'].includes(estado);
 
-        const estado = String(q.estado || 'pendente')
-          .trim()
-          .toLowerCase();
-        const unpaid =
-          q.pago !== true &&
-          !['pago', 'paga', 'isento', 'anulado'].includes(estado);
-
-        if (!unpaid) continue;
-
-        const key = String(q.socio_id);
-        const x = overdue.get(key) || { months: 0, value: 0 };
-        x.months += 1;
-        x.value += Number(q.valor || 0);
-        overdue.set(key, x);
+        if (unpaid && d < currentMonth) {
+          const key = String(q.socio_id);
+          const x = overdue.get(key) || { months: 0, value: 0 };
+          x.months += 1;
+          x.value += Number(q.valor || 0);
+          overdue.set(key, x);
+        }
       }
 
       for (const m of members) {
@@ -298,68 +290,18 @@
     if (result.error) throw result.error;
 
     const data = result.data || {};
-
-    /*
-     * A RPC grava os pontos atomicamente. Depois de confirmar a gravação,
-     * enviamos uma notificação individual a cada sócio efetivamente
-     * encontrado no PDF. O email nunca é usado para decidir se os pontos
-     * são gravados: uma falha de email não desfaz uma atribuição válida.
-     */
-    let emailsEnviados = 0;
-    let emailsFalhados = 0;
-    for (const row of unique) {
-      const member = state.members.find(m =>
-        Number(m.numero) === Number(row.numero_socio)
-      );
-      if (!member || !member.email) continue;
-
-      try {
-        await sendPointsMail(member, 'pontos_adicionados', {
-          pontos_adicionados: points,
-          atividade: 'Fun&Learn',
-          descricao: desc || 'Pontos atribuídos através de PDF'
-        });
-        emailsEnviados += 1;
-      } catch (mailError) {
-        emailsFalhados += 1;
-        console.error('[Fun&Learn PDF] Email falhou:', mailError);
-      }
-    }
-
-    const warning = emailsFalhados
-      ? ` ${emailsEnviados} email(s) enviado(s); ${emailsFalhados} falharam.`
-      : '';
-
-    show(`${data.socios_encontrados ?? 0} sócio(s) encontrados; ${data.pontos_atribuidos ?? 0} ponto(s) atribuídos.${warning}`, emailsFalhados ? 'error' : 'success');
+    show(`${data.socios_encontrados ?? 0} sócio(s) encontrados; ${data.pontos_atribuidos ?? 0} ponto(s) atribuídos.`);
     $('funlearn-pdf').value = '';
     $('funlearn-pdf-description').value = '';
     await loadMembers();
   }
 
   async function sendPointsMail(member, action, extra) {
-    if (!member?.email) {
-      return { sent: false, reason: 'O sócio não tem email registado.' };
-    }
-
-    const isAddition = action === 'pontos_adicionados';
-    const points = Number(
-      isAddition
-        ? extra?.pontos_adicionados
-        : extra?.pontos_retirados
-    ) || 0;
-
-    const subject = isAddition
-      ? 'Fun&Learn — pontos adicionados'
-      : 'Fun&Learn — pontos retirados';
-
-    const text = isAddition
-      ? `Olá ${member.nome || 'sócio'},\n\nForam adicionados ${points} ponto(s) ao teu saldo Fun&Learn.\n\nAtividade: ${extra?.atividade || 'Fun&Learn'}\nMotivo: ${extra?.descricao || '—'}\n\nNúcleo de Árbitros de Futebol Marques Bom`
-      : `Olá ${member.nome || 'sócio'},\n\nForam retirados ${points} ponto(s) ao teu saldo Fun&Learn.\n\nMotivo: ${extra?.motivo || '—'}\n\nSe tiveres alguma questão, contacta o Núcleo.\n\nNúcleo de Árbitros de Futebol Marques Bom`;
-
-    return invokeEdge(cfg.EMAIL_FUNCTION, {
-      to: member.email,
-      subject,
-      text
+    if (!member.email) return;
+    await invokeEdge(cfg.EMAIL_FUNCTION, {
+      action,
+      socio: { id: member.id, nome: member.nome, email: member.email },
+      ...extra
     });
   }
 
@@ -383,19 +325,13 @@
 
     if (result.error) throw result.error;
 
-    let mailWarning = '';
-    try {
-      await sendPointsMail(member, 'pontos_adicionados', {
-        pontos_adicionados: points,
-        atividade: activity,
-        descricao: desc
-      });
-    } catch (mailError) {
-      console.error('[Fun&Learn] Pontos adicionados, mas o email falhou:', mailError);
-      mailWarning = ' O email de notificação não pôde ser enviado.';
-    }
+    await sendPointsMail(member, 'pontos_adicionados', {
+      pontos_adicionados: points,
+      atividade: activity,
+      descricao: desc
+    });
 
-    show(`Foram adicionados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.${mailWarning}`, mailWarning ? 'error' : 'success');
+    show(`Foram adicionados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.`);
     $('funlearn-add-description').value = '';
     await loadMembers();
   }
@@ -418,18 +354,12 @@
 
     if (result.error) throw result.error;
 
-    let mailWarning = '';
-    try {
-      await sendPointsMail(member, 'pontos_retirados', {
-        pontos_retirados: points,
-        motivo: reason
-      });
-    } catch (mailError) {
-      console.error('[Fun&Learn] Pontos retirados, mas o email falhou:', mailError);
-      mailWarning = ' O email de notificação não pôde ser enviado.';
-    }
+    await sendPointsMail(member, 'pontos_retirados', {
+      pontos_retirados: points,
+      motivo: reason
+    });
 
-    show(`Foram retirados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.${mailWarning}`, mailWarning ? 'error' : 'success');
+    show(`Foram retirados ${points} ponto(s) a ${member.nome}. Novo total: ${result.data}.`);
     $('funlearn-remove-reason').value = '';
     await loadMembers();
   }
@@ -610,15 +540,11 @@
       let message = error.message || 'Erro na função.';
       try {
         const body = await error.context?.json();
-        if (body?.error) message = typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
-        else if (body?.message) message = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
+        if (body?.error) message = body.error;
       } catch {}
-      throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
-    }
-    if (data?.error) {
-      const message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
       throw new Error(message);
     }
+    if (data?.error) throw new Error(data.error);
     return data;
   }
 
