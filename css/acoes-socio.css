@@ -1,0 +1,14 @@
+/* Ações — área do sócio. */
+#acoes.socio-tab-content{padding-top:0}
+.acoes-socio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.acao-socio-card{border:1px solid #e9e4eb;border-radius:14px;padding:18px;background:#fff}
+.acao-socio-card h3{margin:0 0 10px;color:var(--roxo,#5b2a72)}
+.acao-meta{display:flex;flex-wrap:wrap;gap:7px 14px;color:#666;font-size:13px}
+.acao-description{color:#555;line-height:1.55;white-space:pre-wrap}
+.acao-price{font-weight:700;margin:12px 0;color:var(--roxo,#5b2a72)}
+.acao-note{font-size:13px;color:#666}
+.acao-file-label{display:flex;flex-direction:column;gap:7px;font-weight:600;margin:12px 0}
+.acao-socio-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.acao-empty{padding:18px;border:1px dashed #ddd;border-radius:12px;color:#777}
+.acao-status-confirmada{color:#18794e}.acao-status-pendente{color:#806000}.acao-status-cancelada,.acao-status-rejeitada{color:#a33}
+@media(max-width:760px){.acoes-socio-grid{grid-template-columns:1fr}}

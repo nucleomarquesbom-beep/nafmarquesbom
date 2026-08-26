@@ -1,429 +1,132 @@
 /* =========================================================
-   AÇÕES — Administração
-   Estilos exclusivos do módulo de atividades e inscrições.
-
-   NOTA:
-   Este ficheiro NÃO controla a barra principal de tabs
-   da Administração. Essa responsabilidade pertence a
-   css/admin.css.
+   AÇÕES — cartão integrado no painel de Administração
 ========================================================= */
-
-
-/* =========================================================
-   CARTÃO PRINCIPAL
-========================================================= */
-
-.acoes-admin-card {
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 22px;
-}
-
-
-/* =========================================================
-   CABEÇALHO DO MÓDULO
-========================================================= */
-
-.acoes-head-actions {
-  margin-top: 0;
-  justify-content: flex-end;
-}
-
-.acoes-section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-  margin-bottom: 16px;
-}
-
-.acoes-section-head h3 {
-  margin: 0 0 4px;
-}
-
-
-/* =========================================================
-   CARTÕES INTERNOS
-========================================================= */
-
+.acoes-admin-card{margin-bottom:22px}
+.acoes-head-actions{margin-top:0;justify-content:flex-end}
 .acoes-form-card,
-.acoes-list-card {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #eee;
-  border-radius: 16px;
-  padding: 22px;
-  margin-top: 22px;
-  background: #fff;
+.acoes-list-card{
+  border:1px solid #eee;
+  border-radius:16px;
+  padding:22px;
+  margin-top:22px;
+  background:#fff;
 }
-
-.acoes-form-card {
-  background: #fcf9fd;
+.acoes-form-card{background:#fcf9fd}
+.acoes-section-head{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
+  margin-bottom:16px;
 }
-
-
-/* =========================================================
-   OPÇÕES DA ATIVIDADE
-========================================================= */
-
-.acoes-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: stretch;
-  margin: 4px 0 2px;
-  padding: 2px 0;
+.acoes-section-head h3{margin:0 0 4px}
+.acoes-options{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px 22px;
+  padding:12px 0;
 }
-
-
-/* =========================================================
-   BOTÕES DE ESTADO
-
-   São os botões:
-   - Atividade ativa
-   - Inscrições abertas
-   - Pagamento obrigatório
-   - Comprovativo obrigatório
-========================================================= */
-
-.acao-toggle {
-  appearance: none;
-  -webkit-appearance: none;
-
-  width: 100%;
-  min-height: 46px;
-
-  padding: 10px 16px;
-
-  border: 1px solid #e2dfe5;
-  border-radius: 12px;
-
-  background: #f7f5f8;
-  color: #54277b;
-
-  box-shadow: 0 1px 2px rgba(35, 28, 42, 0.04);
-
-  font: 600 13px/1.25 Poppins, sans-serif;
-  text-align: left;
-
-  cursor: pointer;
-
-  transition:
-    transform 0.16s ease,
-    box-shadow 0.16s ease,
-    background 0.16s ease,
-    border-color 0.16s ease,
-    color 0.16s ease;
+.acoes-options label{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:7px;
+  font-weight:600;
+  color:#444;
 }
-
-
-/* Ícone quando desligado */
-
-.acao-toggle::before {
-  content: "○";
-
-  display: inline-block;
-
-  width: 22px;
-
-  font-size: 15px;
-  line-height: 1;
-
-  vertical-align: -1px;
+.acoes-options input{width:auto}
+.acoes-admin-list{display:grid;gap:14px}
+.acao-admin-item{
+  border:1px solid #e9e4eb;
+  border-radius:14px;
+  padding:18px;
+  background:#fff;
 }
-
-
-/* Hover */
-
-.acao-toggle:hover {
-  background: #fff;
-  border-color: #c99d17;
-
-  box-shadow: 0 5px 14px rgba(35, 28, 42, 0.08);
-
-  transform: translateY(-1px);
+.acao-admin-item-head{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
 }
-
-
-/* Foco por teclado */
-
-.acao-toggle:focus-visible {
-  outline: 3px solid rgba(201, 157, 23, 0.22);
-  outline-offset: 2px;
+.acao-admin-item h4{
+  margin:0 0 7px;
+  color:var(--roxo);
+  font-size:19px;
 }
-
-
-/* Estado ativo */
-
-.acao-toggle[aria-pressed="true"] {
-  background: #c99d17;
-  border-color: #c99d17;
-  color: #fff;
-
-  box-shadow: 0 5px 14px rgba(201, 157, 23, 0.24);
+.acao-admin-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px 14px;
+  color:#666;
+  font-size:13px;
 }
-
-
-/* Ícone quando ativo */
-
-.acao-toggle[aria-pressed="true"]::before {
-  content: "✓";
-  font-weight: 700;
+.acao-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.acao-badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:5px 10px;
+  background:#eee;
+  color:#666;
+  font-size:11px;
+  font-weight:700;
 }
-
-
-/* =========================================================
-   LISTA DE ATIVIDADES
-========================================================= */
-
-.acoes-admin-list {
-  display: grid;
-  gap: 14px;
+.acao-badge.ok{background:#e6f6ee;color:#18794e}
+.acao-badge.warn{background:#fff3d5;color:#806000}
+.acao-admin-description{
+  margin:12px 0 0;
+  color:#555;
+  line-height:1.55;
+  white-space:pre-wrap;
 }
-
-
-/* =========================================================
-   CARTÃO INDIVIDUAL DE ATIVIDADE
-========================================================= */
-
-.acao-admin-item {
-  border: 1px solid #e9e4eb;
-  border-radius: 14px;
-  padding: 18px;
-  background: #fff;
+.acao-admin-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:15px;
 }
-
-
-/* Cabeçalho */
-
-.acao-admin-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
+.acao-admin-buttons .admin-small-btn{padding:9px 13px;font-size:12px}
+.acao-inscricoes-wrap{
+  margin-top:16px;
+  border-top:1px solid #eee;
+  padding-top:16px;
+  overflow:auto;
 }
-
-
-/* Título */
-
-.acao-admin-item h4 {
-  margin: 0 0 7px;
-
-  color: var(--roxo);
-
-  font-size: 19px;
+.acao-inscricoes-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:820px;
 }
-
-
-/* Metainformação */
-
-.acao-admin-meta {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 7px 14px;
-
-  color: #666;
-  font-size: 13px;
-}
-
-
-/* =========================================================
-   BADGES
-========================================================= */
-
-.acao-badges {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 6px;
-
-  justify-content: flex-end;
-}
-
-.acao-badge {
-  display: inline-flex;
-  align-items: center;
-
-  border-radius: 999px;
-
-  padding: 5px 10px;
-
-  background: #eee;
-  color: #666;
-
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.acao-badge.ok {
-  background: #e6f6ee;
-  color: #18794e;
-}
-
-.acao-badge.warn {
-  background: #fff3d5;
-  color: #806000;
-}
-
-
-/* =========================================================
-   DESCRIÇÃO
-========================================================= */
-
-.acao-admin-description {
-  margin: 12px 0 0;
-
-  color: #555;
-
-  line-height: 1.55;
-
-  white-space: pre-wrap;
-}
-
-
-/* =========================================================
-   BOTÕES DA ATIVIDADE
-========================================================= */
-
-.acao-admin-buttons {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 8px;
-
-  margin-top: 15px;
-}
-
-.acao-admin-buttons .admin-small-btn {
-  padding: 9px 13px;
-  font-size: 12px;
-}
-
-
-/* =========================================================
-   INSCRIÇÕES
-========================================================= */
-
-.acao-inscricoes-wrap {
-  margin-top: 16px;
-
-  border-top: 1px solid #eee;
-
-  padding-top: 16px;
-
-  overflow-x: auto;
-}
-
-
-/* =========================================================
-   TABELA DE INSCRIÇÕES
-========================================================= */
-
-.acao-inscricoes-table {
-  width: 100%;
-
-  min-width: 820px;
-
-  border-collapse: collapse;
-}
-
 .acao-inscricoes-table th,
-.acao-inscricoes-table td {
-  padding: 9px 8px;
-
-  border-bottom: 1px solid #eee;
-
-  text-align: left;
-  vertical-align: middle;
-
-  font-size: 12px;
+.acao-inscricoes-table td{
+  padding:9px 8px;
+  border-bottom:1px solid #eee;
+  text-align:left;
+  vertical-align:middle;
+  font-size:12px;
 }
-
-.acao-inscricoes-table th {
-  color: var(--roxo);
-
-  font-size: 11px;
-
-  text-transform: uppercase;
+.acao-inscricoes-table th{
+  color:var(--roxo);
+  font-size:11px;
+  text-transform:uppercase;
 }
-
-
-/* =========================================================
-   ESTADO DA INSCRIÇÃO
-========================================================= */
-
-.acao-state {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-
-  padding: 6px 8px;
-
-  background: #fff;
+.acao-state{
+  border:1px solid #ddd;
+  border-radius:8px;
+  padding:6px 8px;
+  background:#fff;
 }
-
-.acao-status {
-  font-weight: 700;
+.acao-status{font-weight:700}
+.acao-status-confirmada{color:#18794e}
+.acao-status-pendente{color:#806000}
+.acao-status-cancelada,.acao-status-rejeitada{color:#a33}
+.acao-empty{padding:14px 0;color:#777}
+.acao-small-note{font-size:12px;color:#777}
+@media(max-width:760px){
+  .acao-admin-item-head{flex-direction:column}
+  .acao-badges{justify-content:flex-start}
+  .acoes-head-actions{justify-content:flex-start}
 }
-
-.acao-status-confirmada {
-  color: #18794e;
-}
-
-.acao-status-pendente {
-  color: #806000;
-}
-
-.acao-status-cancelada,
-.acao-status-rejeitada {
-  color: #a33;
-}
-
-
-/* =========================================================
-   TEXTOS AUXILIARES
-========================================================= */
-
-.acao-empty {
-  padding: 14px 0;
-
-  color: #777;
-}
-
-.acao-small-note {
-  font-size: 12px;
-  color: #777;
-}
-
-
-/* =========================================================
-   RESPONSIVO
-========================================================= */
-
-@media (max-width: 760px) {
-
-  .acoes-section-head {
-    flex-direction: column;
-  }
-
-  .acoes-head-actions {
-    justify-content: flex-start;
-  }
-
-  .acoes-options {
-    grid-template-columns: 1fr;
-  }
-
-  .acao-admin-item-head {
-    flex-direction: column;
-  }
-
-  .acao-badges {
-    justify-content: flex-start;
-  }
-
-  .acao-toggle {
-    width: 100%;
-  }
-
-}
+.acao-admin-buttons .admin-small-btn.danger{border-color:#b42318;background:#fff;color:#b42318}
+.acao-admin-buttons .admin-small-btn.danger:hover{background:#fff1f0}
