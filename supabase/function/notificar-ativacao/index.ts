@@ -7,9 +7,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json"
 };
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: cors });
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors });
 
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -42,7 +40,6 @@ Deno.serve(async req => {
       .eq("user_id", userData.user.id)
       .eq("ativo", true)
       .single();
-
     if (adminError || !me?.is_admin) return json({ error: "Apenas administradores podem enviar notificações." }, 403);
 
     const body = await req.json().catch(() => ({}));
@@ -52,7 +49,6 @@ Deno.serve(async req => {
     if (!tipo || !recursoId || !token) return json({ error: "Dados de ativação incompletos." }, 400);
     if (!['acao', 'dr_arbitro'].includes(tipo)) return json({ error: "Tipo de notificação inválido." }, 400);
 
-    // Sócios ativos com email válido.
     const { data: socios, error: sociosError } = await admin
       .from("socios")
       .select("id,nome,email")
@@ -66,11 +62,11 @@ Deno.serve(async req => {
     if (tipo === "acao") {
       const { data: acao, error } = await admin
         .from("acoes")
-        .select("id,titulo,data,hora,local,descricao,ativa,inscricoes_abertas")
+        .select("id,titulo,data,hora,local,descricao,ativa,inscricoes_abertas,anulada")
         .eq("id", recursoId)
         .single();
       if (error) throw error;
-      if (!acao.ativa) return json({ ok: true, skipped: true, reason: "Atividade não está ativa." });
+      if (!acao.ativa || acao.anulada) return json({ ok: true, skipped: true, reason: "Atividade não está ativa." });
 
       subject = `Nova atividade disponível — ${acao.titulo}`;
       text = `Olá {NOME},\n\nEstá disponível uma nova atividade do Núcleo de Árbitros de Futebol Marques Bom:\n\n${acao.titulo}\n${acao.data ? `Data: ${acao.data}\n` : ''}${acao.hora ? `Hora: ${String(acao.hora).slice(0,5)}\n` : ''}${acao.local ? `Local: ${acao.local}\n` : ''}${acao.descricao ? `\n${acao.descricao}\n` : ''}\nConsulte a Área de Sócio para ver os detalhes e, se as inscrições estiverem abertas, efetuar a sua inscrição.\n\nNúcleo de Árbitros de Futebol Marques Bom`;
@@ -87,7 +83,6 @@ Deno.serve(async req => {
       text = `Olá {NOME},\n\nEstá disponível uma nova edição do Drº Árbitro:\n\n${edicao.nome}\n\nConsulte a Área de Sócio para ver os detalhes${edicao.inscricoes_abertas ? ' e efetuar a sua inscrição' : ''}.\n\nNúcleo de Árbitros de Futebol Marques Bom`;
     }
 
-    // Idempotência: o mesmo token nunca gera um segundo envio.
     const { data: existing } = await admin
       .from("notificacoes_ativacao")
       .select("id,estado,total_enviados")
@@ -115,8 +110,7 @@ Deno.serve(async req => {
         headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from, to: [email], subject, text: personalized })
       });
-      if (response.ok) sent++;
-      else failed++;
+      if (response.ok) sent++; else failed++;
     }
 
     await admin.from("notificacoes_ativacao").update({
