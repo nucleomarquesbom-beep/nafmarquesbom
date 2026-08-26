@@ -162,8 +162,8 @@
               </div>
             </div>
             <div class="acao-badges">
-              <span class="acao-badge ${action.ativa ? 'ok' : ''}">
-                ${action.ativa ? 'Ativa' : 'Inativa'}
+              <span class="acao-badge ${action.anulada ? 'warn' : (action.ativa ? 'ok' : '')}">
+                ${action.anulada ? 'Anulada' : (action.ativa ? 'Ativa' : 'Inativa')}
               </span>
               <span class="acao-badge ${action.inscricoes_abertas ? 'ok' : ''}">
                 ${action.inscricoes_abertas ? 'Inscrições abertas' : 'Inscrições fechadas'}
@@ -186,6 +186,7 @@
             </button>
             <button type="button" class="admin-small-btn" data-action-registrations="${esc(action.id)}">Ver inscritos</button>
             <button type="button" class="admin-small-btn" data-action-export="${esc(action.id)}">Exportar Excel</button>
+            ${action.anulada ? '' : `<button type="button" class="admin-small-btn danger" data-action-annul="${esc(action.id)}">Anular ação</button>`}
           </div>
 
           <div id="acao-inscricoes-${esc(action.id)}" class="acao-inscricoes-wrap" hidden></div>
@@ -215,6 +216,10 @@
     root.querySelectorAll('[data-action-export]').forEach(btn => {
       btn.onclick = () => exportRegistrations(btn.dataset.actionExport);
     });
+
+    root.querySelectorAll('[data-action-annul]').forEach(btn => {
+      btn.onclick = () => annulAction(btn.dataset.actionAnnul);
+    });
   }
 
   async function notifyActivation(tipo, recursoId) {
@@ -232,10 +237,42 @@
     return data;
   }
 
+  async function annulAction(id) {
+    try {
+      const action = state.actions.find(a => a.id === id);
+      if (!action) return;
+      if (action.anulada) {
+        showResult('Esta atividade já está anulada.', 'error');
+        return;
+      }
+      if (!window.confirm(`Tem a certeza de que pretende ANULAR a atividade \"${action.titulo}\"?\n\nA atividade será fechada, mas o histórico e as inscrições serão preservados.`)) return;
+
+      const { data: sessionData } = await state.sb.auth.getSession();
+      const anuladaPor = sessionData?.session?.user?.id || null;
+      const { error } = await state.sb.from('acoes').update({
+        anulada: true,
+        anulada_em: new Date().toISOString(),
+        anulada_por: anuladaPor,
+        ativa: false,
+        inscricoes_abertas: false
+      }).eq('id', id);
+      if (error) throw error;
+
+      showResult('Atividade anulada com sucesso. O histórico e as inscrições foram preservados.');
+      await loadActions();
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
+    }
+  }
+
   async function toggleAction(id, field) {
     try {
       const action = state.actions.find(a => a.id === id);
       if (!action) return;
+      if (action.anulada) {
+        showResult('Uma atividade anulada não pode ser reativada ou reaberta.', 'error');
+        return;
+      }
 
       if (field === 'inscricoes_abertas' && action.ativa !== true) {
         showResult('Não é possível abrir inscrições numa atividade inativa.', 'error');

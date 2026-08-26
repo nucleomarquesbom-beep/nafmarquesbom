@@ -2,6 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Exposição controlada para os módulos integrados (Ações, Drº Árbitro e Administração).
+window.__NAF_SUPABASE = supabase;
 const ADMIN_NUMERO = 9999;
 
 const state = {
@@ -1660,6 +1662,9 @@ function activateSocioTab(tabName) {
     }
 }
 
+window.NAF_ACTIVATE_SOCIO_TAB = activateSocioTab;
+window.NAF_SYNC_MOBILE_TABS = syncMobileTabSelector;
+
 function setupTabs() {
     $$('.socio-tab').forEach(button => {
         if (button.dataset.bound === '1') return;
@@ -1981,6 +1986,14 @@ async function init() {
 
     if (!session) {
         return;
+    }
+
+    // O módulo de Ações é carregado apenas para utilizadores autenticados.
+    // Isto mantém a área pública e as restantes funções independentes.
+    try {
+        await loadScriptOnce('js/acoes-socio.js?v=20260826-1');
+    } catch (error) {
+        console.error('Ações do sócio:', error);
     }
 
     try {

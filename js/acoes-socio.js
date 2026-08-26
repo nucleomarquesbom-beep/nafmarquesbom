@@ -28,11 +28,42 @@
     el.hidden = false;
   }
 
-  function ensureTab() {
-    let tab = $('acoes-tab');
-    const panel = $('acoes');
-    if (!panel) return false;
+  function ensurePanel() {
+    let panel = $('acoes');
+    if (panel) return panel;
 
+    const dashboard = document.querySelector('#socio-dashboard, .socio-dashboard, main .socio-dashboard') || document.querySelector('main');
+    const admin = $('administracao');
+    if (!dashboard) return null;
+
+    panel = document.createElement('section');
+    panel.id = 'acoes';
+    panel.className = 'socio-tab-content';
+    panel.hidden = true;
+    panel.innerHTML = `
+      <div class="tab-heading-row"><div><h2>Ações</h2><p>Consulte as atividades disponíveis, inscreva-se e acompanhe as suas inscrições.</p></div></div>
+      <div class="acoes-socio-section"><h3>Atividades disponíveis</h3><div id="acoes-disponiveis" class="acoes-socio-grid"><div class="acao-empty">A carregar…</div></div></div>
+      <div class="acoes-socio-section" style="margin-top:24px"><h3>As minhas inscrições</h3><div id="acoes-minhas" class="acoes-socio-grid"><div class="acao-empty">A carregar…</div></div></div>
+      <div id="acoes-socio-result" class="socio-message" hidden aria-live="polite"></div>`;
+
+    if (admin?.parentNode) admin.parentNode.insertBefore(panel, admin);
+    else dashboard.appendChild(panel);
+    return panel;
+  }
+
+  function ensureStyles() {
+    if (document.getElementById('naf-acoes-socio-css')) return;
+    const link = document.createElement('link');
+    link.id = 'naf-acoes-socio-css';
+    link.rel = 'stylesheet';
+    link.href = 'css/acoes-socio.css?v=20260826-1';
+    document.head.appendChild(link);
+  }
+
+  function ensureTab() {
+    const panel = ensurePanel();
+    if (!panel) return false;
+    let tab = $('acoes-tab');
     if (!tab) {
       const nav = document.querySelector('.socio-tabs, .socio-tab-list, .socio-navigation, .socio-nav');
       if (nav) {
@@ -42,13 +73,18 @@
         tab.className = 'socio-tab';
         tab.dataset.tab = 'acoes';
         tab.textContent = 'Ações';
-        nav.appendChild(tab);
+        const adminTab = $('admin-tab');
+        if (adminTab?.parentNode === nav) nav.insertBefore(tab, adminTab);
+        else nav.appendChild(tab);
       }
     }
-
     if (!tab) return false;
     tab.hidden = false;
     tab.removeAttribute('aria-hidden');
+    if (tab.dataset.bound !== '1') {
+      tab.dataset.bound = '1';
+      tab.addEventListener('click', () => window.NAF_ACTIVATE_SOCIO_TAB?.('acoes'));
+    }
     return true;
   }
 
@@ -59,6 +95,7 @@
     const current = select.value;
     select.innerHTML = tabs.map(b => `<option value="${esc(b.dataset.tab)}">${esc(b.textContent.trim())}</option>`).join('');
     if ([...select.options].some(o => o.value === current)) select.value = current;
+    window.NAF_SYNC_MOBILE_TABS?.();
   }
 
   function showTab(visible) {
@@ -283,6 +320,7 @@
 
   function init() {
     ensureActionAdminStyle();
+    ensureStyles();
     sb = window.__NAF_SUPABASE || window.supabaseClient;
     if (!sb) return;
     load().catch(error => {
