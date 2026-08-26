@@ -125,7 +125,11 @@
   }
 
   function adminPanelElement() {
-    return document.getElementById('admin-panel');
+    // Na administração integrada, o painel oficial do Drº Árbitro
+    // é #panel-dr-arbitro. Usá-lo como contentor principal evita que
+    // o editor de edições/testes seja criado fora da sub-aba visível.
+    return document.getElementById('panel-dr-arbitro')
+      || document.getElementById('admin-panel');
   }
 
   async function ensureIntegratedAdmin() {

@@ -846,7 +846,7 @@ async function loadQuotas() {
     try {
         const { data, error } = await supabase
             .from('quotas')
-            .select('ano,mes,valor,estado')
+            .select('ano,mes,valor,pago,estado')
             .eq('socio_id', state.socio.id)
             .order('ano', { ascending: false })
             .order('mes', { ascending: false });
@@ -865,15 +865,38 @@ async function loadQuotas() {
             return;
         }
 
-        const atrasadas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Em atraso');
-        const pagas = quotas.filter(q => quotaStatusLabel(q.estado) === 'Paga');
-        const pendentes = quotas.filter(q => quotaStatusLabel(q.estado) === 'Pendente');
+        const current = new Date();
+        const currentMonth = new Date(current.getFullYear(), current.getMonth(), 1);
+
+        const quotaDueDate = (q) => {
+            const year = Number(q.ano);
+            const month = Number(q.mes || 12);
+            if (!Number.isInteger(year) || year < 1900 || !Number.isInteger(month) || month < 1 || month > 12) {
+                return null;
+            }
+            return new Date(year, month - 1, 1);
+        };
+
+        const isPaidQuota = (q) => {
+            const status = String(q.estado || '').trim().toLowerCase();
+            return q.pago === true || ['pago', 'paga', 'isento', 'anulado'].includes(status);
+        };
+
+        const isOverdueQuota = (q) => {
+            const dueDate = quotaDueDate(q);
+            return !isPaidQuota(q) && dueDate !== null && dueDate < currentMonth;
+        };
+
+        const isPendingQuota = (q) => !isPaidQuota(q) && !isOverdueQuota(q);
+
+        const atrasadas = quotas.filter(isOverdueQuota);
+        const pagas = quotas.filter(isPaidQuota);
+        const pendentes = quotas.filter(isPendingQuota);
 
         const resumo = `
             <div class="vazio">
                 ${atrasadas.length ? `<strong>Quotas em atraso: ${atrasadas.length}</strong>` : 'Quotas regularizadas.'}
                 ${pagas.length ? ` • ${pagas.length} pagas` : ''}
-                ${pendentes.length ? ` • ${pendentes.length} pendentes` : ''}
             </div>`;
 
         const linhas = quotas.map(q => {
@@ -882,7 +905,9 @@ async function loadQuotas() {
             const valor = q.valor !== null && q.valor !== undefined && q.valor !== ''
                 ? `${Number(q.valor).toFixed(2).replace('.', ',')} €`
                 : '';
-            const estado = quotaStatusLabel(q.estado);
+            const estado = isPaidQuota(q)
+                ? 'Paga'
+                : (isOverdueQuota(q) ? 'Em atraso' : 'Pendente');
 
             return `
                 <div class="quota-row">
@@ -903,6 +928,94 @@ async function loadQuotas() {
             : 'Não foi possível carregar as quotas neste momento.';
         el.innerHTML = `<div class="vazio">${fallback}</div>`;
     }
+}
+
+function ensureQuotaUploadStatus() {
+    const input = $('#quota-comprovativo');
+    if (!input) return null;
+
+    let status = $('#quota-comprovativo-file-name');
+    if (!status) {
+        status = document.createElement('div');
+        status.id = 'quota-comprovativo-file-name';
+        status.className = 'admin-result';
+        status.hidden = true;
+        input.closest('.upload-box')?.insertAdjacentElement('afterend', status);
+    }
+
+    return status;
+}
+
+async function uploadQuotaComprovativo(file) {
+    if (!state.socio?.id) throw new Error('É necessário iniciar sessão para enviar um comprovativo.');
+    if (!file || file.type !== 'application/pdf') throw new Error('O comprovativo tem de ser um ficheiro PDF.');
+    if (file.size > 8 * 1024 * 1024) throw new Error('O comprovativo não pode ultrapassar 8 MB.');
+
+    const status = ensureQuotaUploadStatus();
+    if (status) {
+        status.hidden = false;
+        status.className = 'admin-result';
+        status.textContent = `Ficheiro selecionado: ${file.name} — a enviar…`;
+    }
+
+    const { data: quotas, error: quotaError } = await supabase
+        .from('quotas')
+        .select('id,ano,mes,valor,pago,estado')
+        .eq('socio_id', state.socio.id)
+        .order('ano', { ascending: true })
+        .order('mes', { ascending: true });
+
+    if (quotaError) throw quotaError;
+
+    const unpaid = (quotas || []).filter(q => {
+        const estado = String(q.estado || 'pendente').trim().toLowerCase();
+        return q.pago !== true && !['pago', 'paga', 'isento', 'anulado'].includes(estado);
+    });
+
+    if (!unpaid.length) throw new Error('Não existem quotas por regularizar para associar a este comprovativo.');
+
+    /* O comprovativo é associado à quota em dívida mais antiga. */
+    const quota = unpaid[0];
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${state.socio.id}/${crypto.randomUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('comprovativos-quotas')
+        .upload(path, file, {
+            contentType: 'application/pdf',
+            upsert: false
+        });
+
+    if (uploadError) throw uploadError;
+
+    try {
+        const { error: dbError } = await supabase
+            .from('quota_comprovativos')
+            .insert({
+                quota_id: quota.id,
+                socio_id: state.socio.id,
+                storage_path: path,
+                nome_ficheiro: file.name,
+                tamanho_bytes: file.size,
+                tipo_mime: 'application/pdf',
+                estado: 'pendente',
+                submitted_at: new Date().toISOString()
+            });
+
+        if (dbError) throw dbError;
+    } catch (error) {
+        await supabase.storage.from('comprovativos-quotas').remove([path]).catch(() => {});
+        throw error;
+    }
+
+    if (status) {
+        status.hidden = false;
+        status.className = 'admin-result success';
+        const periodo = formatQuotaMonth(quota.ano, quota.mes) || `${quota.ano}/${quota.mes}`;
+        status.textContent = `Comprovativo “${file.name}” enviado com sucesso e associado à quota ${periodo}. Aguarda validação.`;
+    }
+
+    await loadQuotas();
 }
 
 async function loadDocuments() {
@@ -1614,6 +1727,10 @@ async function init() {
 
     $('#logout-btn')?.addEventListener('click', logout);
 
+    $('#photo-trigger')?.addEventListener('click', () => {
+        $('#photo-input')?.click();
+    });
+
     $('#photo-input')?.addEventListener('change', async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -1623,6 +1740,37 @@ async function init() {
             showMessage('Fotografia atualizada.', 'sucesso');
         } catch (error) {
             showMessage(error.message || 'Não foi possível atualizar a fotografia.', 'erro');
+        } finally {
+            event.target.value = '';
+        }
+    });
+
+    $('#quota-comprovativo')?.addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        const status = ensureQuotaUploadStatus();
+
+        if (!file) {
+            if (status) status.hidden = true;
+            return;
+        }
+
+        if (status) {
+            status.hidden = false;
+            status.className = 'admin-result';
+            status.textContent = `Ficheiro selecionado: ${file.name}`;
+        }
+
+        try {
+            await uploadQuotaComprovativo(file);
+            showMessage('Comprovativo enviado e associado à quota em dívida mais antiga.', 'sucesso');
+        } catch (error) {
+            console.error('[QUOTAS] Comprovativo:', error);
+            if (status) {
+                status.hidden = false;
+                status.className = 'admin-result error';
+                status.textContent = error?.message || String(error);
+            }
+            showMessage(error?.message || 'Não foi possível enviar o comprovativo.', 'erro');
         } finally {
             event.target.value = '';
         }
