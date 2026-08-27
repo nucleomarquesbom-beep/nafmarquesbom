@@ -1,0 +1,7 @@
+/* NAF Marques Bom — ajustes Admin 27/08/2026 */
+#admin-photo-input,
+.member-photo-open,
+[data-member-photo]{display:none!important}
+#panel-dr-arbitro #dr-arbitro-admin-integrado{display:none!important}
+#panel-dr-arbitro .dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){#panel-dr-arbitro .dr-grid{grid-template-columns:1fr}}
