@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Área Administrativa — Núcleo Marques Bom</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/admin-final-fixes-20260827.css">
   <link rel="stylesheet" href="css/admin-criar-socio.css">
   <link rel="stylesheet" href="css/admin-funlearn.css">
   <link rel="stylesheet" href="css/admin-quotas-manual.css">
@@ -160,10 +162,7 @@
         </div>
 
         <div id="selected-count" class="admin-selected-count">0 selecionados</div>
-
-        <input id="admin-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
-
-        <div class="admin-table-wrap">
+<div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
               <tr><th></th><th>Nº</th><th>Nome</th><th>Email</th><th>Estado</th><th>Quotas</th><th>Pontos</th><th>Ações</th></tr>
@@ -417,12 +416,15 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <footer><div class="container"><h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Portugal</p><p>Fundado em 1987</p><p class="rgpd-footer-link"><a href="rgpd.html">Proteção de Dados</a></p></div></footer>
 
 <script src="js/admin-config.js"></script>
+<script src="js/admin-prebind-fix.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/admin-import-socios-excel.js" defer></script>
 <script src="js/admin-excel.js" defer></script>
 <script src="js/admin-criar-socio.js" defer></script>
 <script src="js/admin-quotas-manual.js" defer></script>
 <script src="js/dr-arbitro.js" defer></script>
+<script src="js/admin-final-fixes-20260827.js" defer></script>
+<script src="js/dr-arbitro-admin-dedup.js" defer></script>
 <script src="js/acoes-admin.js" defer></script>
 <script type="module" src="js/admin-questoes.js?v=20260822-final3"></script>
 <script src="js/admin-ui-fixes.js?v=20260827-final" defer></script>
