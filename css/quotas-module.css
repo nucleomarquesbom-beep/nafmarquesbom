@@ -1,0 +1,3 @@
+/* Apenas organização visual do módulo de quotas; não altera o pagamento manual existente. */
+#panel-quotas .manual-quota { margin-top: 1rem; }
+#panel-quotas .admin-help { max-width: 900px; }
