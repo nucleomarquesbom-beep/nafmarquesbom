@@ -48,6 +48,7 @@
 
     <div class="admin-tabs" role="tablist" aria-label="Secções da administração">
       <button id="tab-socios" class="admin-tab active" data-panel="socios" type="button" role="tab" aria-selected="true" aria-controls="panel-socios">Sócios</button>
+      <button id="tab-quotas" class="admin-tab" data-panel="quotas" type="button" role="tab" aria-selected="false" aria-controls="panel-quotas">Quotas</button>
       <button id="tab-admins" class="admin-tab" data-panel="admins" type="button" role="tab" aria-selected="false" aria-controls="panel-admins" hidden>Administradores</button>
       <button id="tab-email" class="admin-tab" data-panel="email" type="button" role="tab" aria-selected="false" aria-controls="panel-email">Email</button>
       <button id="tab-funlearn" class="admin-tab" data-panel="funlearn" type="button" role="tab" aria-selected="false" aria-controls="panel-funlearn">Fun&amp;Learn</button>
@@ -171,7 +172,11 @@
           </table>
         </div>
       </div>
-    </section>      <section id="panel-quotas" class="admin-inline-subpanel" aria-labelledby="tab-socios">
+    </section>
+
+
+
+      <section id="panel-quotas" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-quotas" hidden>
       <div class="admin-card">
         <h3>Avisos de quotas em atraso</h3>
         <p class="admin-help">Seleciona os sócios na lista principal e usa “Enviar avisos de quotas”. Só são processados os selecionados que tenham dívida e email.</p>
@@ -223,8 +228,6 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
         <div id="manual-quota-result" class="admin-result" hidden aria-live="polite"></div>
       </div>
       </section>
-
-
 
     <section id="panel-admins" class="admin-tab-panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
       <div class="admin-card">
@@ -422,5 +425,6 @@ Núcleo de Árbitros de Futebol Marques Bom</textarea></label>
 <script src="js/dr-arbitro.js" defer></script>
 <script src="js/acoes-admin.js" defer></script>
 <script type="module" src="js/admin-questoes.js?v=20260822-final3"></script>
+<script src="js/admin-ui-fixes.js?v=20260827-final" defer></script>
 </body>
 </html>
