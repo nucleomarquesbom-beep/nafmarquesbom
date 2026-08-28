@@ -1,0 +1,42 @@
+/* NAF Marques Bom — estilos consolidados da Administração */
+.member-photo-open,
+[data-member-photo],
+#admin-photo-input { display:none !important; }
+
+.socio-admin-subtabs {
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin:0 0 22px;
+  padding:5px;
+  background:#f1edf4;
+  border:1px solid #e6dfea;
+  border-radius:14px;
+}
+
+.socio-admin-subtab {
+  border:0;
+  min-height:42px;
+  padding:9px 19px;
+  border-radius:10px;
+  background:transparent;
+  color:#5b2a72;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.socio-admin-subtab.active {
+  background:#fff;
+  color:#4a205e;
+  box-shadow:0 2px 7px rgba(50,25,60,.10);
+}
+
+.integrated-admin-group { display:none; width:100%; }
+.integrated-admin-group.active { display:block; }
+#integrated-admin-host .admin-tabs { display:none !important; }
+
+@media (max-width:800px) {
+  .socio-admin-subtabs { overflow-x:auto; flex-wrap:nowrap; }
+  .socio-admin-subtab { flex:0 0 auto; white-space:nowrap; }
+}
