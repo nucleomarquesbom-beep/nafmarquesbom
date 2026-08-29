@@ -1,0 +1,9 @@
+/* CSS consolidado para a página de sócio. Não recria HTML nem observa o DOM. */
+.socio-tab-content[hidden] { display:none !important; }
+.socio-tab.active { font-weight:700; }
+#acoes-tab { display:inline-flex; }
+#admin-tab[hidden] { display:none !important; }
+.socio-admin-integrated { width:100%; }
+#integrated-admin-host { width:100%; min-height:120px; }
+.socio-message[hidden] { display:none !important; }
+@media (max-width:800px) { .socio-tabs { overflow-x:auto; flex-wrap:nowrap; } .socio-tab { white-space:nowrap; } }

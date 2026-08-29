@@ -1,0 +1,12 @@
+/* Camada de apresentação consolidada. Mantém os estilos existentes e só resolve estados de integração. */
+.admin-modern { min-height: 60vh; }
+.admin-tab[hidden] { display:none !important; }
+.admin-tab-panel[hidden] { display:none !important; }
+.admin-tab-panel.active { display:block; }
+.admin-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+.admin-tab { cursor:pointer; }
+.admin-tab:focus-visible,.admin-small-btn:focus-visible { outline:3px solid rgba(91,42,114,.25); outline-offset:2px; }
+.acao-toggle.active { font-weight:700; }
+.admin-table-wrap { overflow-x:auto; }
+.admin-result[hidden] { display:none !important; }
+@media (max-width:800px) { .admin-tabs { overflow-x:auto; flex-wrap:nowrap; } .admin-tab { white-space:nowrap; } }
