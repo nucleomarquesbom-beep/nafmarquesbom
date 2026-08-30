@@ -1,24 +1,15 @@
-/* NAF Marques Bom — configuração pública da administração.
- * Mantém a configuração existente e carrega a camada de correções finais.
- */
-window.NAF_ADMIN_CONFIG = {
-  SUPABASE_URL: "https://pvaupgdhtrmbumaxvvrj.supabase.co",
-  SUPABASE_ANON_KEY: "sb_publishable_8pqZLxvQA5kMbYYLD95WPg_0uFK5WRi",
-  EMAIL_FUNCTION: "admin-mail",
-  RECEIPT_FUNCTION: "emitir-recibo-quota"
-};
-
+/* Configuração pública da aplicação. Nunca colocar service_role/secret keys aqui. */
 (() => {
-  const loadFinalFixes = () => {
-    if (document.querySelector('script[data-naf-final-fixes]')) return;
-    const script = document.createElement('script');
-    script.src = 'js/admin-final-fixes-20260826.js?v=20260826-2';
-    script.dataset.nafFinalFixes = '1';
-    document.head.appendChild(script);
+  'use strict';
+  const current = window.NAF_ADMIN_CONFIG || {};
+  const meta = document.querySelector('meta[name="naf-supabase"]');
+  window.NAF_ADMIN_CONFIG = {
+    ...current,
+    SUPABASE_URL: meta?.dataset?.url || current.SUPABASE_URL || 'https://pvaupgdhtrmbumaxvvrj.supabase.co',
+    SUPABASE_ANON_KEY: meta?.dataset?.anonKey || current.SUPABASE_ANON_KEY || 'sb_publishable_8pqZLxvQA5kMbYYLD95WPg_0uFK5WRi',
+    EMAIL_FUNCTION: current.EMAIL_FUNCTION || 'admin-mail',
+    ADMIN_FUNCTION: current.ADMIN_FUNCTION || 'admin-members',
+    REMOVE_POINTS_RPC: current.REMOVE_POINTS_RPC || 'retirar_pontos_funlearn'
   };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadFinalFixes, { once: true });
-  } else {
-    loadFinalFixes();
-  }
+  window.NAF_ADMIN_CONFIG_READY = true;
 })();
