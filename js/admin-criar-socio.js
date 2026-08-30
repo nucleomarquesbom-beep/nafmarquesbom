@@ -35,16 +35,18 @@
       button.textContent = "A criar…";
       show("A criar a conta e a preparar o convite…", "success");
 
-      const client = window.NAF_GET_SHARED_SUPABASE?.() || window.__NAF_SUPABASE || window.supabaseClient;
-      if (!client) throw new Error("Cliente Supabase não disponível.");
+      if (!window.supabaseClient) {
+        if (!window.supabase?.createClient) throw new Error("Biblioteca Supabase não carregada.");
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
 
       const { data: { session }, error: sessionError } =
-        await client.auth.getSession();
+        await window.supabaseClient.auth.getSession();
 
       if (sessionError) throw sessionError;
       if (!session) throw new Error("A sessão de administrador expirou. Volta a iniciar sessão.");
 
-      const { data, error } = await client.functions.invoke("criar-socio", {
+      const { data, error } = await window.supabaseClient.functions.invoke("criar-socio", {
         body: {
           nome,
           numero_socio: numero,
