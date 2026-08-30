@@ -24,7 +24,17 @@
 <main class="pagina admin-modern">
 <div class="admin-page-head"><div><span class="admin-badge">Área reservada</span><h1>Administração</h1><p class="admin-help">Gestão de sócios, quotas, Fun&amp;Learn, comunicações, Drº Árbitro, Questões e Ações.</p></div><button id="btn-refresh" class="admin-small-btn primary" type="button">Atualizar</button></div>
 <div id="admin-result" class="admin-result" hidden aria-live="polite"></div>
-<section id="admin-login-warning" class="admin-card" hidden><h3>Acesso não autorizado</h3><p>É necessário iniciar sessão com uma conta de administrador.</p></section>
+<section id="admin-login-warning" class="admin-card admin-login-card" hidden>
+<h3>Acesso de administrador</h3>
+<p>Inicia sessão com a conta de administrador para abrir esta área.</p>
+<form id="admin-login-form" class="admin-form" novalidate>
+<div class="admin-form-grid">
+<label><span>Email</span><input id="admin-login-email" type="email" autocomplete="username" required></label>
+<label><span>Palavra-passe</span><input id="admin-login-password" type="password" autocomplete="current-password" required></label>
+</div>
+<button id="admin-login-submit" type="submit" class="admin-small-btn primary">Entrar</button>
+</form>
+</section>
 <section id="admin-app" hidden>
 <div class="admin-kpis">
 <div class="admin-kpi"><span>Total de sócios</span><strong id="kpi-total">—</strong></div>
