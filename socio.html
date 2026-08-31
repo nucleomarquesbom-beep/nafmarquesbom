@@ -1,186 +1,1193 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-PT">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Área de Sócios | Núcleo de Árbitros de Futebol Marques Bom</title>
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/socio.css">
-<link rel="stylesheet" href="css/socio-public-members.css">
-<link rel="stylesheet" href="css/socio-excel.css">
-<link rel="stylesheet" href="css/questoes-socios.css">
-<link rel="stylesheet" href="css/socio-consolidated.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Área de Sócios | Núcleo de Árbitros de Futebol Marques Bom</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/socio.css?v=20260820-2">
+    <link rel="stylesheet" href="css/socio-public-members.css?v=20260821-3">
+    <link rel="stylesheet" href="css/socio-excel.css?v=20260820-2">
+    <link rel="stylesheet" href="css/questoes-socios.css?v=20260822-1">
+
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+<style id="socio-admin-ui-20260815">
+.socio-edit-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:22px 28px;
+    align-items:start;
+}
+.socio-edit-grid > label {
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    min-width:0;
+    font-weight:700;
+    color:#3e3e3e;
+}
+.socio-edit-grid > label input,
+.socio-edit-grid > label select {
+    width:100% !important;
+    min-height:48px;
+    box-sizing:border-box;
+    padding:10px 14px;
+    border:1px solid #d8d8d8;
+    border-radius:10px;
+    background:#fff;
+    color:#333;
+    font:inherit;
+}
+.socio-edit-grid > label select {
+    appearance:auto;
+    cursor:pointer;
+}
+.socio-edit-grid > label input:focus,
+.socio-edit-grid > label select:focus {
+    outline:none;
+    border-color:#5b2a72;
+    box-shadow:0 0 0 3px rgba(91,42,114,.10);
+}
+.admin-socio-row {
+    display:grid !important;
+    grid-template-columns:36px 210px minmax(220px,1fr) 76px auto !important;
+    gap:14px !important;
+    align-items:center !important;
+    padding:14px 16px !important;
+}
+.admin-socio-number-cell {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+}
+.admin-socio-number-display {
+    min-width:62px;
+    font-size:18px;
+    font-weight:800;
+    color:#222;
+}
+.admin-socio-numero-input {
+    width:86px !important;
+    min-height:38px;
+    padding:7px 9px;
+    border:1px solid #cfcfcf;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+.admin-socio-number-cell .admin-small-btn {
+    white-space:nowrap;
+}
+.admin-numero-confirm {
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+}
+.admin-members-actions {
+    display:flex !important;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+.admin-members-actions .botao,
+.admin-members-actions .botao-secundario {
+    margin:0 !important;
+}
+#admin-comunicacao-form[hidden] { display:none !important; }
+@media (max-width:900px) {
+    .socio-edit-grid { grid-template-columns:1fr; }
+    .admin-socio-row {
+        grid-template-columns:30px minmax(150px,1fr) !important;
+    }
+    .admin-socio-main,
+    .admin-socio-status,
+    .admin-socio-admin-toggle {
+        grid-column:2;
+    }
+}
+</style>
+
+
+<style id="socio-integrated-admin-ui">
+#admin-tab { display:none !important; }
+#admin-tab.admin-visible { display:inline-flex !important; }
+#administracao { padding:0; }
+.socio-admin-integrated { width:100%; }
+.socio-admin-title-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+.socio-admin-title-row h2 { margin:6px 0 4px; }
+.socio-admin-title-row p { margin:0; color:#666; }
+.socio-admin-loading { padding:24px; text-align:center; background:#fff; border-radius:14px; }
+.socio-admin-error { margin:0 0 18px; padding:14px 16px; border-radius:10px; background:#fff0f0; color:#9d1c1c; border:1px solid #e5b5b5; }
+#integrated-admin-host { width:100%; }
+#integrated-admin-host .admin-tabs { display:none !important; }
+#integrated-admin-host #admin-app { display:block !important; }
+#integrated-admin-host .admin-kpis { margin-bottom:18px; }
+#integrated-admin-host .socio-admin-subtabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; padding:4px; background:#f4f1f6; border-radius:12px; }
+#integrated-admin-host .socio-admin-subtab { border:0; background:transparent; padding:11px 16px; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; color:#5b2a72; }
+#integrated-admin-host .socio-admin-subtab.active { background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+#integrated-admin-host .integrated-admin-group > .admin-tab-panel { display:block !important; }
+#integrated-admin-host .integrated-admin-group { display:none; }
+#integrated-admin-host .integrated-admin-group.active { display:block; }
+#integrated-admin-host .admin-tab-panel { display:block !important; }
+#integrated-admin-host #panel-admins { display:none !important; }
+#integrated-admin-host .admin-table th.admin-permission-col,
+#integrated-admin-host .admin-table td.admin-permission-cell { white-space:nowrap; }
+#integrated-admin-host .admin-permission-button { min-width:120px; }
+#integrated-admin-host .admin-permission-button[disabled] { opacity:.65; cursor:default; }
+@media (max-width:800px) {
+  #integrated-admin-host .socio-admin-subtabs { overflow-x:auto; flex-wrap:nowrap; }
+  #integrated-admin-host .socio-admin-subtab { white-space:nowrap; }
+}
+
+
+/* ==========================================================
+   ADMINISTRAÇÃO INTEGRADA — APRESENTAÇÃO LIMPA
+   A administração pertence ao dashboard do sócio.
+   Não é uma página dentro de outra página.
+========================================================== */
+#administracao.socio-tab-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#administracao .socio-admin-integrated {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+#administracao .socio-admin-title-row {
+    margin: 0 0 22px;
+    padding: 0 2px;
+}
+#administracao .socio-admin-title-row h2 {
+    margin: 5px 0 4px;
+    font-size: clamp(25px, 3vw, 34px);
+}
+#administracao .socio-admin-title-row p {
+    max-width: 780px;
+}
+#integrated-admin-host {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host > #admin-app {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .admin-kpis {
+    margin: 0 0 22px !important;
+}
+#integrated-admin-host .admin-tabs {
+    display: none !important;
+}
+#integrated-admin-host .socio-admin-subtabs {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 0 22px !important;
+    padding: 5px !important;
+    background: #f1edf4 !important;
+    border: 1px solid #e6dfea;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+#integrated-admin-host .socio-admin-subtab {
+    min-height: 42px;
+    padding: 9px 19px !important;
+    border-radius: 10px !important;
+    color: #5b2a72 !important;
+    background: transparent !important;
+    transition: .18s ease;
+}
+#integrated-admin-host .socio-admin-subtab:hover {
+    background: rgba(255,255,255,.72) !important;
+}
+#integrated-admin-host .socio-admin-subtab.active {
+    background: #fff !important;
+    color: #4a205e !important;
+    box-shadow: 0 2px 7px rgba(50,25,60,.10) !important;
+}
+#integrated-admin-host .integrated-admin-group {
+    width: 100%;
+}
+#integrated-admin-host .admin-card {
+    width: 100%;
+    margin: 0 0 18px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 5px 18px rgba(40,20,50,.055) !important;
+}
+#integrated-admin-host .admin-card:last-child {
+    margin-bottom: 0 !important;
+}
+#integrated-admin-host .admin-page-head {
+    display: none !important;
+}
+#integrated-admin-host .admin-result {
+    margin-bottom: 16px;
+}
+#integrated-admin-host .admin-table-wrap {
+    max-width: 100%;
+}
+#integrated-admin-host .admin-table {
+    min-width: 1040px;
+}
+#integrated-admin-host .admin-kpi {
+    min-height: 105px;
+}
+#integrated-admin-host .admin-permission-button {
+    min-width: 120px;
+}
+#integrated-admin-host .admin-permission-button[disabled] {
+    opacity: .7;
+}
+@media (max-width: 800px) {
+    #integrated-admin-host .socio-admin-subtabs {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+    #integrated-admin-host .socio-admin-subtab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
+
+</style>
+
 </head>
 <body>
-<header><div class="container">
-<a href="index.html" class="logo"><img src="imagens/logo.png" alt="Núcleo de Árbitros de Futebol Marques Bom"></a>
-<nav>
-<a href="index.html">Início</a><a href="historia.html">História</a><a href="corpos-sociais.html">Corpos Sociais</a>
-<a href="plano-atividades.html">Plano de Atividades</a><a href="documentos.html">Documentos</a><a href="contactos.html">Contactos</a>
-<a href="socio.html" class="ativo">Sócio</a>
-</nav>
-</div></header>
 
-<section class="page-hero"><img src="imagens/cabecalho.png" alt=""><div class="page-title"><h1>Área de Sócios</h1></div></section>
+<header>
+    <div class="container">
 
-<main class="socio-area"><div class="container">
-<div id="socio-message" class="socio-message" hidden aria-live="polite"></div>
+        <a href="index.html" class="logo">
+            <img
+                src="imagens/logo.png"
+                alt="Núcleo de Árbitros de Futebol Marques Bom"
+            >
+        </a>
 
-<section id="socios-publicos" class="socios-publicos">
-<div class="public-members-head"><div><h2 id="socios-publicos-title">Os nossos sócios</h2><p>Conheça os sócios por categoria.</p></div></div>
-<div id="public-members-list" class="public-members-list"><div class="vazio">A carregar categorias…</div></div>
+        <nav>
+            <a href="index.html">Início</a>
+            <a href="historia.html">História</a>
+            <a href="corpos-sociais.html">Corpos Sociais</a>
+            <a href="plano-atividades.html">Plano de Atividades</a>
+            <a href="documentos.html">Documentos</a>
+            <a href="contactos.html">Contactos</a>
+            <a href="socio.html" class="ativo">Sócio</a>
+        </nav>
+
+    </div>
+</header>
+
+<section class="page-hero">
+    <img
+        src="imagens/cabecalho.png"
+        alt="Núcleo de Árbitros de Futebol Marques Bom"
+    >
+
+    <div class="page-title">
+        <h1>Área de Sócios</h1>
+    </div>
 </section>
 
-<section id="login-panel" class="login-card">
-<span class="login-icon">🔐</span><h2>Acesso dos Sócios</h2><p>Entre com o seu email e palavra-passe.</p>
-<form id="login-form" class="login-form">
-<label>Email<input id="login-email" type="email" autocomplete="email" required></label>
-<label>Palavra-passe<input id="login-password" type="password" autocomplete="current-password" required></label>
-<div class="socio-actions">
-<button class="botao" type="submit" id="login-submit">Entrar</button>
-<button id="reset-password" class="link-password" type="button">Esqueci-me da palavra-passe</button>
-</div>
-</form>
+<main class="socio-area">
+
+    <div class="container">
+
+        <div
+            id="socio-message"
+            class="socio-message"
+            hidden
+            aria-live="polite"
+        ></div>
+
+
+        <!-- SÓCIOS PÚBLICOS -->
+        <section id="socios-publicos" class="socios-publicos" aria-labelledby="socios-publicos-title">
+            <div class="public-members-head">
+                <div>
+                    <h2 id="socios-publicos-title">Os nossos sócios</h2>
+                    <p>Conheça os sócios por categoria. Passe o rato por uma categoria para ver a lista.</p>
+                </div>
+            </div>
+            <div id="public-members-list" class="public-members-list">
+                <div class="vazio">A carregar categorias…</div>
+            </div>
+        </section>
+
+        <!-- LOGIN -->
+
+        <section id="login-panel" class="login-card">
+
+            <span class="login-icon" aria-hidden="true">🔐</span>
+
+            <h2>Acesso dos Sócios</h2>
+
+            <p>
+                Entre com o seu email e palavra-passe.
+            </p>
+
+            <form id="login-form" class="login-form">
+
+                <label>
+                    Email
+                    <input
+                        id="login-email"
+                        type="email"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Palavra-passe
+                    <input
+                        id="login-password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <div class="socio-actions">
+
+                    <button
+                        class="botao"
+                        type="submit"
+                        id="login-submit"
+                    >
+                        Entrar
+                    </button>
+
+                    <button
+                        id="reset-password"
+                        class="link-password"
+                        type="button"
+                    >
+                        Esqueci-me da palavra-passe
+                    </button>
+
+                </div>
+
+            </form>
+
+            <small>
+                Se ainda não recebeu os dados de acesso, contacte o Núcleo.
+            </small>
+
+        </section>
+
+
+        <!-- DASHBOARD -->
+
+        <section id="dashboard" hidden>
+
+            <!-- CABEÇALHO DO SÓCIO -->
+
+            <div class="socio-dashboard-head">
+
+                <div class="socio-perfil-card">
+
+                    <div class="socio-foto-wrap">
+
+                        <div
+                            class="socio-foto-3d"
+                            aria-label="Fotografia do sócio"
+                        >
+
+                            <img
+                                id="socio-photo"
+                                class="socio-photo-img"
+                                alt="Fotografia do sócio"
+                                hidden
+                            >
+
+                            <div
+                                id="socio-photo-placeholder"
+                                class="socio-foto-placeholder"
+                                aria-hidden="true"
+                            >
+                                <span>👤</span>
+                            </div>
+
+                            <!-- Botão discreto -->
+
+                            <button
+                                type="button"
+                                id="photo-trigger"
+                                class="photo-change-button"
+                                title="Alterar fotografia"
+                                aria-label="Alterar fotografia"
+                            >
+                                ✎
+                            </button>
+
+                        </div>
+
+                        <input
+                            id="photo-input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            hidden
+                        >
+
+
+                    </div>
+
+
+                    <div class="socio-identidade">
+
+                        <span class="socio-etiqueta">
+                            SÓCIO
+                        </span>
+
+                        <h2 id="socio-name">—</h2>
+
+                        <p class="numero-socio">
+                            N.º de Sócio
+                            <strong id="socio-number">—</strong>
+                        </p>
+
+                        <p class="socio-estado">
+                            ● Conta ativa
+                        </p>
+
+                        <button
+                            id="logout-btn"
+                            class="botao-secundario"
+                            type="button"
+                        >
+                            Terminar sessão
+                        </button>
+
+                    </div>
+
+
+                    <div class="funlearn-resumo">
+
+                        <span>FUN&amp;LEARN</span>
+
+                        <strong id="funlearn-total-top">
+                            0
+                        </strong>
+
+                        <small>
+                            pontos
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- TABS -->
+
+            <div class="socio-tabs" role="tablist">
+
+                <label class="socio-tab-select-wrap" for="socio-tab-select"><span class="sr-only">Secção</span><select id="socio-tab-select" class="socio-tab-select" aria-label="Secção do espaço de sócio"></select></label>
+
+                <button
+                    class="socio-tab active"
+                    data-tab="dados"
+                    type="button"
+                >
+                    Dados pessoais
+                </button>
+
+                <button
+                    class="socio-tab"
+                    data-tab="arbitragem"
+                    type="button"
+                >
+                    Arbitragem
+                </button>
+
+                <button
+                    class="socio-tab"
+                    data-tab="quotas"
+                    type="button"
+                >
+                    Quotas
+                </button>
+
+                <button
+                    class="socio-tab"
+                    data-tab="documentos"
+                    type="button"
+                >
+                    Documentos
+                </button>
+
+                <button
+                    class="socio-tab"
+                    data-tab="funlearn"
+                    type="button"
+                >
+                    Fun&amp;Learn
+                </button>
+
+                <button
+                    id="acoes-tab"
+                    class="socio-tab"
+                    data-tab="acoes"
+                    type="button"
+                    hidden
+                >
+                    Ações
+                </button>
+
+                <button
+                    class="socio-tab"
+                    data-tab="questoes"
+                    type="button"
+                >
+                    Questões
+                </button>
+
+                <button
+                    id="admin-tab"
+                    class="socio-tab admin-only-tab"
+                    data-tab="administracao"
+                    type="button"
+                    hidden
+                >
+                    Administração
+                </button>
+
+            </div>
+
+
+            <section class="socio-tab-content" id="acoes">
+                <div class="tab-heading-row"><div><h2>Ações</h2><p>Atividades disponibilizadas pelo Núcleo e o seu histórico de inscrições.</p></div></div>
+                <div id="acoes-socio-result" class="socio-message" hidden aria-live="polite"></div>
+                <div class="admin-subpanel"><h3>Atividades disponíveis</h3><div id="acoes-disponiveis" class="acoes-socio-list"><div class="acao-empty">A carregar…</div></div></div>
+                <div class="admin-subpanel"><h3>As minhas inscrições</h3><div id="acoes-minhas" class="acoes-socio-list"><div class="acao-empty">A carregar…</div></div></div>
+            </section>
+
+            <!-- DADOS PESSOAIS -->
+
+            <section
+                class="socio-tab-content active"
+                id="dados"
+            >
+
+                <div class="tab-heading-row">
+
+                    <div>
+                        <h2>Dados pessoais</h2>
+
+                        <p>
+                            O nome e o número de sócio são definidos pelo Núcleo.
+                        </p>
+                    </div>
+
+                    <button
+                        id="editar-dados-btn"
+                        class="botao"
+                        type="button"
+                    >
+                        Editar os meus dados
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="dados-view"
+                    class="socio-grid"
+                >
+
+                    <div>
+                        <span>Nome completo</span>
+                        <strong id="dados-nome">—</strong>
+                    </div>
+
+                    <div>
+                        <span>N.º de sócio</span>
+                        <strong id="dados-numero">—</strong>
+                    </div>
+
+                    <div>
+                        <span>NIF</span>
+                        <strong id="dados-nif">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Data de nascimento</span>
+                        <strong id="dados-nascimento">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Naturalidade</span>
+                        <strong id="dados-naturalidade">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Cartão de Cidadão</span>
+                        <strong id="dados-cartao-cidadao">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Profissão</span>
+                        <strong id="dados-profissao">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Email</span>
+                        <strong id="dados-email">—</strong>
+                    </div>
+
+                    <div class="wide">
+                        <span>Morada completa</span>
+                        <strong id="dados-morada">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Localidade</span>
+                        <strong id="dados-localidade">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Código Postal</span>
+                        <strong id="dados-codigo-postal">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Telemóvel</span>
+                        <strong id="dados-telemovel">—</strong>
+                    </div>
+
+                </div>
+
+
+                <form
+                    id="dados-edit-form"
+                    class="socio-edit-form"
+                    hidden
+                >
+
+                    <div class="socio-edit-locked">
+
+                        <label>
+                            Nome
+                            <input
+                                id="edit-nome"
+                                type="text"
+                                readonly
+                            >
+                        </label>
+
+                        <label>
+                            N.º de sócio
+                            <input
+                                id="edit-numero"
+                                type="text"
+                                readonly
+                            >
+                        </label>
+
+                    </div>
+
+
+                    <div class="socio-edit-grid">
+
+                        <label>
+                            Data de nascimento
+                            <input
+                                id="edit-nascimento"
+                                type="date"
+                            >
+                        </label>
+
+                        <label>
+                            Email
+                            <input
+                                id="edit-email"
+                                type="email"
+                                autocomplete="email"
+                            >
+                        </label>
+
+                        <label class="wide">
+                            Morada
+                            <input
+                                id="edit-morada"
+                                type="text"
+                            >
+                        </label>
+
+                        <label>
+                            Telemóvel
+                            <input
+                                id="edit-telemovel"
+                                type="tel"
+                            >
+                        </label>
+
+                    </div>
+
+
+                    <div class="socio-edit-actions">
+
+                        <button
+                            id="guardar-dados-btn"
+                            class="botao"
+                            type="submit"
+                        >
+                            Guardar alterações
+                        </button>
+
+                        <button
+                            id="cancelar-dados-btn"
+                            class="botao-secundario"
+                            type="button"
+                        >
+                            Cancelar
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+
+            <!-- ARBITRAGEM -->
+
+            <section
+                class="socio-tab-content"
+                id="arbitragem"
+            >
+
+                <div class="tab-heading-row">
+
+                    <div>
+                        <h2>Dados de arbitragem</h2>
+
+                        <p>
+                            Dados que podem ser completados ou atualizados pelo sócio.
+                        </p>
+                    </div>
+
+                    <button
+                        id="editar-arbitragem-btn"
+                        class="botao"
+                        type="button"
+                    >
+                        Editar
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="arbitragem-view"
+                    class="socio-grid"
+                >
+
+                    <div>
+                        <span>N.º árbitro</span>
+                        <strong id="dados-arbitro">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Associação de Futebol</span>
+                        <strong id="dados-af">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Modalidade</span>
+                        <strong id="dados-modalidade">—</strong>
+                    </div>
+
+                    <div>
+                        <span>Categoria</span>
+                        <strong id="dados-categoria">—</strong>
+                    </div>
+
+                </div>
+
+
+                <form
+                    id="arbitragem-edit-form"
+                    class="socio-edit-form"
+                    hidden
+                >
+
+                    <div class="socio-edit-grid">
+
+                        <label>
+                            N.º árbitro
+                            <input id="edit-arbitro" type="text">
+                        </label>
+
+                        <label>
+                            Associação de Futebol
+                            <select id="edit-af" required>
+                                <option value="">Selecionar Associação de Futebol</option>
+                                <option value="AF Algarve">AF Algarve</option>
+                                <option value="AF Angra do Heroísmo">AF Angra do Heroísmo</option>
+                                <option value="AF Aveiro">AF Aveiro</option>
+                                <option value="AF Beja">AF Beja</option>
+                                <option value="AF Braga">AF Braga</option>
+                                <option value="AF Bragança">AF Bragança</option>
+                                <option value="AF Castelo Branco">AF Castelo Branco</option>
+                                <option value="AF Coimbra">AF Coimbra</option>
+                                <option value="AF Évora">AF Évora</option>
+                                <option value="AF Guarda">AF Guarda</option>
+                                <option value="AF Horta">AF Horta</option>
+                                <option value="AF Leiria">AF Leiria</option>
+                                <option value="AF Lisboa">AF Lisboa</option>
+                                <option value="AF Madeira">AF Madeira</option>
+                                <option value="AF Ponta Delgada">AF Ponta Delgada</option>
+                                <option value="AF Portalegre">AF Portalegre</option>
+                                <option value="AF Porto">AF Porto</option>
+                                <option value="AF Santarém">AF Santarém</option>
+                                <option value="AF Setúbal">AF Setúbal</option>
+                                <option value="AF Viana do Castelo">AF Viana do Castelo</option>
+                                <option value="AF Vila Real">AF Vila Real</option>
+                                <option value="AF Viseu">AF Viseu</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Modalidade
+                            <select id="edit-modalidade" required>
+                                <option value="">Selecionar modalidade</option>
+                                <option value="Futebol">Futebol</option>
+                                <option value="Futsal">Futsal</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Categoria
+                            <select id="edit-categoria" required disabled>
+                                <option value="">Selecionar categoria</option>
+                            </select>
+                        </label>
+
+                    </div>
+
+
+                    <div class="socio-edit-actions">
+
+                        <button
+                            class="botao"
+                            type="submit"
+                        >
+                            Guardar alterações
+                        </button>
+
+                        <button
+                            id="cancelar-arbitragem-btn"
+                            class="botao-secundario"
+                            type="button"
+                        >
+                            Cancelar
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+
+            <!-- QUOTAS -->
+
+            <section
+    class="socio-tab-content"
+    id="quotas"
+>
+
+    <div class="tab-heading-row">
+
+        <div>
+            <h2>Quotas</h2>
+
+            <p>
+                Consulte a sua situação e envie o comprovativo
+                de pagamento.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div
+        id="quotas-list"
+        class="quota-list"
+    >
+        <div class="vazio">
+            A carregar…
+        </div>
+    </div>
+
+
+    <div class="quota-upload-card">
+
+        <h3>
+            Enviar comprovativo
+        </h3>
+
+        <p>
+            Carregue o PDF do comprovativo da transferência
+            ou pagamento por MB WAY.
+        </p>
+
+        <label class="upload-box">
+
+            📄 Selecionar comprovativo PDF
+
+            <input
+                id="quota-comprovativo"
+                type="file"
+                accept="application/pdf"
+            >
+
+        </label>
+
+        <div
+            id="quota-upload-status"
+            class="admin-result"
+            hidden
+        ></div>
+
+    </div>
+
+
+    <div
+        id="recibos-list"
+        class="docs-list"
+    ></div>
+
 </section>
 
-<section id="dashboard" hidden>
-<div class="socio-dashboard-head">
-<div class="socio-perfil-card">
-<div class="socio-foto-wrap"><div class="socio-foto-3d">
-<img id="socio-photo" class="socio-photo-img" alt="Fotografia do sócio" hidden>
-<div id="socio-photo-placeholder" class="socio-foto-placeholder"><span>👤</span></div>
-<button id="photo-trigger" class="photo-change-button" type="button" title="Alterar fotografia">✎</button>
-</div><input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden></div>
-<div class="socio-identidade"><span class="socio-etiqueta">SÓCIO</span><h2 id="socio-name">—</h2><p id="socio-number">N.º —</p></div>
-</div></div>
 
-<nav class="socio-tabs" role="tablist" aria-label="Área do sócio">
-<button type="button" id="dados-tab" class="socio-tab active" data-tab="dados">Dados</button>
-<button type="button" id="arbitragem-tab" class="socio-tab" data-tab="arbitragem">Arbitragem</button>
-<button type="button" id="quotas-tab" class="socio-tab" data-tab="quotas">Quotas</button>
-<button type="button" id="documentos-tab" class="socio-tab" data-tab="documentos">Documentos</button>
-<button type="button" id="funlearn-tab" class="socio-tab" data-tab="funlearn">Fun&amp;Learn</button>
-<button type="button" id="acoes-tab" class="socio-tab" data-tab="acoes">Ações</button>
-<button type="button" id="questoes-tab" class="socio-tab" data-tab="questoes">Questões</button>
-<button type="button" id="admin-tab" class="socio-tab" data-tab="administracao" hidden>Administração</button>
-</nav>
 
-<div id="socio-tab-select-wrap" class="socio-mobile-tab-select">
-<select id="socio-tab-select" aria-label="Secção da área do sócio"></select>
-</div>
+            <!-- DOCUMENTOS -->
 
-<section id="dados" class="socio-tab-content active">
-<div class="socio-card"><h3>Dados pessoais</h3><div id="dados-pessoais">
-<div id="dados-view">
-<div class="dados-pessoais-grid">
-<div class="dados-pessoal-item"><small>Nome</small><strong id="dados-nome">—</strong></div>
-<div class="dados-pessoal-item"><small>N.º Sócio</small><strong id="dados-numero">—</strong></div>
-<div class="dados-pessoal-item"><small>NIF</small><strong id="dados-nif">—</strong></div>
-<div class="dados-pessoal-item"><small>Data de nascimento</small><strong id="dados-nascimento">—</strong></div>
-<div class="dados-pessoal-item"><small>Naturalidade</small><strong id="dados-naturalidade">—</strong></div>
-<div class="dados-pessoal-item"><small>Cartão de Cidadão</small><strong id="dados-cartao-cidadao">—</strong></div>
-<div class="dados-pessoal-item"><small>Profissão</small><strong id="dados-profissao">—</strong></div>
-<div class="dados-pessoal-item"><small>Email</small><strong id="dados-email">—</strong></div>
-<div class="dados-pessoal-item"><small>Morada</small><strong id="dados-morada">—</strong></div>
-<div class="dados-pessoal-item"><small>Localidade</small><strong id="dados-localidade">—</strong></div>
-<div class="dados-pessoal-item"><small>Código Postal</small><strong id="dados-codigo-postal">—</strong></div>
-<div class="dados-pessoal-item"><small>Telemóvel</small><strong id="dados-telemovel">—</strong></div>
-</div>
-<button id="editar-dados-btn" type="button" class="botao-secundario">Editar dados</button>
-</div>
-<form id="dados-edit-form" class="socio-edit-form" hidden>
-<div class="form-grid">
-<label>Data de nascimento<input id="edit-nascimento" type="date"></label>
-<label>Email<input id="edit-email" type="email" autocomplete="email" required></label>
-<label>Morada<input id="edit-morada" type="text"></label>
-<label>Telemóvel<input id="edit-telemovel" type="tel"></label>
-</div>
-<div class="socio-actions">
-<button id="guardar-dados-btn" class="botao" type="submit">Guardar</button>
-<button id="cancelar-dados-btn" class="botao-secundario" type="button">Cancelar</button>
-</div>
-</form>
-</div></div>
-</section>
+            <section
+                class="socio-tab-content"
+                id="documentos"
+            >
 
-<section id="arbitragem" class="socio-tab-content" hidden>
-<div class="socio-card"><h3>Arbitragem</h3><div id="dados-arbitragem">
-<div id="arbitragem-view">
-<div class="dados-pessoais-grid">
-<div class="dados-pessoal-item"><small>N.º Árbitro</small><strong id="dados-arbitro">—</strong></div>
-<div class="dados-pessoal-item"><small>Associação de Futebol</small><strong id="dados-af">—</strong></div>
-<div class="dados-pessoal-item"><small>Modalidade</small><strong id="dados-modalidade">—</strong></div>
-<div class="dados-pessoal-item"><small>Categoria</small><strong id="dados-categoria">—</strong></div>
-</div>
-<button id="editar-arbitragem-btn" type="button" class="botao-secundario">Editar arbitragem</button>
-</div>
-<form id="arbitragem-edit-form" class="socio-edit-form" hidden>
-<div class="form-grid">
-<label>N.º Árbitro<input id="edit-arbitro" type="text"></label>
-<label>Associação de Futebol<input id="edit-af" type="text"></label>
-<label>Modalidade<select id="edit-modalidade"><option value="">Selecionar modalidade</option><option value="Futebol">Futebol</option><option value="Futsal">Futsal</option></select></label>
-<label>Categoria<select id="edit-categoria"><option value="">Selecionar categoria</option></select></label>
-</div>
-<div class="socio-actions"><button class="botao" type="submit">Guardar</button><button id="cancelar-arbitragem-btn" class="botao-secundario" type="button">Cancelar</button></div>
-</form>
-</div></div>
-</section>
+                <div class="tab-heading-row">
 
-<section id="quotas" class="socio-tab-content" hidden>
-<div class="socio-card"><h3>Quotas</h3><div id="quotas-content">
-<div id="quotas-list"></div>
-<div class="upload-box"><label>Enviar comprovativo de quota<input id="quota-comprovativo" type="file" accept="application/pdf"></label></div>
-</div><div id="quota-result" class="socio-message" hidden></div></div>
-</section>
+                    <div>
+                        <h2>Os meus documentos</h2>
 
-<section id="documentos" class="socio-tab-content" hidden>
-<div class="socio-card"><h3>Documentos</h3><div id="documentos-list">
-<div><span id="docs-count">0 / 12</span></div>
-<div id="docs-list"></div>
-<div class="upload-box"><label>Adicionar documento PDF<input id="doc-input" type="file" accept="application/pdf"></label></div>
-</div></div>
-</section>
+                        <p>
+                            Até 12 documentos PDF.
+                        </p>
+                    </div>
 
-<section id="funlearn" class="socio-tab-content" hidden>
-<div class="socio-card"><h3>Fun&amp;Learn</h3><div id="funlearn-content">
-<div class="funlearn-total-box">Total de pontos: <strong id="funlearn-total">0</strong><span id="funlearn-total-top" hidden>0</span></div>
-<div id="funlearn-history"></div>
-</div></div>
-</section>
+                    <span
+                        id="docs-count"
+                        class="contador-docs"
+                    >
+                        0 / 12
+                    </span>
 
-<section id="acoes" class="socio-tab-content" hidden>
-<div class="socio-card">
-<div class="acoes-socio-head"><h3>Ações</h3><button id="acoes-socio-refresh" type="button" class="botao">Atualizar</button></div>
-<div id="acoes-socio-result" class="socio-message" hidden></div>
-<div id="acoes-disponiveis"></div><div id="acoes-minhas"></div>
-</div>
-</section>
+                </div>
 
-<section id="questoes" class="socio-tab-content" hidden>
-<div class="socio-card"><h3>Questões</h3>
-<form id="questao-form"><textarea id="questao-texto" required placeholder="Escreva a sua questão"></textarea><input id="questao-pdf" type="file" accept="application/pdf"><button type="submit" class="botao">Enviar questão</button></form>
-<div id="questao-result" class="socio-message" hidden></div><div id="questoes-list"></div>
-</div>
-</section>
 
-<section id="administracao" class="socio-tab-content" hidden>
-<div class="socio-admin-integrated">
-<div class="socio-admin-title-row"><div><span class="socio-etiqueta">ADMINISTRAÇÃO</span><h2>Gestão do Núcleo</h2><p>Ferramentas administrativas disponíveis para utilizadores autorizados.</p></div></div>
-<div id="integrated-admin-loading" class="vazio" hidden>A carregar administração…</div>
-<div id="integrated-admin-error" class="socio-message erro" hidden></div>
-<div id="integrated-admin-host"></div>
-</div>
-</section>
+                <label class="upload-box">
 
-<div class="socio-actions"><button id="logout-button" type="button" class="botao-secundario">Sair</button></div>
-</section>
-</div></main>
+                    📄 Carregar PDF
 
-<footer><div class="container"><h3>Núcleo de Árbitros de Futebol Marques Bom</h3><p>Coimbra • Portugal</p><p>Fundado em 1987</p></div></footer>
+                    <input
+                        id="doc-input"
+                        type="file"
+                        accept="application/pdf"
+                    >
 
-<script src="js/naf-consolidated-runtime.js"></script>
-<script type="module" src="js/socio.js"></script>
-<script type="module" src="js/socio-questoes.js"></script>
+                </label>
+
+
+                <div
+                    id="docs-list"
+                    class="docs-list"
+                >
+                    <div class="vazio">
+                        A carregar…
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- FUN & LEARN -->
+
+            <section
+                class="socio-tab-content"
+                id="funlearn"
+            >
+
+                <div class="funlearn-box">
+
+                    <span class="funlearn-label">
+                        FUN&amp;LEARN
+                    </span>
+
+                    <strong id="funlearn-total">
+                        0
+                    </strong>
+
+                    <p>
+                        Pontos acumulados
+                    </p>
+
+                </div>
+
+                <h2>
+                    Histórico de pontos
+                </h2>
+
+                <div
+                    id="funlearn-history"
+                    class="funlearn-history"
+                >
+                    <div class="vazio">
+                        A carregar…
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- QUESTÕES -->
+
+            <section
+                id="questoes"
+                class="socio-tab-content"
+            >
+                <div class="questoes-head">
+                    <span class="admin-badge">Contacto com o Núcleo</span>
+                    <h2>Questões</h2>
+                    <p>Envie uma questão por escrito ou através de PDF. Quando o Núcleo responder, a resposta aparecerá imediatamente abaixo da questão.</p>
+                </div>
+
+                <form id="questao-form" class="questao-form">
+                    <label>
+                        Questão
+                        <textarea id="questao-texto" rows="6" placeholder="Escreva aqui a sua questão…"></textarea>
+                    </label>
+
+                    <label>
+                        Anexar PDF (opcional)
+                        <input id="questao-pdf" type="file" accept="application/pdf">
+                    </label>
+
+                    <button class="botao" type="submit">Enviar questão</button>
+                    <div id="questao-result" class="admin-result" hidden aria-live="polite"></div>
+                </form>
+
+                <div id="questoes-list" class="questoes-list">
+                    <div class="vazio">Inicie sessão para consultar as suas questões.</div>
+                </div>
+            </section>
+
+
+            <!-- =====================================================
+                 ADMIN
+            ====================================================== -->
+
+            <section
+                id="administracao"
+                class="socio-tab-content"
+                hidden
+            >
+
+                <div class="socio-admin-integrated">
+
+                    <div class="socio-admin-title-row">
+                        <div>
+                            <span class="admin-badge">Área reservada</span>
+                            <h2>Administração</h2>
+                            <p>Gestão de sócios, quotas, Fun&amp;Learn, comunicações e Drº Árbitro.</p>
+                        </div>
+                    </div>
+
+                    <div id="integrated-admin-loading" class="socio-admin-loading">A carregar a administração…</div>
+                    <div id="integrated-admin-error" class="socio-admin-error" hidden></div>
+
+                    <div id="integrated-admin-host" hidden></div>
+
+                </div>
+
+            </section>
+
+        </section>
+
+    </div>
+
+</main>
+
+
+<footer>
+
+    <div class="container">
+
+        <h3>
+            Núcleo de Árbitros de Futebol Marques Bom
+        </h3>
+
+        <p>
+            Coimbra • Portugal
+        </p>
+
+        <p>
+            Email: nucleomarquesbom@gmail.com
+        </p>
+
+        <p>
+            © 2026 Todos os direitos reservados.
+        </p>
+        <p class="rgpd-footer-link">
+        <a href="rgpd.html">Proteção de Dados</a>
+        </p>
+    </div>
+
+</footer>
+<script
+    type="module"
+    src="js/socio.js?v=20260821-admin-public"
+></script>
+<script
+    type="module"
+    src="js/socio-questoes.js?v=20260822-1"
+></script>
+<script type="module" src="js/socio-enhancements.js?v=20260821-1"></script>
+<script src="js/acoes-socio.js" defer></script>
 </body>
 </html>
