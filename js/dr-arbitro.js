@@ -113,12 +113,14 @@
     return value ? new Date(value).toISOString() : null;
   }
 
-  async function nextEditionNumber(c) {
-    const { data, error } = await c
+  async function nextEditionNumber(c, modalidadeId = null) {
+    let query = c
       .from('dr_arbitro_edicoes')
       .select('numero_edicao')
       .order('numero_edicao', { ascending: false })
       .limit(1);
+    if (modalidadeId) query = query.eq('modalidade_id', modalidadeId);
+    const { data, error } = await query;
 
     if (error) throw error;
     return Number(data?.[0]?.numero_edicao || 0) + 1;
@@ -799,7 +801,7 @@
 
       if (mError) throw mError;
 
-      const next = await nextEditionNumber(c);
+      const next = await nextEditionNumber(c, m.id);
 
       root.innerHTML = modalidades.map(m => `
         <div class="dr-modalidade">
@@ -850,7 +852,7 @@
       root.querySelectorAll('[data-create-ed]').forEach(btn => {
         btn.onclick = async () => {
           try {
-            const numero = await nextEditionNumber(c);
+            const numero = await nextEditionNumber(c, btn.dataset.createEd);
 
             const { error } = await c.from('dr_arbitro_edicoes').insert({
               modalidade_id: btn.dataset.createEd,
@@ -907,6 +909,9 @@
 
       target.innerHTML = `
         <h4>${esc(m.nome)}</h4>
+        <div class="dr-actions" style="margin:10px 0">
+          <button type="button" class="admin-small-btn primary" data-create-ed="${esc(m.id)}">+ Criar nova edição</button>
+        </div>
         <div class="dr-admin-grid">
           ${(editions || []).map(ed => `
             <div class="dr-row">
@@ -930,6 +935,28 @@
           renderEditionAdmin(target, ed).catch(error => {
             target.innerHTML = `<div class="dr-test-error">${esc(error.message || String(error))}</div>`;
           });
+        };
+      });
+
+      target.querySelectorAll('[data-create-ed]').forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            const numero = await nextEditionNumber(c, btn.dataset.createEd);
+            const { data: sessionData } = await c.auth.getSession();
+            const { error: insertError } = await c.from('dr_arbitro_edicoes').insert({
+              modalidade_id: btn.dataset.createEd,
+              numero_edicao: numero,
+              nome: `Drº Árbitro - ${editionLabel(numero)}`,
+              ativo: false,
+              numero_testes: 1,
+              inscricoes_abertas: false,
+              criado_por: sessionData?.session?.user?.id || null
+            });
+            if (insertError) throw insertError;
+            await renderDedicatedAdmin();
+          } catch (error) {
+            alert(error.message || String(error));
+          }
         };
       });
     }

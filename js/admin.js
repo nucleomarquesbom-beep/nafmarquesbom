@@ -97,6 +97,34 @@
   async function invokeEdge(name,payload){const {data,error}=await state.supabase.functions.invoke(name,{body:payload});if(error){let message=error.message||'Erro na função.';try{const body=await error.context?.json();if(body?.error)message=body.error;}catch{}throw new Error(message);}if(data?.error)throw new Error(data.error);return data;}
   async function sendDocument(){const file=$('mail-file')?.files?.[0];if(!file)throw new Error('Seleciona o documento.');if(file.size>10*1024*1024)throw new Error('O documento não pode ultrapassar 10 MB.');const subject=$('mail-subject')?.value.trim();const message=$('mail-message')?.value.trim();if(!subject||!message)throw new Error('Indica o assunto e escreve a mensagem.');const recipients=state.members.filter(m=>m.ativo&&m.email).map(m=>m.email);if(!recipients.length)throw new Error('Não existem sócios ativos com email.');let sent=0;const failures=[];const base64=await fileToBase64(file);for(const email of recipients){try{await invokeEdge(cfg.EMAIL_FUNCTION,{to:email,subject,text:message,attachment:{name:file.name,mime:file.type||'application/octet-stream',base64}});sent++;}catch(error){failures.push(`${email}: ${error.message||error}`);}}if(failures.length)throw new Error(`${sent} email(s) enviado(s); ${failures.length} falharam.`);show(`Documento enviado para ${sent} sócio(s).`);$('mail-file').value='';}
   async function loadAdminPermissions(){const tab=$('tab-admins'),panel=$('panel-admins');if(!tab||!panel)return;let root=false;try{const {data,error}=await state.supabase.rpc('is_root_admin');root=!error&&data===true;}catch{}if(!root){tab.hidden=true;panel.hidden=true;return;}tab.hidden=false;panel.hidden=false;const {data,error}=await state.supabase.rpc('admin_listar_permissoes_admin');if(error)throw error;const box=$('admin-permissions-list');if(!box)return;box.innerHTML=(data||[]).map(m=>`<div class="admin-preview-row admin-permission-row"><strong>${esc(m.numero_socio)}</strong><span>${esc(m.nome)}</span><span>${esc(m.email||'')}</span><span>${m.is_admin?'Administrador':'Sócio'}</span><button type="button" class="admin-small-btn ${m.is_admin?'danger':'primary'}" data-admin-toggle="${esc(m.id)}" data-admin-value="${m.is_admin?'false':'true'}">${m.is_admin?'Retirar admin':'Dar admin'}</button></div>`).join('')||'<div class="admin-loading">Não existem outros sócios.</div>';box.querySelectorAll('[data-admin-toggle]').forEach(btn=>{btn.onclick=async()=>{btn.disabled=true;try{const {error}=await state.supabase.rpc('admin_definir_admin',{p_socio_id:btn.dataset.adminToggle,p_is_admin:btn.dataset.adminValue==='true'});if(error)throw error;await loadMembers();show('Permissões de administrador atualizadas.');}catch(e){fail(e);}finally{btn.disabled=false;}};});}
+  function setupAdminTabs(){
+    const tabs=[...document.querySelectorAll('#admin-app .admin-tabs > .admin-tab')].filter(btn=>!btn.hidden);
+    const panels=[...document.querySelectorAll('#admin-app > .admin-tab-panel')];
+    if(!tabs.length || !panels.length) return;
+
+    const activate=(name)=>{
+      for(const btn of tabs){
+        const active=btn.dataset.panel===name;
+        btn.classList.toggle('active',active);
+        btn.setAttribute('aria-selected',String(active));
+      }
+      for(const panel of panels){
+        const active=panel.id===`panel-${name}`;
+        panel.classList.toggle('active',active);
+        panel.hidden=!active;
+      }
+    };
+
+    for(const btn of tabs){
+      if(btn.dataset.nafBound==='1') continue;
+      btn.dataset.nafBound='1';
+      btn.addEventListener('click',()=>activate(btn.dataset.panel));
+    }
+
+    const current=tabs.find(b=>b.classList.contains('active'))?.dataset.panel || 'socios';
+    activate(current);
+  }
+
   function bind(){
     const bindClick=(id,handler)=>$(id)?.addEventListener('click',()=>handler().catch?.(fail));
     bindClick('btn-refresh',loadMembers); bindClick('btn-refresh-list',loadMembers);
@@ -107,7 +135,7 @@
     $('members-body')?.addEventListener('click',e=>{const payment=e.target.closest('.manual-quota-open');if(payment)openManualQuota(payment.dataset.id);const number=e.target.closest('.member-number-open');if(number)editMemberNumber(number.dataset.id,number.dataset.number).catch(fail);});
     $('btn-export-members-excel')?.addEventListener('click',exportMembersExcel);
     bindClick('btn-send-overdue-selected',sendOverdueSelected); bindClick('btn-send-document',sendDocument); bindClick('btn-parse-pdf',parsePdf); bindClick('btn-import-pdf',importPdfRows); bindClick('btn-funlearn-pdf',importFunlearnPdf); bindClick('btn-funlearn-add',addFunlearnPoints); bindClick('btn-funlearn-remove',removeFunlearnPoints);
-    document.querySelectorAll('.admin-tab').forEach(btn=>{if(btn.dataset.nafBound==='1')return;btn.dataset.nafBound='1';btn.addEventListener('click',()=>{document.querySelectorAll('.admin-tab').forEach(x=>{x.classList.toggle('active',x===btn);x.setAttribute('aria-selected',String(x===btn));});document.querySelectorAll('.admin-tab-panel').forEach(x=>{const active=x.id===`panel-${btn.dataset.panel}`;x.classList.toggle('active',active);x.hidden=!active;});});});
+    setupAdminTabs();
   }
   async function init(){try{assertConfig();const shared=getSharedClient();if(!shared)throw new Error('Biblioteca/cliente Supabase não disponível.');state.supabase=shared;const {data:{session},error:sessionError}=await state.supabase.auth.getSession();if(sessionError)throw sessionError;state.user=session?.user||null;if(!state.user){$('admin-login-warning')?.removeAttribute('hidden');return;}const {data:isAdmin,error}=await state.supabase.rpc('is_admin');if(error)throw error;if(isAdmin!==true){$('admin-login-warning')?.removeAttribute('hidden');return;}$('admin-app')?.removeAttribute('hidden');bind();await loadMembers();}catch(e){fail(e);}}
   init();
