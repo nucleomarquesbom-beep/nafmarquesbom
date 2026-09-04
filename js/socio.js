@@ -506,7 +506,6 @@ async function loadIntegratedAdmin() {
         }
 
         await new Promise(r => setTimeout(r, 50));
-        buildIntegratedAdminTabs();
         patchAdminPermissionColumn();
 
         if (typeof window.loadMembers === 'function') {
@@ -527,76 +526,6 @@ async function loadIntegratedAdmin() {
     } finally {
         state.adminLoading = false;
     }
-}
-
-function buildIntegratedAdminTabs() {
-    const host = $('#integrated-admin-host');
-    if (!host || host.querySelector('.socio-admin-subtabs')) return;
-
-    const app = host.querySelector('#admin-app');
-    if (!app) return;
-
-    const panels = {
-        socios: app.querySelector('#panel-socios'),
-        email: app.querySelector('#panel-email'),
-        funlearn: app.querySelector('#panel-funlearn'),
-        dr: app.querySelector('#panel-dr-arbitro'),
-        questoes: app.querySelector('#panel-questoes'),
-        acoes: app.querySelector('#panel-acoes'),
-        quotas: app.querySelector('#panel-quotas'),
-        admins: app.querySelector('#panel-admins')
-    };
-
-    if (!panels.socios || !panels.email || !panels.funlearn || !panels.dr || !panels.questoes || !panels.acoes) {
-        throw new Error('A estrutura administrativa esperada não foi encontrada.');
-    }
-
-    if (panels.admins) panels.admins.hidden = true;
-
-    const subtabs = document.createElement('div');
-    subtabs.className = 'socio-admin-subtabs';
-    subtabs.setAttribute('role', 'tablist');
-    subtabs.setAttribute('aria-label', 'Secções da administração');
-    subtabs.innerHTML = `
-        <button type="button" class="socio-admin-subtab active" role="tab" aria-selected="true" data-admin-section="socios">Sócios</button>
-        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="email">Email</button>
-        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="funlearn">Fun&amp;Learn</button>
-        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="dr-arbitro">Drº Árbitro</button>
-        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="questoes">Questões</button>
-        <button type="button" class="socio-admin-subtab" role="tab" aria-selected="false" data-admin-section="acoes">Ações</button>
-    `;
-
-    const groups = {};
-    for (const name of ['socios','email','funlearn','dr','questoes','acoes']) {
-        const group = document.createElement('div');
-        const sectionName = name === 'dr' ? 'dr-arbitro' : name;
-        group.className = `integrated-admin-group${name === 'socios' ? ' active' : ''}`;
-        group.dataset.adminGroup = sectionName;
-        group.appendChild(panels[name]);
-        if (name === 'socios' && panels.quotas) group.appendChild(panels.quotas);
-        groups[sectionName] = group;
-    }
-
-    app.append(subtabs, ...Object.values(groups));
-
-    const activate = (name) => {
-        subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
-            const active = button.dataset.adminSection === name;
-            button.classList.toggle('active', active);
-            button.setAttribute('aria-selected', String(active));
-        });
-        Object.values(groups).forEach(group => {
-            group.classList.toggle('active', group.dataset.adminGroup === name);
-        });
-
-        if (name === 'acoes') window.loadAcoesAdmin?.();
-        if (name === 'questoes') window.loadAdminQuestions?.();
-        if (name === 'dr-arbitro') window.NAF_DR_ARBITRO_START?.();
-    };
-
-    subtabs.querySelectorAll('.socio-admin-subtab').forEach(button => {
-        button.addEventListener('click', () => activate(button.dataset.adminSection));
-    });
 }
 
 async function getAdminMembersMap() {

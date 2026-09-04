@@ -7,18 +7,3 @@ window.NAF_ADMIN_CONFIG = {
   EMAIL_FUNCTION: "admin-mail",
   RECEIPT_FUNCTION: "emitir-recibo-quota"
 };
-
-(() => {
-  const loadFinalFixes = () => {
-    if (document.querySelector('script[data-naf-final-fixes]')) return;
-    const script = document.createElement('script');
-    script.src = 'js/admin-final-fixes-20260826.js?v=20260826-2';
-    script.dataset.nafFinalFixes = '1';
-    document.head.appendChild(script);
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadFinalFixes, { once: true });
-  } else {
-    loadFinalFixes();
-  }
-})();
