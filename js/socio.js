@@ -477,6 +477,10 @@ async function loadIntegratedAdmin() {
         host.replaceChildren(clone);
         host.hidden = false;
 
+        // Arranque determinístico das sub-abas da Administração integrada.
+        // O runtime mantém também um MutationObserver como fallback.
+        window.NAF_SETUP_INTEGRATED_ADMIN?.(host);
+
         // Carregamos exatamente os módulos que o admin.html usa.
         if (!window.supabase?.createClient) {
             await loadScriptOnce('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');

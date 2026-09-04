@@ -114,6 +114,10 @@
     host.dataset.nafRuntimeReady='1';
   }
 
+  // Expor a inicialização para o socio.js poder arrancar as sub-abas
+  // imediatamente após inserir o #admin-app, sem depender apenas do MutationObserver.
+  window.NAF_SETUP_INTEGRATED_ADMIN = setupIntegratedAdmin;
+
   function run() {
     injectStyles();
     removeAdminPhotoControls();
