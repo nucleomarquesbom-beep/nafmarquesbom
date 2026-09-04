@@ -1,5 +1,5 @@
 /* NAF Marques Bom — configuração pública da administração.
- * Mantém a configuração existente e carrega a camada de correções finais.
+ * Mantém apenas a configuração pública necessária ao frontend.
  */
 window.NAF_ADMIN_CONFIG = {
   SUPABASE_URL: "https://pvaupgdhtrmbumaxvvrj.supabase.co",
