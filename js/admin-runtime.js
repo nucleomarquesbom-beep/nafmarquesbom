@@ -56,7 +56,11 @@
     if (!host || !app) return false;
 
     // Se já existe uma montagem válida, não a reconstruir.
-    if (host.dataset.nafRuntimeReady === '1' && app.querySelector('.socio-admin-subtabs')) {
+    // O host pode sobreviver a uma recarga do admin.html. Nunca confiamos
+    // apenas numa flag antiga: verificamos sempre a montagem atual.
+    const existingTabs = app.querySelector(':scope > .socio-admin-subtabs');
+    if (existingTabs && sections.every(([name]) => app.querySelector(`#integrated-admin-group-${name}`))) {
+      host.dataset.nafRuntimeReady = '1';
       return true;
     }
 

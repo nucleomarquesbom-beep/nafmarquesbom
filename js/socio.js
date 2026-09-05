@@ -505,6 +505,10 @@ async function loadIntegratedAdmin() {
             window.__NAF_LOAD_MEMBERS_WRAPPED = true;
         }
 
+        // O runtime da administração é carregado pelo socio.html com defer.
+        // Como o admin.html é injetado dinamicamente, não podemos depender
+        // apenas do MutationObserver: inicializamos explicitamente as abas
+        // depois de todos os módulos administrativos estarem disponíveis.
         await new Promise(r => setTimeout(r, 50));
         patchAdminPermissionColumn();
 
@@ -513,6 +517,16 @@ async function loadIntegratedAdmin() {
         }
         patchAdminPermissionColumn();
         window.loadAdminQuestions?.();
+
+        // Fonte única das abas da Administração integrada.
+        // Isto elimina a condição de corrida entre socio.js, admin.js e
+        // admin-runtime.js que fazia desaparecer as sub-abas.
+        if (typeof window.NAF_SETUP_INTEGRATED_ADMIN === 'function') {
+            window.NAF_SETUP_INTEGRATED_ADMIN(host);
+        } else {
+            // O runtime pode ainda estar a terminar o arranque.
+            setTimeout(() => window.NAF_SETUP_INTEGRATED_ADMIN?.(host), 0);
+        }
 
         if (loading) loading.hidden = true;
         state.adminLoaded = true;
