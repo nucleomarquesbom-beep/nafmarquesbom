@@ -135,10 +135,8 @@
 #integrated-admin-host .socio-admin-subtabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; padding:4px; background:#f4f1f6; border-radius:12px; }
 #integrated-admin-host .socio-admin-subtab { border:0; background:transparent; padding:11px 16px; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; color:#5b2a72; }
 #integrated-admin-host .socio-admin-subtab.active { background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-#integrated-admin-host .integrated-admin-group > .admin-tab-panel { display:block !important; }
 #integrated-admin-host .integrated-admin-group { display:none; }
 #integrated-admin-host .integrated-admin-group.active { display:block; }
-#integrated-admin-host .admin-tab-panel { display:block !important; }
 #integrated-admin-host #panel-admins { display:none !important; }
 #integrated-admin-host .admin-table th.admin-permission-col,
 #integrated-admin-host .admin-table td.admin-permission-cell { white-space:nowrap; }
@@ -721,36 +719,53 @@
                     <div class="socio-edit-grid">
 
                         <label>
+                            NIF
+                            <input id="edit-nif" type="text" inputmode="numeric" autocomplete="off">
+                        </label>
+
+                        <label>
                             Data de nascimento
-                            <input
-                                id="edit-nascimento"
-                                type="date"
-                            >
+                            <input id="edit-nascimento" type="date" autocomplete="bday">
+                        </label>
+
+                        <label>
+                            Naturalidade
+                            <input id="edit-naturalidade" type="text" autocomplete="off">
+                        </label>
+
+                        <label>
+                            Cartão de Cidadão
+                            <input id="edit-cartao-cidadao" type="text" autocomplete="off">
+                        </label>
+
+                        <label>
+                            Profissão
+                            <input id="edit-profissao" type="text" autocomplete="organization-title">
                         </label>
 
                         <label>
                             Email
-                            <input
-                                id="edit-email"
-                                type="email"
-                                autocomplete="email"
-                            >
+                            <input id="edit-email" type="email" autocomplete="email">
                         </label>
 
                         <label class="wide">
                             Morada
-                            <input
-                                id="edit-morada"
-                                type="text"
-                            >
+                            <input id="edit-morada" type="text" autocomplete="street-address">
+                        </label>
+
+                        <label>
+                            Localidade
+                            <input id="edit-localidade" type="text" autocomplete="address-level2">
+                        </label>
+
+                        <label>
+                            Código Postal
+                            <input id="edit-codigo-postal" type="text" inputmode="numeric" autocomplete="postal-code">
                         </label>
 
                         <label>
                             Telemóvel
-                            <input
-                                id="edit-telemovel"
-                                type="tel"
-                            >
+                            <input id="edit-telemovel" type="tel" autocomplete="tel">
                         </label>
 
                     </div>
@@ -1181,14 +1196,14 @@
 </footer>
 <script
     type="module"
-    src="js/socio.js?v=20260821-admin-public"
+    src="js/socio.js?v=20260905-admin1"
 ></script>
 <script
     type="module"
-    src="js/socio-questoes.js?v=20260822-1"
+    src="js/socio-questoes.js?v=20260905-admin1"
 ></script>
-<script type="module" src="js/socio-enhancements.js?v=20260821-1"></script>
+<script type="module" src="js/socio-enhancements.js?v=20260905-admin1"></script>
 <script src="js/acoes-socio.js" defer></script>
-<script src="js/admin-runtime.js?v=20260904-fix2" defer></script>
+<script src="js/admin-runtime.js?v=20260828-opt1" defer></script>
 </body>
 </html>
