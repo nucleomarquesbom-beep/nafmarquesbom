@@ -477,23 +477,19 @@ async function loadIntegratedAdmin() {
         host.replaceChildren(clone);
         host.hidden = false;
 
-        // Arranque determinístico das sub-abas da Administração integrada.
-        // O runtime mantém também um MutationObserver como fallback.
-        window.NAF_SETUP_INTEGRATED_ADMIN?.(host);
-
         // Carregamos exatamente os módulos que o admin.html usa.
         if (!window.supabase?.createClient) {
             await loadScriptOnce('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
         }
-        await loadScriptOnce('js/admin-config.js?v=20260820-clean');
-        await loadScriptOnce('js/admin.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-criar-socio.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-import-socios-excel.js?v=20260823-final');
-        await loadScriptOnce('js/admin-quotas-manual.js?v=20260820-clean');
-        await loadScriptOnce('js/admin-excel.js?v=20260820-clean');
-        await loadScriptOnce('js/dr-arbitro.js?v=20260820-clean');
-        await loadScriptOnce('js/acoes-admin.js?v=20260823-final');
-        try { await import(`./admin-questoes.js?v=20260823-final`); } catch (questionError) { console.error('Questões administrativas:', questionError); }
+        await loadScriptOnce('js/admin-config.js?v=20260905-admin1');
+        await loadScriptOnce('js/admin.js?v=20260905-admin1');
+        await loadScriptOnce('js/admin-criar-socio.js?v=20260905-admin1');
+        await loadScriptOnce('js/admin-import-socios-excel.js?v=20260905-admin1');
+        await loadScriptOnce('js/admin-quotas-manual.js?v=20260905-admin1');
+        await loadScriptOnce('js/admin-excel.js?v=20260905-admin1');
+        await loadScriptOnce('js/dr-arbitro.js?v=20260905-admin1');
+        await loadScriptOnce('js/acoes-admin.js?v=20260905-admin1');
+        try { await import(`./admin-questoes.js?v=20260905-admin1`); } catch (questionError) { console.error('Questões administrativas:', questionError); }
         window.bindAdminExcel?.();
         window.bindAdminQuotasManual?.();
 
@@ -1120,9 +1116,15 @@ function fillEditForms() {
 
     $('#edit-nome').value = s.nome || '';
     $('#edit-numero').value = s.numero_socio ?? '';
+    $('#edit-nif').value = s.nif || '';
     $('#edit-nascimento').value = s.data_nascimento || '';
+    $('#edit-naturalidade').value = s.naturalidade || '';
+    $('#edit-cartao-cidadao').value = s.cartao_cidadao || '';
+    $('#edit-profissao').value = s.profissao || '';
     $('#edit-email').value = s.email || state.user?.email || '';
     $('#edit-morada').value = s.morada || '';
+    $('#edit-localidade').value = s.localidade || '';
+    $('#edit-codigo-postal').value = s.codigo_postal || '';
     $('#edit-telemovel').value = s.telemovel || '';
     $('#edit-arbitro').value = s.numero_arbitro || '';
     $('#edit-af').value = s.associacao_futebol || '';
@@ -1169,10 +1171,16 @@ async function savePersonalData() {
     }
 
     await saveProfileFields({
+        nif: $('#edit-nif').value.trim() || null,
         data_nascimento: $('#edit-nascimento').value || null,
-        morada: $('#edit-morada').value || null,
+        naturalidade: $('#edit-naturalidade').value.trim() || null,
+        cartao_cidadao: $('#edit-cartao-cidadao').value.trim() || null,
+        profissao: $('#edit-profissao').value.trim() || null,
+        morada: $('#edit-morada').value.trim() || null,
+        localidade: $('#edit-localidade').value.trim() || null,
+        codigo_postal: $('#edit-codigo-postal').value.trim() || null,
         email,
-        telemovel: $('#edit-telemovel').value || null
+        telemovel: $('#edit-telemovel').value.trim() || null
     });
 }
 

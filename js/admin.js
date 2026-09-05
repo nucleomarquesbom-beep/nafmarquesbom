@@ -98,8 +98,10 @@
   async function sendDocument(){const file=$('mail-file')?.files?.[0];if(!file)throw new Error('Seleciona o documento.');if(file.size>10*1024*1024)throw new Error('O documento não pode ultrapassar 10 MB.');const subject=$('mail-subject')?.value.trim();const message=$('mail-message')?.value.trim();if(!subject||!message)throw new Error('Indica o assunto e escreve a mensagem.');const recipients=state.members.filter(m=>m.ativo&&m.email).map(m=>m.email);if(!recipients.length)throw new Error('Não existem sócios ativos com email.');let sent=0;const failures=[];const base64=await fileToBase64(file);for(const email of recipients){try{await invokeEdge(cfg.EMAIL_FUNCTION,{to:email,subject,text:message,attachment:{name:file.name,mime:file.type||'application/octet-stream',base64}});sent++;}catch(error){failures.push(`${email}: ${error.message||error}`);}}if(failures.length)throw new Error(`${sent} email(s) enviado(s); ${failures.length} falharam.`);show(`Documento enviado para ${sent} sócio(s).`);$('mail-file').value='';}
   async function loadAdminPermissions(){const tab=$('tab-admins'),panel=$('panel-admins');if(!tab||!panel)return;let root=false;try{const {data,error}=await state.supabase.rpc('is_root_admin');root=!error&&data===true;}catch{}if(!root){tab.hidden=true;panel.hidden=true;return;}tab.hidden=false;panel.hidden=false;const {data,error}=await state.supabase.rpc('admin_listar_permissoes_admin');if(error)throw error;const box=$('admin-permissions-list');if(!box)return;box.innerHTML=(data||[]).map(m=>`<div class="admin-preview-row admin-permission-row"><strong>${esc(m.numero_socio)}</strong><span>${esc(m.nome)}</span><span>${esc(m.email||'')}</span><span>${m.is_admin?'Administrador':'Sócio'}</span><button type="button" class="admin-small-btn ${m.is_admin?'danger':'primary'}" data-admin-toggle="${esc(m.id)}" data-admin-value="${m.is_admin?'false':'true'}">${m.is_admin?'Retirar admin':'Dar admin'}</button></div>`).join('')||'<div class="admin-loading">Não existem outros sócios.</div>';box.querySelectorAll('[data-admin-toggle]').forEach(btn=>{btn.onclick=async()=>{btn.disabled=true;try{const {error}=await state.supabase.rpc('admin_definir_admin',{p_socio_id:btn.dataset.adminToggle,p_is_admin:btn.dataset.adminValue==='true'});if(error)throw error;await loadMembers();show('Permissões de administrador atualizadas.');}catch(e){fail(e);}finally{btn.disabled=false;}};});}
   function setupAdminTabs(){
-    const tabs=[...document.querySelectorAll('#admin-app .admin-tabs > .admin-tab')].filter(btn=>!btn.hidden);
-    const panels=[...document.querySelectorAll('#admin-app > .admin-tab-panel')];
+    const app=$('admin-app');
+    if(!app) return;
+    const tabs=[...app.querySelectorAll(':scope > .admin-tabs > .admin-tab')].filter(btn=>!btn.hidden);
+    const panels=[...app.querySelectorAll(':scope > .admin-tab-panel')];
     if(!tabs.length || !panels.length) return;
 
     const activate=(name)=>{
@@ -121,7 +123,7 @@
       btn.addEventListener('click',()=>activate(btn.dataset.panel));
     }
 
-    const current=tabs.find(b=>b.classList.contains('active'))?.dataset.panel || 'socios';
+    const current=tabs.find(btn=>btn.classList.contains('active'))?.dataset.panel || 'socios';
     activate(current);
   }
 
