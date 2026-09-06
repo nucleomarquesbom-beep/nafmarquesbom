@@ -8,6 +8,11 @@ const cors = {
   "Content-Type": "application/json"
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors });
+const DEFAULT_SIGNATURE_TEXT = "--\nCom os mais respeitosos cumprimentos,\n\nP' Direcção,\nDiogo Silva\nNúcleo de Árbitros de Futebol Marques Bom\nEstádio Municipal Sérgio Conceição, 3030-974 Coimbra\n919 887 473\nFacebook | Instagram";
+const DEFAULT_SIGNATURE_HTML = `<div style="margin-top:24px">--<br><br>Com os mais respeitosos cumprimentos,<br><br>P' Direcção,<br><div style="font-family:cursive;font-size:24px;font-weight:700;font-style:italic;margin:6px 0">Diogo Silva</div><div style="color:#b00000;font-weight:700">Núcleo de Árbitros de Futebol Marques Bom</div>Estádio Municipal Sérgio Conceição, 3030-974 Coimbra<br>919 887 473<br><span style="color:#1155cc;text-decoration:underline">Facebook</span> | <span style="color:#1155cc;text-decoration:underline">Instagram</span></div>`;
+const signatureText = () => DEFAULT_SIGNATURE_TEXT;
+const signatureHtml = () => DEFAULT_SIGNATURE_HTML;
+const escapeHtml = (v: unknown) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -69,7 +74,7 @@ Deno.serve(async req => {
       if (!acao.ativa || acao.anulada) return json({ ok: true, skipped: true, reason: "Atividade não está ativa." });
 
       subject = `Nova atividade disponível — ${acao.titulo}`;
-      text = `Olá {NOME},\n\nEstá disponível uma nova atividade do Núcleo de Árbitros de Futebol Marques Bom:\n\n${acao.titulo}\n${acao.data ? `Data: ${acao.data}\n` : ''}${acao.hora ? `Hora: ${String(acao.hora).slice(0,5)}\n` : ''}${acao.local ? `Local: ${acao.local}\n` : ''}${acao.descricao ? `\n${acao.descricao}\n` : ''}\nConsulte a Área de Sócio para ver os detalhes e, se as inscrições estiverem abertas, efetuar a sua inscrição.\n\nNúcleo de Árbitros de Futebol Marques Bom`;
+      text = `Olá {NOME},\n\nEstá disponível uma nova atividade do Núcleo de Árbitros de Futebol Marques Bom:\n\n${acao.titulo}\n${acao.data ? `Data: ${acao.data}\n` : ''}${acao.hora ? `Hora: ${String(acao.hora).slice(0,5)}\n` : ''}${acao.local ? `Local: ${acao.local}\n` : ''}${acao.descricao ? `\n${acao.descricao}\n` : ''}\nConsulte a Área de Sócio para ver os detalhes e, se as inscrições estiverem abertas, efetuar a sua inscrição.\n\n${signatureText()}`;
     } else {
       const { data: edicao, error } = await admin
         .from("dr_arbitro_edicoes")
@@ -80,7 +85,7 @@ Deno.serve(async req => {
       if (!edicao.ativo) return json({ ok: true, skipped: true, reason: "Edição não está ativa." });
 
       subject = `Drº Árbitro — ${edicao.nome}`;
-      text = `Olá {NOME},\n\nEstá disponível uma nova edição do Drº Árbitro:\n\n${edicao.nome}\n\nConsulte a Área de Sócio para ver os detalhes${edicao.inscricoes_abertas ? ' e efetuar a sua inscrição' : ''}.\n\nNúcleo de Árbitros de Futebol Marques Bom`;
+      text = `Olá {NOME},\n\nEstá disponível uma nova edição do Drº Árbitro:\n\n${edicao.nome}\n\nConsulte a Área de Sócio para ver os detalhes${edicao.inscricoes_abertas ? ' e efetuar a sua inscrição' : ''}.\n\n${signatureText()}`;
     }
 
     const { data: existing } = await admin
@@ -108,7 +113,13 @@ Deno.serve(async req => {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to: [email], subject, text: personalized })
+        body: JSON.stringify({
+          from,
+          to: [email],
+          subject,
+          text: personalized,
+          html: `<p>${escapeHtml(personalized).replace(/\n/g, "<br>")}</p>`
+        })
       });
       if (response.ok) sent++; else failed++;
     }
