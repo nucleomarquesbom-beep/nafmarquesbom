@@ -4,377 +4,337 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>História | Núcleo de Árbitros de Futebol Marques Bom</title>
-
     <link rel="stylesheet" href="css/style.css">
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
-        rel="stylesheet"
-    >
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* =========================================================
-           HISTÓRIA — LINHA VERTICAL DE PRESIDENTES
-           Mantém a linguagem visual da timeline do Plano de Atividades.
-           Desktop: esquerda + conteúdo à direita.
-           Mobile: linha sobe para o topo em formato compacto.
+           LAYOUT HISTÓRIA — DESIGN MOCKUP
            ========================================================= */
 
-        .historia-layout {
+        .historia-grid-top {
             display: grid;
-            grid-template-columns: 290px minmax(0, 1fr);
-            gap: 48px;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 32px;
+            margin-bottom: 48px;
             align-items: start;
         }
 
-        .presidentes-timeline {
-            position: relative;
-            padding: 8px 0 8px 42px;
+        .historia-card-main {
+            background: #fff;
+            padding: 32px 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
         }
 
-        .presidentes-timeline::before {
-            content: "";
-            position: absolute;
-            left: 18px;
-            top: 24px;
-            bottom: 24px;
-            width: 4px;
-            border-radius: 999px;
-            background: #d2a51f;
-        }
-
-        .presidentes-titulo {
-            margin: 0 0 22px;
-            font-size: 1.1rem;
+        .section-title-center {
+            text-align: center;
+            color: #1a1a1a;
+            font-size: 1.6rem;
             font-weight: 700;
-            letter-spacing: .03em;
-            color: #5d267b;
-            text-transform: uppercase;
+            margin-bottom: 32px;
         }
 
-        .presidente-item {
+        /* TIMELINE ZIGUE-ZAGUE CENTRAL */
+        .timeline-wrapper {
             position: relative;
-            display: flex;
-            align-items: center;
-            min-height: 92px;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px 0;
         }
 
-        .presidente-linha {
+        .timeline-wrapper::before {
+            content: '';
             position: absolute;
-            left: 18px;
-            width: 26px;
-            height: 4px;
-            border-radius: 999px;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
             background: #d2a51f;
+            transform: translateX(-50%);
         }
 
-        .presidente-circulo {
+        .timeline-item {
             position: relative;
-            z-index: 2;
-            width: 76px;
-            height: 76px;
-            margin-left: -20px;
-            padding: 0;
-            border: 4px solid #d2a51f;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 5px 16px rgba(0, 0, 0, .10);
-            display: grid;
-            place-items: center;
-            overflow: hidden;
-            cursor: pointer;
-            transition:
-                transform .22s ease,
-                box-shadow .22s ease,
-                border-color .22s ease;
+            width: 50%;
+            padding: 0 20px;
+            margin-bottom: 28px;
+            box-sizing: border-box;
         }
 
-        .presidente-circulo:hover,
-        .presidente-circulo:focus-visible {
-            transform: scale(1.08);
-            box-shadow: 0 9px 24px rgba(0, 0, 0, .15);
-            border-color: #5d267b;
-            outline: none;
+        .timeline-item.left {
+            left: 0;
+            text-align: right;
         }
 
-        .presidente-circulo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            display: block;
+        .timeline-item.right {
+            left: 50%;
+            text-align: left;
         }
 
-        .presidente-avatar {
-            width: 100%;
-            height: 100%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            background: #f3f3f3;
-        }
-
-        .presidente-info {
+        .timeline-dot {
             position: absolute;
-            left: 78px;
-            top: 50%;
-            transform: translateY(-50%) translateX(-6px);
-            width: 210px;
-            padding: 14px 16px;
-            border-radius: 12px;
-            background: #fff;
-            border-top: 4px solid #d2a51f;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, .13);
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transition:
-                opacity .18s ease,
-                transform .18s ease,
-                visibility .18s ease;
-        }
-
-        .presidente-info::before {
-            content: "";
-            position: absolute;
-            left: -8px;
-            top: 50%;
+            top: 15px;
             width: 14px;
             height: 14px;
-            transform: translateY(-50%) rotate(45deg);
+            background: #5d267b;
+            border: 3px solid #d2a51f;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .timeline-item.left .timeline-dot {
+            right: -10px;
+        }
+
+        .timeline-item.right .timeline-dot {
+            left: -10px;
+        }
+
+        .timeline-content-card {
             background: #fff;
-            box-shadow: -2px 2px 5px rgba(0, 0, 0, .04);
-        }
-
-        .presidente-info strong {
-            display: block;
-            color: #5d267b;
-            font-size: .95rem;
-            line-height: 1.25;
-            margin-bottom: 4px;
-        }
-
-        .presidente-info span {
-            display: block;
-            color: #6a6a6a;
-            font-size: .8rem;
-            font-weight: 600;
-            letter-spacing: .03em;
-        }
-
-        .presidente-item:hover .presidente-info,
-        .presidente-item:focus-within .presidente-info {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(-50%) translateX(0);
-        }
-
-        .historia-conteudo {
-            min-width: 0;
-        }
-
-        .historia-card {
-            border-top: 4px solid #d2a51f;
-            background: #fff;
-            padding: 32px;
+            border: 1px solid #eef0f3;
             border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,.05);
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         }
 
-        /* Estilos específicos para a nova secção da História */
-        .patrono-box {
-            display: flex;
-            gap: 24px;
-            align-items: center;
-            background: #f8f9fa;
-            border-left: 5px solid #5d267b;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 28px 0;
+        .timeline-content-card h4 {
+            margin: 0 0 4px;
+            font-size: 0.95rem;
+            color: #1a1a1a;
+            font-weight: 700;
         }
 
-        .patrono-img {
-            width: 110px;
-            height: 130px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 2px solid #d2a51f;
-            flex-shrink: 0;
+        .timeline-content-card p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.35;
+        }
+
+        .timeline-year {
+            display: inline-block;
+            font-weight: 700;
+            color: #1a1a1a;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        /* SECÇÃO PATRONO */
+        .patrono-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .patrono-card h2 {
+            font-size: 1.4rem;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .patrono-img-wrapper {
+            width: 100%;
+            max-width: 240px;
+            height: 220px;
+            margin: 0 auto 20px;
+            border-radius: 12px;
+            overflow: hidden;
             background: #e9ecef;
         }
 
-        .patrono-info h3 {
+        .patrono-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .patrono-card h3 {
+            font-size: 1.1rem;
+            color: #1a1a1a;
             margin: 0 0 8px;
-            color: #5d267b;
-            font-size: 1.15rem;
-        }
-
-        .patrono-info p {
-            margin: 0;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            color: #4a4a4a;
-        }
-
-        .historia-timeline {
-            margin: 32px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .timeline-block {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-        }
-
-        .timeline-badge {
-            background: #5d267b;
-            color: #fff;
             font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            min-width: 85px;
-            text-align: center;
         }
 
-        .timeline-text h4 {
-            margin: 0 0 4px;
-            color: #333;
-            font-size: 1rem;
-        }
-
-        .timeline-text p {
-            margin: 0;
-            font-size: 0.92rem;
-            color: #666;
-            line-height: 1.45;
-        }
-
-        .historia-cta-box {
-            margin-top: 36px;
-            padding: 24px;
-            background: linear-gradient(135deg, #fef8eb 0%, #fff 100%);
-            border: 1px solid #f0e2b6;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .historia-cta-box h3 {
-            margin: 0 0 8px;
-            color: #5d267b;
-        }
-
-        .historia-cta-box p {
-            margin: 0 0 16px;
+        .patrono-card p {
+            font-size: 0.88rem;
             color: #555;
-            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
         }
 
-        .btn-cta {
-            display: inline-block;
+        /* GRELHA HOMENAGEM AOS PRESIDENTES */
+        .section-presidentes {
+            margin-top: 48px;
+            text-align: center;
+        }
+
+        .presidentes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .presidente-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .presidente-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .presidente-card.active {
             background: #5d267b;
             color: #fff;
-            padding: 10px 24px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: 600;
+            border-color: #5d267b;
+        }
+
+        .presidente-card.active .presi-years,
+        .presidente-card.active .presi-name,
+        .presidente-card.active .presi-role {
+            color: #fff;
+        }
+
+        .presidente-avatar-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            border: 2px solid #ccc;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .presidente-card.active .presidente-avatar-circle {
+            border-color: #d2a51f;
+        }
+
+        .presidente-avatar-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .presi-years {
+            font-size: 0.75rem;
+            color: #777;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .presi-name {
             font-size: 0.9rem;
-            transition: background 0.2s;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0 0 2px;
         }
 
-        .btn-cta:hover {
-            background: #471d5e;
+        .presi-role {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 0;
         }
 
-        /* =========================================================
-           MOBILE
-           ========================================================= */
+        .btn-presi-more {
+            display: inline-block;
+            margin-top: 10px;
+            background: #d2a51f;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
 
-        @media (max-width: 900px) {
-            .historia-layout {
+        /* SECÇÃO LEGADO NO RODAPÉ */
+        .legado-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 48px;
+        }
+
+        .legado-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .legado-icon {
+            font-size: 1.8rem;
+            background: #f8f9fa;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .legado-info h4 {
+            margin: 0 0 4px;
+            font-size: 1rem;
+            color: #1a1a1a;
+        }
+
+        .legado-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* RESPONSIVIDADE MOBILE */
+        @media (max-width: 850px) {
+            .historia-grid-top {
                 grid-template-columns: 1fr;
-                gap: 28px;
             }
 
-            .presidentes-timeline {
-                padding-left: 34px;
-                overflow-x: visible;
+            .legado-grid {
+                grid-template-columns: 1fr;
             }
 
-            .presidentes-timeline::before {
-                left: 15px;
+            .timeline-wrapper::before {
+                left: 20px;
             }
 
-            .presidente-linha {
-                left: 15px;
-                width: 20px;
+            .timeline-item {
+                width: 100%;
+                padding-left: 45px;
+                padding-right: 0;
             }
 
-            .presidente-circulo {
-                width: 68px;
-                height: 68px;
-                margin-left: -19px;
+            .timeline-item.left,
+            .timeline-item.right {
+                left: 0;
+                text-align: left;
             }
 
-            .presidente-info {
-                left: 70px;
-                width: min(220px, calc(100vw - 120px));
-            }
-
-            .patrono-box {
-                flex-direction: column;
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .presidentes-timeline {
-                padding-left: 28px;
-            }
-
-            .presidentes-timeline::before {
-                left: 12px;
-                top: 18px;
-                bottom: 18px;
-            }
-
-            .presidente-item {
-                min-height: 82px;
-            }
-
-            .presidente-linha {
-                left: 12px;
-                width: 16px;
-                height: 3px;
-            }
-
-            .presidente-circulo {
-                width: 60px;
-                height: 60px;
-                margin-left: -18px;
-                border-width: 3px;
-            }
-
-            .presidente-info {
-                left: 62px;
-                width: calc(100vw - 110px);
-                max-width: 240px;
-                padding: 11px 12px;
-            }
-
-            .presidentes-titulo {
-                font-size: 1rem;
-            }
-
-            .timeline-block {
-                flex-direction: column;
-                gap: 6px;
+            .timeline-item.left .timeline-dot,
+            .timeline-item.right .timeline-dot {
+                left: 13px;
+                right: auto;
             }
         }
     </style>
@@ -387,7 +347,6 @@
         <a href="index.html" class="logo">
             <img src="imagens/logo.png" alt="Logótipo">
         </a>
-
         <nav>
             <a href="index.html">Início</a>
             <a href="historia.html" class="ativo">História</a>
@@ -410,289 +369,175 @@
 <main class="pagina">
     <div class="container">
 
-        <div class="historia-layout">
+        <!-- PARTE SUPERIOR: TIMELINE + PATRONO -->
+        <div class="historia-grid-top">
 
-            <!-- =====================================================
-                 LINHA VERTICAL DOS PRESIDENTES
-                 ===================================================== -->
+            <!-- COLUNA ESQUERDA: A NOSSA JORNADA (TIMELINE) -->
+            <section class="historia-card-main">
+                <h2 class="section-title-center">A Nossa Jornada</h2>
 
-            <aside class="presidentes-timeline">
+                <div class="timeline-wrapper">
 
-                <h2 class="presidentes-titulo">
-                    Presidentes
-                </h2>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 01">
-                        <img src="imagens/presidentes/presidente-01.jpg" alt="Fotografia do Presidente 01" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 01</strong>
-                        <span>1987 — Mandato</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 02">
-                        <img src="imagens/presidentes/presidente-02.jpg" alt="Fotografia do Presidente 02" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 02</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 03">
-                        <img src="imagens/presidentes/presidente-03.jpg" alt="Fotografia do Presidente 03" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 03</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 04">
-                        <img src="imagens/presidentes/presidente-04.jpg" alt="Fotografia do Presidente 04" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 04</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 05">
-                        <img src="imagens/presidentes/presidente-05.jpg" alt="Fotografia do Presidente 05" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 05</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 06">
-                        <img src="imagens/presidentes/presidente-06.jpg" alt="Fotografia do Presidente 06" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 06</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 07">
-                        <img src="imagens/presidentes/presidente-07.jpg" alt="Fotografia do Presidente 07" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 07</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 08">
-                        <img src="imagens/presidentes/presidente-08.jpg" alt="Fotografia do Presidente 08" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 08</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 09">
-                        <img src="imagens/presidentes/presidente-09.jpg" alt="Fotografia do Presidente 09" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 09</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 10">
-                        <img src="imagens/presidentes/presidente-10.jpg" alt="Fotografia do Presidente 10" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 10</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 11">
-                        <img src="imagens/presidentes/presidente-11.jpg" alt="Fotografia do Presidente 11" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 11</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 12">
-                        <img src="imagens/presidentes/presidente-12.jpg" alt="Fotografia do Presidente 12" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 12</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 13">
-                        <img src="imagens/presidentes/presidente-13.jpg" alt="Fotografia do Presidente 13" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 13</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 14">
-                        <img src="imagens/presidentes/presidente-14.jpg" alt="Fotografia do Presidente 14" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 14</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-                <article class="presidente-item">
-                    <div class="presidente-linha"></div>
-                    <button class="presidente-circulo" type="button" aria-label="Presidente 15">
-                        <img src="imagens/presidentes/presidente-15.jpg" alt="Fotografia do Presidente 15" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <span class="presidente-avatar" aria-hidden="true">👤</span>
-                    </button>
-                    <div class="presidente-info" role="tooltip">
-                        <strong>Presidente 15</strong>
-                        <span>ANO / PERÍODO</span>
-                    </div>
-                </article>
-
-            </aside>
-
-            <!-- =====================================================
-                 CONTEÚDO PRINCIPAL DA HISTÓRIA
-                 ===================================================== -->
-
-            <section class="historia-card historia-conteudo">
-                <h2>A Nossa Jornada</h2>
-                <p>
-                    Fundado a <strong>16 de novembro de 1987</strong>, o <strong>Núcleo de Árbitros de Futebol Marques Bom</strong> (Sócio Nº 03 da APAF) é uma referência incontornável na arbitragem do distrito de Coimbra. Desde a sua criação, tem como missão a valorização, formação contínua e apoio social aos árbitros de futebol e futsal.
-                </p>
-
-                <!-- Destaque ao Patrono -->
-                <div class="patrono-box">
-                    <img 
-                        src="imagens/patrono-marques-bom.jpg" 
-                        alt="Augusto Marques Bom" 
-                        class="patrono-img"
-                        onerror="this.src='https://via.placeholder.com/110x130/5d267b/ffffff?text=Patrono';"
-                    >
-                    <div class="patrono-info">
-                        <h3>O Patrono: Augusto Marques Bom</h3>
-                        <p>
-                            Uma das figuras mais respeitadas da arbitragem em Coimbra e antigo membro da Comissão Distrital de Arbitragem da AF Coimbra. O seu legado de exigência, rigor pedagógico e elevação dos valores do desporto continua a ser o farol que guia o nosso Núcleo.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Marcos Históricos -->
-                <h3 style="color:#5d267b; margin-top: 28px;">Marcos Históricos</h3>
-                <div class="historia-timeline">
-                    <div class="timeline-block">
-                        <span class="timeline-badge">1987</span>
-                        <div class="timeline-text">
-                            <h4>Fundação Oficial</h4>
-                            <p>Criação do Núcleo por um grupo de árbitros visionários em Coimbra para defender os interesses e a dignidade da classe.</p>
+                    <div class="timeline-item left">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content-card">
+                            <span class="timeline-year">1987</span>
+                            <h4>Fundação do Núcleo</h4>
+                            <p>Um grupo de árbitros visionários funda o NAFMB, por amor à arbitragem.</p>
                         </div>
                     </div>
 
-                    <div class="timeline-block">
-                        <span class="timeline-badge">Anos 90/00</span>
-                        <div class="timeline-text">
-                            <h4>Consolidação e Formação</h4>
-                            <p>Implementação dos primeiros cursos internos de apoio técnico, encontros sociais e cooperação estreita com a Associação de Futebol de Coimbra (AFC).</p>
+                    <div class="timeline-item right">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content-card">
+                            <span class="timeline-year">1995</span>
+                            <h4>Expansão da Formação</h4>
+                            <p>Primeiro curso de formação cujo legado de integridade inspira gerações.</p>
                         </div>
                     </div>
 
-                    <div class="timeline-block">
-                        <span class="timeline-badge">Atualidade</span>
-                        <div class="timeline-text">
-                            <h4>Inovação e Futuro</h4>
-                            <p>Sediados no Estádio Municipal Sérgio Conceição (Taveiro), continuamos focados na capacitação contínua, arbitragem jovem, feminina e na transição digital.</p>
+                    <div class="timeline-item left">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content-card">
+                            <span class="timeline-year">2010</span>
+                            <h4>Nova Sede Social</h4>
+                            <p>Inauguração das atuais instalações no NAFMB.</p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Call To Action -->
-                <div class="historia-cta-box">
-                    <h3>Queres fazer parte desta história?</h3>
-                    <p>Junta-te a nós como sócio ou inicia a tua carreira na arbitragem.</p>
-                    <a href="contactos.html" class="btn-cta">Saber Como Começar</a>
+                    <div class="timeline-item right">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content-card">
+                            <span class="timeline-year">2020</span>
+                            <h4>Modernização Digital</h4>
+                            <p>Lançamento da plataforma online e formação digital aos associados.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item left">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content-card">
+                            <span class="timeline-year">Atualidade</span>
+                            <h4>2026-2027</h4>
+                            <p>Continuando a servir e valorizar o futuro da arbitragem.</p>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
+            <!-- COLUNA DIREITA: O PATRONO -->
+            <section class="patrono-card">
+                <h2>O Patrono: Marques Bom</h2>
+                <div class="patrono-img-wrapper">
+                    <img src="imagens/patrono-marques-bom.jpg" alt="Augusto Marques Bom" onerror="this.src='https://via.placeholder.com/240x220/e9ecef/5d267b?text=Marques+Bom';">
+                </div>
+                <h3>Quem foi Marques Bom?</h3>
+                <p>
+                    Um árbitro exemplar e pedagogo dedicado, cujo legado de integridade inspira gerações.
+                </p>
+            </section>
+
         </div>
+
+        <!-- PARTE INFERIOR: HOMENAGEM AOS PRESIDENTES -->
+        <section class="section-presidentes">
+            <h2 class="section-title-center">Homenagem aos Presidentes</h2>
+
+            <div class="presidentes-grid">
+
+                <div class="presidente-card">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-01.jpg" alt="António Silva" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">1987-1991</span>
+                    <h4 class="presi-name">António Silva</h4>
+                    <p class="presi-role">Presidente Fundador</p>
+                </div>
+
+                <div class="presidente-card">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-02.jpg" alt="João Santos" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">1991-1995</span>
+                    <h4 class="presi-name">João Santos</h4>
+                </div>
+
+                <div class="presidente-card">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-03.jpg" alt="José Pinto" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">1995-2000</span>
+                    <h4 class="presi-name">José Pinto</h4>
+                </div>
+
+                <div class="presidente-card">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-04.jpg" alt="Luís Almeida" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">2000-2005</span>
+                    <h4 class="presi-name">Luís Almeida</h4>
+                </div>
+
+                <div class="presidente-card">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-05.jpg" alt="Manuel Ferreira" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">2005-2015</span>
+                    <h4 class="presi-name">Manuel Ferreira</h4>
+                </div>
+
+                <div class="presidente-card active">
+                    <div class="presidente-avatar-circle">
+                        <img src="imagens/presidentes/presidente-06.jpg" alt="Pedro Costa" onerror="this.style.display='none';">
+                        <span>👤</span>
+                    </div>
+                    <span class="presi-years">2015-Atualidade</span>
+                    <h4 class="presi-name">Pedro Costa</h4>
+                    <a href="#" class="btn-presi-more">Saber Mais</a>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECÇÃO O NOSSO LEGADO -->
+        <section style="margin-top: 56px;">
+            <h2 class="section-title-center">O Nosso Legado</h2>
+            <div class="legado-grid">
+                <div class="legado-card">
+                    <div class="legado-icon">⭐</div>
+                    <div class="legado-info">
+                        <h4>Valores</h4>
+                        <p>Integridade, Respeito, Formação, Excelência</p>
+                    </div>
+                </div>
+                <div class="legado-card">
+                    <div class="legado-icon">💡</div>
+                    <div class="legado-info">
+                        <h4>Inovação</h4>
+                        <p>Adotando novas tecnologias e métodos</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </div>
 </main>
 
 <footer>
     <div class="container">
-
-        <h3>
-            Núcleo de Árbitros de Futebol Marques Bom
-        </h3>
-
-        <p>
-            Coimbra • Portugal
-        </p>
-
-        <p>
-            Email: geral@nafmarquesbom.pt
-        </p>
-
-        <p>
-            © 2026 Todos os direitos reservados.
-        </p>
+        <h3>Núcleo de Árbitros de Futebol Marques Bom</h3>
+        <p>Coimbra • Portugal</p>
+        <p>Email: geral@nafmarquesbom.pt</p>
+        <p>© 2026 Todos os direitos reservados.</p>
         <p class="rgpd-footer-link">
             <a href="rgpd.html">Proteção de Dados</a>
         </p>
-
     </div>
 </footer>
 
