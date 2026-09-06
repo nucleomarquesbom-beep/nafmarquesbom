@@ -274,29 +274,22 @@ async function sendInvalidEmail(
     `<p><strong>Motivos:</strong></p><ul>${htmlReasons}</ul>` +
     signatureHtml();
 
-  const resend = Deno.env.get("RESEND_API_KEY") || "";
-  if (!resend) throw new Error("RESEND_API_KEY não está configurada no Supabase.");
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resend}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: fromEmail(),
-      to: [ROOT_EMAIL],
-      cc: [socio.email],
-      subject: `Comprovativo não validado — Sócio ${socio.numero_socio}`,
-      text,
-      html
-    })
+  const { error } = await admin.rpc("enfileirar_email_sistema", {
+    p_to_email: ROOT_EMAIL,
+    p_subject: `Comprovativo de quotas não validado — Sócio ${socio.numero_socio}`,
+    p_html_body: html,
+    p_text_body: text,
+    p_cc_email: socio.email,
+    p_bcc_email: null,
+    p_attachment_storage_path: null,
+    p_attachment_filename: null,
+    p_available_at: null,
+    p_source: "quota-comprovativo",
+    p_metadata: { socio_id: socio.numero_socio, ficheiro: fileName, tipo: "comprovativo-invalido" },
+    p_from_email: fromEmail()
   });
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body?.message || "Não foi possível enviar a notificação de comprovativo inválido.");
-  }
+  if (error) throw error;
 }
 
 Deno.serve(async (req) => {
