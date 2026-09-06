@@ -11,6 +11,12 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: CORS });
 
+const DEFAULT_SIGNATURE_TEXT = "--\nCom os mais respeitosos cumprimentos,\n\nP' Direcção,\nDiogo Silva\nNúcleo de Árbitros de Futebol Marques Bom\nEstádio Municipal Sérgio Conceição, 3030-974 Coimbra\n919 887 473\nFacebook | Instagram";
+const DEFAULT_SIGNATURE_HTML = `<div style="margin-top:24px">--<br><br>Com os mais respeitosos cumprimentos,<br><br>P' Direcção,<br><div style="font-family:cursive;font-size:24px;font-weight:700;font-style:italic;margin:6px 0">Diogo Silva</div><div style="color:#b00000;font-weight:700">Núcleo de Árbitros de Futebol Marques Bom</div>Estádio Municipal Sérgio Conceição, 3030-974 Coimbra<br>919 887 473<br><span style="color:#1155cc;text-decoration:underline">Facebook</span> | <span style="color:#1155cc;text-decoration:underline">Instagram</span></div>`;
+const signatureText = () => DEFAULT_SIGNATURE_TEXT;
+const signatureHtml = () => DEFAULT_SIGNATURE_HTML;
+const escapeHtml = (value: unknown) => String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
 function key(name: "publishable" | "secret") {
   const raw = Deno.env.get(
     name === "publishable" ? "SUPABASE_PUBLISHABLE_KEYS" : "SUPABASE_SECRET_KEYS"
@@ -136,8 +142,13 @@ Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não pod
 
 Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.
 
-Um forte abraço,
-Núcleo de Árbitros de Futebol Marques Bom`
+${signatureText()}`,
+          html:
+            `<p>Olá ${escapeHtml(socio.nome || "sócio")}.</p>` +
+            `<p>Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não podia deixar passar em branco.</p>` +
+            `<p>🎂 Muitos parabéns pelo seu aniversário!</p>` +
+            `<p>Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.</p>` +
+            signatureHtml()
         })
       });
 
