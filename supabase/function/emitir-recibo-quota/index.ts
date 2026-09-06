@@ -5,6 +5,10 @@ import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const json=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:cors});
 const ROOT="nucleomarquesbom@gmail.com";
+const DEFAULT_SIGNATURE_TEXT=`--\nCom os mais respeitosos cumprimentos,\n\nP' Tesouraria,\nJoão Gomes\nNúcleo de Árbitros de Futebol Marques Bom\nEstádio Municipal Sérgio Conceição, 3030-974 Coimbra\n964 645 735\nFacebook | Instagram`;
+const DEFAULT_SIGNATURE_HTML=`<div style="margin-top:24px">--<br><br>Com os mais respeitosos cumprimentos,<br><br>P' Tesouraria,<br><div style="font-family:cursive;font-size:24px;font-weight:700;font-style:italic;margin:6px 0">João Gomes</div><div style="color:#b00000;font-weight:700">Núcleo de Árbitros de Futebol Marques Bom</div>Estádio Municipal Sérgio Conceição, 3030-974 Coimbra<br>964 645 735<br><span style="color:#1155cc;text-decoration:underline">Facebook</span> | <span style="color:#1155cc;text-decoration:underline">Instagram</span></div>`;
+const signatureText=()=>DEFAULT_SIGNATURE_TEXT;
+const signatureHtml=()=>DEFAULT_SIGNATURE_HTML;
 const METHODS:Record<string,string>={transferencia:"Transferência bancária",mbway:"MB WAY",numerario:"Numerário"};
 const money=(v:number)=>`${v.toFixed(2).replace('.',',')} €`;
 const wrap=(t:string,max=92)=>{const o:string[]=[];let l='';for(const w of t.split(/\s+/)){if((l+' '+w).trim().length>max){if(l)o.push(l);l=w}else l=(l+' '+w).trim()}if(l)o.push(l);return o;};
@@ -41,7 +45,7 @@ Deno.serve(async req=>{
   const bytes=await pdf(s,r),path=`${s.id}/${r.numero_recibo}.pdf`;
   const {error:up}=await admin.storage.from('recibos-quotas').upload(path,bytes,{contentType:'application/pdf',upsert:true});if(up)throw up;
   await admin.from('recibos_quotas').update({storage_path:path}).eq('id',r.id);
-  const text=`Olá ${s.nome},\n\nEnviamos em anexo o recibo de pagamento das suas quotas.\n\nValor: ${money(Number(r.valor_total))}\nMétodo: ${METHODS[metodo]}\nRecibo: ${r.numero_recibo}\n\nObrigado,\nNúcleo de Árbitros de Futebol Marques Bom`;
+  const text=`Olá ${s.nome},\n\nEnviamos em anexo o recibo de pagamento das suas quotas.\n\nValor: ${money(Number(r.valor_total))}\nMétodo: ${METHODS[metodo]}\nRecibo: ${r.numero_recibo}\n\n${signatureText()}`;
   const {error:eq}=await admin.rpc('enfileirar_email_sistema',{p_to_email:s.email,p_subject:`Recibo de pagamento de quotas — Sócio ${s.numero_socio}`,p_html_body:`<p>${text.replace(/\n/g,'<br>')}</p>`,p_text_body:text,p_cc_email:ROOT,p_attachment_storage_path:path,p_attachment_filename:`Recibo-${r.numero_recibo}.pdf`,p_source:'emitir-recibo-quota',p_metadata:{recibo_id:r.id,socio_id:s.id}});
   if(eq){await admin.from('recibos_quotas').update({email_erro:eq.message}).eq('id',r.id);return json({error:`Pagamento registado e recibo guardado, mas não foi possível colocar o email na fila: ${eq.message}`},500);}
   await admin.from('recibos_quotas').update({email_enviado_em:new Date().toISOString(),email_erro:null}).eq('id',r.id);
