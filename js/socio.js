@@ -900,67 +900,43 @@ async function uploadQuotaComprovativo(file) {
     if (status) {
         status.hidden = false;
         status.className = 'admin-result';
-        status.textContent = `Ficheiro selecionado: ${file.name} — a enviar…`;
+        status.textContent = `Ficheiro selecionado: ${file.name} — a ler e validar…`;
     }
 
-    const { data: quotas, error: quotaError } = await supabase
-        .from('quotas')
-        .select('id,ano,mes,valor,pago,estado')
-        .eq('socio_id', state.socio.id)
-        .order('ano', { ascending: true })
-        .order('mes', { ascending: true });
+    const formData = new FormData();
+    formData.append('comprovativo', file, file.name);
 
-    if (quotaError) throw quotaError;
-
-    const unpaid = (quotas || []).filter(q => {
-        const estado = String(q.estado || 'pendente').trim().toLowerCase();
-        return q.pago !== true && !['pago', 'paga', 'isento', 'anulado'].includes(estado);
+    const { data, error } = await supabase.functions.invoke('processar-comprovativo', {
+        body: formData
     });
 
-    if (!unpaid.length) throw new Error('Não existem quotas por regularizar para associar a este comprovativo.');
-
-    /* O comprovativo é associado à quota em dívida mais antiga. */
-    const quota = unpaid[0];
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${state.socio.id}/${crypto.randomUUID()}-${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('comprovativos-quotas')
-        .upload(path, file, {
-            contentType: 'application/pdf',
-            upsert: false
-        });
-
-    if (uploadError) throw uploadError;
-
-    try {
-        const { error: dbError } = await supabase
-            .from('quota_comprovativos')
-            .insert({
-                quota_id: quota.id,
-                socio_id: state.socio.id,
-                storage_path: path,
-                nome_ficheiro: file.name,
-                tamanho_bytes: file.size,
-                tipo_mime: 'application/pdf',
-                estado: 'pendente',
-                submitted_at: new Date().toISOString()
-            });
-
-        if (dbError) throw dbError;
-    } catch (error) {
-        await supabase.storage.from('comprovativos-quotas').remove([path]).catch(() => {});
-        throw error;
+    if (error) {
+        let message = error.message || 'Não foi possível processar o comprovativo.';
+        try {
+            const response = error.context;
+            if (response && typeof response.json === 'function') {
+                const body = await response.json();
+                if (body?.error) message = body.error;
+                if (Array.isArray(body?.reasons) && body.reasons.length) {
+                    message = body.reasons.join(' ');
+                }
+            }
+        } catch (_) {
+            // Mantém a mensagem original da função.
+        }
+        throw new Error(message);
     }
+
+    if (data?.error) throw new Error(data.error);
 
     if (status) {
         status.hidden = false;
         status.className = 'admin-result success';
-        const periodo = formatQuotaMonth(quota.ano, quota.mes) || `${quota.ano}/${quota.mes}`;
-        status.textContent = `Comprovativo “${file.name}” enviado com sucesso e associado à quota ${periodo}. Aguarda validação.`;
+        status.textContent = data?.message || 'Comprovativo processado com sucesso.';
     }
 
     await loadQuotas();
+    await loadDocuments();
 }
 
 async function loadDocuments() {
