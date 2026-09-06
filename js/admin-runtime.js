@@ -55,9 +55,6 @@
     const app = host?.querySelector('#admin-app');
     if (!host || !app) return false;
 
-    // Se já existe uma montagem válida, não a reconstruir.
-    // O host pode sobreviver a uma recarga do admin.html. Nunca confiamos
-    // apenas numa flag antiga: verificamos sempre a montagem atual.
     const existingTabs = app.querySelector(':scope > .socio-admin-subtabs');
     if (existingTabs && sections.every(([name]) => app.querySelector(`#integrated-admin-group-${name}`))) {
       host.dataset.nafRuntimeReady = '1';
@@ -69,9 +66,6 @@
       panels[name] = app.querySelector(`#panel-${name}`);
     }
 
-    // O admin.html é a fonte oficial. Se algum painel estiver em falta,
-    // mostramos ainda assim as abas e um aviso explícito em vez de esconder
-    // toda a navegação administrativa.
     const tabs = document.createElement('div');
     tabs.className = 'socio-admin-subtabs';
     tabs.setAttribute('role', 'tablist');
@@ -132,18 +126,129 @@
     return true;
   }
 
-  window.NAF_SETUP_INTEGRATED_ADMIN = setupIntegratedAdmin;
+  /*
+   * QUOTAS — seleção de comprovativos
+   *
+   * socio.js já trata do envio para a Edge Function, mas algumas versões
+   * antigas do HTML/JS deixaram o input limitado a PDF. Este runtime é
+   * carregado depois de socio.js e normaliza a interface para PDF + imagens.
+   * Não cria um segundo listener: remove o listener antigo através da
+   * substituição do input e instala apenas o fluxo novo.
+   */
+  function setupQuotaProofUpload() {
+    const input = $('quota-comprovativo');
+    if (!input || input.dataset.nafQuotaUploadReady === '1') return;
+
+    input.dataset.nafQuotaUploadReady = '1';
+    input.accept = 'application/pdf,image/jpeg,image/png,image/webp,image/gif,.pdf,.jpg,.jpeg,.png,.webp,.gif';
+
+    const label = input.closest('.upload-box');
+    if (label) {
+      label.childNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE && /selecionar comprovativo/i.test(node.textContent || '')) {
+          node.textContent = '📄 Selecionar comprovativo PDF ou imagem';
+        }
+      });
+    }
+
+    // capture=true garante que este fluxo corre antes do listener antigo
+    // existente no socio.js. stopImmediatePropagation impede o listener
+    // antigo de rejeitar imagens como se fossem PDFs.
+    input.addEventListener('change', async event => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const allowed = new Set([
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif'
+      ]);
+      const nameOk = /\.(pdf|jpe?g|png|webp|gif)$/i.test(file.name);
+
+      if (!allowed.has(file.type) && !nameOk) {
+        showQuotaUploadStatus('O comprovativo tem de ser PDF, JPG, JPEG, PNG ou WEBP.', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        showQuotaUploadStatus('O comprovativo não pode ultrapassar 8 MB.', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      showQuotaUploadStatus(`Ficheiro selecionado: ${file.name} — a ler e validar…`, '');
+
+      try {
+        const sb = window.__NAF_SUPABASE;
+        if (!sb?.functions?.invoke) {
+          throw new Error('Não foi possível inicializar o serviço de quotas.');
+        }
+
+        const formData = new FormData();
+        formData.append('comprovativo', file, file.name);
+
+        const { data, error } = await sb.functions.invoke('processar-comprovativo', {
+          body: formData
+        });
+
+        if (error) {
+          let message = error.message || 'Não foi possível processar o comprovativo.';
+          try {
+            const response = error.context;
+            if (response && typeof response.json === 'function') {
+              const body = await response.json();
+              if (body?.error) message = body.error;
+              if (Array.isArray(body?.reasons) && body.reasons.length) message = body.reasons.join(' ');
+            }
+          } catch (_) {}
+          throw new Error(message);
+        }
+
+        if (data?.error) throw new Error(data.error);
+
+        showQuotaUploadStatus(data?.message || 'Comprovativo processado com sucesso.', 'success');
+        event.target.value = '';
+      } catch (error) {
+        showQuotaUploadStatus(error?.message || 'Não foi possível enviar o comprovativo.', 'error');
+        event.target.value = '';
+      }
+    }, true);
+  }
+
+  function showQuotaUploadStatus(text, type) {
+    const input = $('quota-comprovativo');
+    const card = input?.closest('.quota-upload-card');
+    let status = $('quota-comprovativo-file-name');
+    if (!status) {
+      status = document.createElement('div');
+      status.id = 'quota-comprovativo-file-name';
+      status.className = 'admin-result';
+      card?.appendChild(status);
+    }
+    status.hidden = false;
+    status.className = `admin-result${type ? ` ${type}` : ''}`;
+    status.textContent = text;
+  }
 
   function run() {
     injectStyles();
     removeAdminPhotoControls();
     deduplicateDrArbitro();
+    setupQuotaProofUpload();
 
     if (!isStandaloneAdmin) {
       const host = $('#integrated-admin-host');
       if (host?.querySelector('#admin-app')) setupIntegratedAdmin(host);
     }
   }
+
+  window.NAF_SETUP_INTEGRATED_ADMIN = setupIntegratedAdmin;
 
   const observer = new MutationObserver(() => run());
   observer.observe(document.documentElement, { childList: true, subtree: true });
