@@ -1,0 +1,87 @@
+/* NAF Marques Bom — ajustes de interface para telemóvel.
+   Mantém a identidade original: roxo, dourado e Poppins. */
+:root { color-scheme: light; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 125px; }
+body { overflow-wrap: anywhere; }
+img, video, iframe { max-width: 100%; }
+button, input, select, textarea { font: inherit; }
+:focus-visible { outline: 3px solid var(--dourado, #C9A227); outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  header .container { flex-direction: column; align-items: center; gap: 8px; padding: 9px 0 10px; }
+  .logo img { display: block; height: 56px; width: auto; max-width: min(78vw, 260px); object-fit: contain; }
+  nav { width: 100%; max-width: 100%; flex-wrap: nowrap; justify-content: flex-start; gap: 8px; margin: 0; padding: 3px 2px 7px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  nav a { flex: 0 0 auto; white-space: nowrap; padding: 9px 13px; font-size: 14px; }
+  .hero, .page-hero { margin-top: 122px; }
+  .page-hero img { height: clamp(170px, 34vw, 270px); }
+  .page-title h1 { top: 0; padding: 0 16px; font-size: clamp(30px, 6vw, 48px); text-align: center; }
+  .container { width: min(92%, 1200px); }
+  .admin-table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .admin-table { min-width: 760px; }
+  .timeline { max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 650px) {
+  html { scroll-padding-top: 118px; }
+  .container { width: calc(100% - 32px); }
+  .hero, .page-hero { margin-top: 116px; }
+  .page-hero img { height: 175px; }
+  .page-title h1 { top: 0; font-size: clamp(28px, 8vw, 38px); line-height: 1.15; }
+  h2, .equipa h2, .timeline-titulo { font-size: clamp(26px, 7vw, 32px); line-height: 1.2; }
+  .quem p, .construcao-card p { font-size: 16px; line-height: 1.75; }
+  section { padding-top: 48px; padding-bottom: 48px; }
+  .card { padding: 26px 22px; border-radius: 16px; }
+  .card h3 { font-size: 23px; }
+  footer { padding: 32px 18px; }
+  footer h3 { font-size: 18px; line-height: 1.45; }
+  .pagina { width: calc(100% - 32px); padding-top: 125px; padding-bottom: 50px; }
+  .pagina h1 { font-size: 32px; line-height: 1.2; }
+  .subtitulo { font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
+  .contactos, .contactos-page .contactos { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .contacto-card { min-height: 0; padding: 25px 20px; }
+  .mapa-wrapper { height: 280px; }
+  .documentos-lista { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .documento-card { min-width: 0; padding: 18px; gap: 14px; border-radius: 15px; }
+  .documento-card h3 { font-size: 17px; line-height: 1.4; }
+  .documento-icone { width: 44px; height: 44px; flex-basis: 44px; font-size: 20px; }
+  .membros { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .equipa { padding: 55px 0; }
+  .equipa h2 { margin-bottom: 35px; letter-spacing: 1px; }
+  .membro .foto-container { width: 145px; height: 145px; margin-top: 25px; }
+  .membro h3 { min-height: 0; padding: 20px 16px; font-size: 19px; }
+  .historia-galeria { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .historia-nota { display: block; font-size: 14px; }
+  .presidente-foto { height: 240px; }
+  .historia-page { padding: 48px 0; }
+  .historia-intro h2 { font-size: 29px; }
+  .socio-area { padding: 42px 0 60px; }
+  .socio-perfil-card { grid-template-columns: minmax(0, 1fr); padding: 22px 18px; gap: 18px; text-align: center; }
+  .socio-identidade h2 { text-align: center; font-size: 23px; line-height: 1.25; }
+  .socio-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .socio-tab { min-height: 44px; padding: 10px 9px; font-size: 13px; line-height: 1.3; }
+  .socio-tab-content { padding: 22px 16px; border-radius: 16px; }
+  .socio-tab-content h2 { font-size: 24px; }
+  .login-card { padding: 28px 20px; border-radius: 18px; }
+  .login-card h2 { font-size: 27px; }
+  input, select, textarea { font-size: 16px; max-width: 100%; }
+  .socio-edit-form, .admin-subpanel { padding: 18px 14px; }
+  .socio-edit-actions { align-items: stretch; flex-direction: column; }
+  .socio-edit-actions button, .socio-edit-actions .botao { width: 100%; }
+  .admin-panel, .admin-card { padding: 20px 14px; border-radius: 16px; }
+  .admin-card-header, .admin-toolbar, .admin-actions { align-items: stretch; flex-direction: column; }
+  .admin-toolbar > *, .admin-actions > *, .admin-card-header button { width: 100%; }
+  .admin-form, .admin-new-socio-form { grid-template-columns: minmax(0, 1fr); }
+  .admin-new-socio-form label:first-child, .admin-new-socio-form .botao { grid-column: auto; }
+  .timeline-section { padding: 45px 0; }
+  .timeline { padding: 38px 18px 285px; gap: 18px; }
+  .timeline .mes { flex: 0 0 96px; }
+  .timeline .linha { left: 58px; top: 85px; }
+  .circulo { width: 78px; height: 78px; font-size: 16px; }
+  .card-evento { width: min(270px, calc(100vw - 38px)); left: 0; transform: none; padding: 18px; }
+  .mes.active .card-evento { left: 0; }
+}
+@media (hover: none) {
+  .card:hover, .contacto-card:hover, .documento-card:hover, .membro:hover, .presidente-historico:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
