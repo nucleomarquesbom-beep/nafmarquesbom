@@ -149,7 +149,14 @@
       body:form
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result?.error) throw new Error(result?.error||result?.message||'Falha no envio dos emails.');
+    if(!response.ok||result?.error||result?.ok===false){
+      let message=result?.error||result?.message||'Falha no envio dos emails.';
+      if(Array.isArray(result?.failed)&&result.failed.length){
+        const details=result.failed.slice(0,3).map(item=>typeof item==='string'?item:(item.error||item.email||item.socio_id||'Falha no destinatário'));
+        message+=` Detalhes: ${details.join(' | ')}`;
+      }
+      throw new Error(message);
+    }
     show(result?.message||`Documento enviado para ${result?.sent??0} sócio(s).`);
     $('mail-file').value='';
   }
