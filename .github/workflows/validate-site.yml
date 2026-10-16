@@ -19,6 +19,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check js/admin.js
+          node --check js/acoes-admin.js
+          node --check js/admin-import-socios-excel.js
           node --check js/mobile-nav.js
           node --check js/socio.js
       - name: Check mobile navigation is linked on pages with site navigation
@@ -28,7 +30,9 @@ jobs:
           import { join } from 'node:path';
           const pages = readdirSync('.').filter(file => file.endsWith('.html'));
           const failures = [];
+          const standaloneApps = new Set(['socio-app.html']);
           for (const page of pages) {
+            if (standaloneApps.has(page)) continue;
             const html = readFileSync(join('.', page), 'utf8');
             if (!/<header[\s>]/i.test(html) || !/<nav[\s>]/i.test(html)) continue;
             if (!html.includes('js/mobile-nav.js')) failures.push(`${page}: missing js/mobile-nav.js`);
