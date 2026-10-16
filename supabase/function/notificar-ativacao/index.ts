@@ -15,10 +15,12 @@ const signatureHtml = () => DEFAULT_SIGNATURE_HTML;
 const escapeHtml = (v: unknown) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
 Deno.serve(async req => {
+  let stage = "request";
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
   try {
+    stage = "configuration";
     const authorization = req.headers.get("Authorization");
     if (!authorization?.startsWith("Bearer ")) return json({ error: "Não autenticado." }, 401);
 
@@ -26,11 +28,18 @@ Deno.serve(async req => {
     const anon = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SECRET_KEY") || "";
     const resend = Deno.env.get("RESEND_API_KEY") || "";
-    const from = Deno.env.get("MAIL_FROM") || "Núcleo Marques Bom <nucleomarquesbom@gmail.com>";
+const from = (Deno.env.get("MAIL_FROM") || "").trim();
 
     if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
-    if (!resend) return json({ error: "RESEND_API_KEY não está configurada no Supabase." }, 500);
+if (!resend) return json({ error: "Falta configurar o secret RESEND_API_KEY no Supabase." }, 500);
+    if (!from) return json({ error: "Falta configurar MAIL_FROM com um remetente de domínio verificado no Resend." }, 500);
+    const fromMatch = from.match(/<([^<>]+)>/);
+    const fromAddress = (fromMatch?.[1] || from).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
+      return json({ error: "MAIL_FROM não contém um endereço válido." }, 500);
+    }
 
+stage = "authentication";
     const userClient = createClient(url, anon, {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false }
@@ -38,7 +47,8 @@ Deno.serve(async req => {
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return json({ error: "Sessão inválida." }, 401);
 
-    const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+stage = "admin-permission";
+    const admin = createClient(url, service, { auth:
     const { data: me, error: adminError } = await admin
       .from("socios")
       .select("id,is_admin,ativo")
@@ -47,6 +57,7 @@ Deno.serve(async req => {
       .single();
     if (adminError || !me?.is_admin) return json({ error: "Apenas administradores podem enviar notificações." }, 403);
 
+stage = "request-validation";
     const body = await req.json().catch(() => ({}));
     const tipo = String(body.tipo || "");
     const recursoId = String(body.recurso_id || "");
@@ -54,6 +65,7 @@ Deno.serve(async req => {
     if (!tipo || !recursoId || !token) return json({ error: "Dados de ativação incompletos." }, 400);
     if (!['acao', 'dr_arbitro'].includes(tipo)) return json({ error: "Tipo de notificação inválido." }, 400);
 
+stage = "load-recipients";
     const { data: socios, error: sociosError } = await admin
       .from("socios")
       .select("id,nome,email")
@@ -64,6 +76,7 @@ Deno.serve(async req => {
     let subject = "";
     let text = "";
 
+stage = "load-resource";
     if (tipo === "acao") {
       const { data: acao, error } = await admin
         .from("acoes")
@@ -88,13 +101,15 @@ Deno.serve(async req => {
       text = `Olá {NOME},\n\nEstá disponível uma nova edição do Drº Árbitro:\n\n${edicao.nome}\n\nConsulte a Área de Sócio para ver os detalhes${edicao.inscricoes_abertas ? ' e efetuar a sua inscrição' : ''}.\n\n${signatureText()}`;
     }
 
-    const { data: existing } = await admin
+stage = "notification-record";
+    const { data: existing, error: existingError } = await admin
       .from("notificacoes_ativacao")
       .select("id,estado,total_enviados")
       .eq("tipo", tipo)
       .eq("recurso_id", recursoId)
       .eq("activation_token", token)
       .maybeSingle();
+    if (existingError) throw new Error(`Não foi possível consultar o registo de notificação: ${existingError.message}`);
     if (existing?.estado === "enviado") return json({ ok: true, duplicate: true, total_enviados: existing.total_enviados });
 
     const { data: notification, error: insertError } = await admin
@@ -104,34 +119,73 @@ Deno.serve(async req => {
       .single();
     if (insertError) throw insertError;
 
+    stage = "send-emails";
     let sent = 0;
-    let failed = 0;
+    const failures: string[] = [];
     for (const socio of socios || []) {
-      const email = String(socio.email || '').trim();
-      if (!email || !email.includes('@')) continue;
-      const personalized = text.replace('{NOME}', String(socio.nome || 'sócio'));
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from,
-          to: [email],
-          subject,
-          text: personalized,
-          html: `<p>${escapeHtml(personalized).replace(/\n/g, "<br>")}</p>`
-        })
-      });
-      if (response.ok) sent++; else failed++;
+      const email = String(socio.email || "").trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      const personalized = text.replace("{NOME}", String(socio.nome || "sócio"));
+      const payload = {
+        from,
+        to: [email],
+        subject,
+        text: personalized,
+        html: `<p>${escapeHtml(personalized).replace(/\n/g, "<br>")}</p>`
+      };
+      let delivered = false;
+      let providerError = "Erro de envio desconhecido";
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const result = await response.json().catch(() => ({}));
+          if (response.ok) {
+            delivered = true;
+            break;
+          }
+          providerError = `Resend ${response.status}: ${String(result?.message || result?.error || "falha do fornecedor")}`;
+          if (response.status !== 429 && response.status < 500) break;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[notificar-ativacao] Erro", { stage, message });
+    return json({ error: message, stage }, 500);
+  }
+});
+          providerError = error instanceof Error ? error.message : String(error);
+        }
+        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
+      }
+      if (delivered) sent++;
+      else {
+        failures.push(providerError);
+        console.error("[notificar-ativacao] Falha no envio", { providerError });
+      }
     }
 
-    await admin.from("notificacoes_ativacao").update({
-      estado: failed ? "parcial" : "enviado",
+    stage = "update-notification-record";
+    const failed = failures.length;
+    const { error: updateError } = await admin.from("notificacoes_ativacao").update({
+      estado: failed ? (sent ? "parcial" : "falhado") : "enviado",
       total_enviados: sent,
       total_falhados: failed,
       enviado_em: new Date().toISOString()
     }).eq("id", notification.id);
+    if (updateError) throw new Error(`Emails processados, mas não foi possível atualizar o registo: ${updateError.message}`);
 
-    return json({ ok: true, total_enviados: sent, total_falhados: failed });
+    if (failed) {
+      return json({
+        ok: false,
+        total_enviados: sent,
+        total_falhados: failed,
+        error: `${failed} email(s) não foram aceites pelo fornecedor. Verifica MAIL_FROM e o domínio verificado no Resend.`,
+        provider_errors: [...new Set(failures)].slice(0, 3)
+      }, 502);
+    }
+    return json({ ok: true, total_enviados: sent, total_falhados: 0 });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
