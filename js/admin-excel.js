@@ -304,7 +304,13 @@
   }
 
   async function getClient() {
-    if (window.__NAF_SUPABASE) return window.__NAF_SUPABASE;
+    // Reutilizar qualquer alias global existente evita criar um segundo GoTrueClient.
+    const shared = window.__NAF_SUPABASE || window.supabaseClient;
+    if (shared) {
+      window.__NAF_SUPABASE = shared;
+      window.supabaseClient = shared;
+      return shared;
+    }
 
     const cfg = window.NAF_ADMIN_CONFIG || {};
     if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
@@ -315,12 +321,14 @@
       throw new Error('Biblioteca Supabase não carregada.');
     }
 
-    window.__NAF_SUPABASE = window.supabase.createClient(
+    const client = window.supabase.createClient(
       cfg.SUPABASE_URL,
-      cfg.SUPABASE_ANON_KEY
+      cfg.SUPABASE_ANON_KEY,
+      { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
     );
-
-    return window.__NAF_SUPABASE;
+    window.__NAF_SUPABASE = client;
+    window.supabaseClient = client;
+    return client;
   }
 
   /*
