@@ -19,9 +19,17 @@ Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors});
  try{
   const auth=req.headers.get('Authorization');if(!auth?.startsWith('Bearer '))return json({error:'Não autenticado.'},401);
-  const url=Deno.env.get('SUPABASE_URL')||'',anon=Deno.env.get('SUPABASE_ANON_KEY')||Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||'',secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||Deno.env.get('SUPABASE_SECRET_KEY')||'',resend=Deno.env.get('RESEND_API_KEY')||'';
+  const url=Deno.env.get('SUPABASE_URL')||'';
+  const anon=Deno.env.get('SUPABASE_ANON_KEY')||Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||'';
+  const secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||Deno.env.get('SUPABASE_SECRET_KEY')||'';
+  const resend=Deno.env.get('RESEND_API_KEY')||'';
+  const mailFrom=(Deno.env.get('MAIL_FROM')||'').trim();
   if(!url||!anon||!secret)return json({error:'Configuração Supabase incompleta.'},500);
-  if(!resend)return json({error:'RESEND_API_KEY não está configurada no Supabase.'},500);
+  if(!resend)return json({error:'Falta configurar o secret RESEND_API_KEY no Supabase.'},500);
+  if(!mailFrom)return json({error:'Falta configurar MAIL_FROM no Supabase com um remetente de um domínio verificado no Resend. O envio não pode usar um endereço Gmail como remetente por defeito.'},500);
+  const fromMatch=mailFrom.match(/<([^<>]+)>/);
+  const senderAddress=(fromMatch?.[1]||mailFrom).trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderAddress))return json({error:'MAIL_FROM inválido. Usa, por exemplo, "Núcleo Marques Bom <email@dominio-verificado.pt>".'},500);
 
   const uc=createClient(url,anon,{global:{headers:{Authorization:auth}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:u,error:ue}=await uc.auth.getUser();if(ue||!u.user)return json({error:'Sessão inválida.'},401);
@@ -61,14 +69,24 @@ Deno.serve(async req=>{
       html:`<p>${escapeHtml(text).replace(/\n/g,'<br>')}</p>${htmlSignature}`
     };
     if(attachment)payload.attachments=[attachment];
-    const response=await fetch('https://api.resend.com/emails',{
-      method:'POST',
-      headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(result?.message||'Falha no envio do email.');
-    return result?.id||null;
+     let response:Response;
+     let result:any={};
+     for(let attempt=0;attempt<4;attempt++){
+       response=await fetch('https://api.resend.com/emails',{
+         method:'POST',
+         headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json'},
+         body:JSON.stringify(payload)
+       });
+       result=await response.json().catch(()=>({}));
+       if(response.ok) return result?.id||null;
+       const retryable=response.status===429||response.status>=500;
+       if(!retryable||attempt===3){
+         const providerMessage=String(result?.message||result?.error||'Falha no fornecedor de email.');
+         throw new Error(`Resend (${response.status}): ${providerMessage}`);
+       }
+       await new Promise(resolve=>setTimeout(resolve,500*(2**attempt)));
+     }
+     throw new Error('Não foi possível concluir o envio do email.');
   };
 
   if(action==='quotas_em_atraso'){
