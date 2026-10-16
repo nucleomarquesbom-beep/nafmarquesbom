@@ -48,7 +48,7 @@ stage = "authentication";
     if (userError || !userData.user) return json({ error: "Sessão inválida." }, 401);
 
 stage = "admin-permission";
-    const admin = createClient(url, service, { auth:
+    const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: me, error: adminError } = await admin
       .from("socios")
       .select("id,is_admin,ativo")
