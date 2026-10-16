@@ -55,7 +55,7 @@ Deno.serve(async req=>{
     const signature=isQuotaSubject(subject)?signatureText(subject):signatureText(subject);
     const htmlSignature=signatureHtml(subject);
     const payload:any={
-      from:Deno.env.get('MAIL_FROM')||DEFAULT_FROM,
+      from:mailFrom,
       to:[to],subject,
       text:text+'\n\n'+signature,
       html:`<p>${escapeHtml(text).replace(/\n/g,'<br>')}</p>${htmlSignature}`
@@ -140,7 +140,7 @@ Deno.serve(async req=>{
   const text=rawText?`${rawText}\n\n${signatureText(subject)}`:signatureText(subject);
   const html=rawHtml?`${rawHtml}${signatureHtml(subject)}`:`<p>${escapeHtml(rawText).replace(/\n/g,'<br>')}</p>${signatureHtml(subject)}`;
   const attachment=body.attachment?.base64?{filename:String(body.attachment.name||'documento.pdf'),content:String(body.attachment.base64)}:null;
-  const payload:any={from:Deno.env.get('MAIL_FROM')||DEFAULT_FROM,to:[String(body.to)],subject,text,html};
+  const payload:any={from:mailFrom,to:[String(body.to)],subject,text,html};
   if(body.cc)payload.cc=Array.isArray(body.cc)?body.cc.map(String):[String(body.cc)];
   if(attachment)payload.attachments=[attachment];
 
