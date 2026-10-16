@@ -171,7 +171,7 @@ Deno.serve(async req=>{
     data=await r.json().catch(()=>({}));
     if(r.ok)return json({ok:true,id:data?.id||null});
     const retryable=r.status===429||r.status>=500;
-    if(!retryable||attempt===3)return json({error:`Resend (${r.status}): ${data?.message||data?.error||'Falha no envio do email.'`},details:data},r.status);
+    if(!retryable||attempt===3)return json({error:`Resend (${r.status}): ${data?.message||data?.error||'Falha no envio do email.'}`,details:data},r.status);
     await new Promise(resolve=>setTimeout(resolve,500*(2**attempt)));
   }
   return json({error:'Não foi possível concluir o envio do email.'},502);
