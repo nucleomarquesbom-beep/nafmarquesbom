@@ -94,7 +94,7 @@ Deno.serve(async req=>{
       if(!validEmail(email)||!rows.length){skipped++;continue;}
       const amount=rows.reduce((sum,q)=>sum+Number(q.valor||0),0);
       const periods=rows.map(q=>String(q.mes).padStart(2,'0')+'/'+q.ano).join(', ');
-      const message=template.replace(/\{NOME\}/gi,String(socio.nome||'sócio'))+`\n\nPeríodos em atraso: ${periods}.\\nValor em atraso registado: ${amount.toFixed(2)} €.`;
+      const message=template.replace(/\{NOME\}/gi,String(socio.nome||'sócio'))+`\n\nPeríodos em atraso: ${periods}.\nValor em atraso registado: ${amount.toFixed(2)} €.`;
       try{await sendOne(email,subject,message);sent++;}
       catch(error){failures.push(`${socio.nome||email}: ${error instanceof Error?error.message:String(error)}`);}
     }
@@ -127,7 +127,7 @@ Deno.serve(async req=>{
     const details=action==='pontos_adicionados'
       ?`Foram adicionados ${Number(body.pontos_adicionados||0)} ponto(s).\nAtividade: ${body.atividade||'Fun&Learn'}\nMotivo: ${body.descricao||'—'}`
       :`Foram retirados ${Number(body.pontos_retirados||0)} ponto(s).\nMotivo: ${body.motivo||'—'}`;
-    const id=await sendOne(email,subject,`Olá ${socio.nome||'sócio'},\\n\\n${details}`);
+    const id=await sendOne(email,subject,`Olá ${socio.nome||'sócio'},\n\n${details}`);
     return json({ok:true,id});
   }
 
