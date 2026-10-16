@@ -149,13 +149,9 @@ stage = "notification-record";
           }
           providerError = `Resend ${response.status}: ${String(result?.message || result?.error || "falha do fornecedor")}`;
           if (response.status !== 429 && response.status < 500) break;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[notificar-ativacao] Erro", { stage, message });
-    return json({ error: message, stage }, 500);
-  }
-});
+        } catch (error) {
           providerError = error instanceof Error ? error.message : String(error);
+        }
         }
         if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
       }
@@ -187,6 +183,8 @@ stage = "notification-record";
     }
     return json({ ok: true, total_enviados: sent, total_falhados: 0 });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[notificar-ativacao] Erro", { stage, message });
+    return json({ error: message, stage }, 500);
   }
 });
