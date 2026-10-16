@@ -143,7 +143,7 @@
     form.append('documento',file);
     form.append('subject',subject);
     form.append('message',message);
-    const response=await fetch(`${String(cfg.SUPABASE_URL).replace(/\\/$/,'')}/functions/v1/${cfg.EMAIL_FUNCTION||'admin-mail'}`,{
+    const response=await fetch(`${String(cfg.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/${cfg.EMAIL_FUNCTION||'admin-mail'}`,{
       method:'POST',
       headers:{Authorization:`Bearer ${session.access_token}`,apikey:cfg.SUPABASE_ANON_KEY},
       body:form
