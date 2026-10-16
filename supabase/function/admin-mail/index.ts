@@ -162,9 +162,18 @@ Deno.serve(async req=>{
   if(body.cc)payload.cc=Array.isArray(body.cc)?body.cc.map(String):[String(body.cc)];
   if(attachment)payload.attachments=[attachment];
 
-  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const data=await r.json().catch(()=>({}));
-  if(!r.ok)return json({error:data?.message||'Falha no envio do email.',details:data},r.status);
-  return json({ok:true,id:data?.id||null});
+  if(!validEmail(String(body.to)))return json({error:'Indica um endereço de email destinatário válido.'},400);
+  if(payload.cc?.some((email:string)=>!validEmail(email)))return json({error:'Um dos endereços em cópia é inválido.'},400);
+  let r:Response;
+  let data:any={};
+  for(let attempt=0;attempt<4;attempt++){
+    r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    data=await r.json().catch(()=>({}));
+    if(r.ok)return json({ok:true,id:data?.id||null});
+    const retryable=r.status===429||r.status>=500;
+    if(!retryable||attempt===3)return json({error:`Resend (${r.status}): ${data?.message||data?.error||'Falha no envio do email.'`},details:data},r.status);
+    await new Promise(resolve=>setTimeout(resolve,500*(2**attempt)));
+  }
+  return json({error:'Não foi possível concluir o envio do email.'},502);
  }catch(e){return json({error:e instanceof Error?e.message:String(e)},500)}
 });
