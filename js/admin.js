@@ -108,7 +108,25 @@
     if(result?.failed?.length) throw new Error(result.message||`${result.failed.length} aviso(s) falharam.`);
   }
   async function fileToBase64(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));return btoa(binary);}
-  async function invokeEdge(name,payload){const {data,error}=await state.supabase.functions.invoke(name,{body:payload});if(error){let message=error.message||'Erro na função.';try{const body=await error.context?.json();if(body?.error)message=body.error;}catch{}throw new Error(message);}if(data?.error)throw new Error(data.error);return data;}
+  async function invokeEdge(name,payload){
+    const {data,error}=await state.supabase.functions.invoke(name,{body:payload});
+    if(error){
+      let message=error.message||'Erro na função.';
+      try{
+        const body=await error.context?.json();
+        if(body?.error) message=body.error;
+        else if(body?.message) message=body.message;
+        if(Array.isArray(body?.failed)&&body.failed.length){
+          const details=body.failed.slice(0,3).map(item=>typeof item==='string'?item:(item.error||item.email||item.socio_id||'Falha no destinatário'));
+          message+=` Detalhes: ${details.join(' | ')}`;
+        }
+      }catch{}
+      throw new Error(message);
+    }
+    if(data?.error)throw new Error(data.error);
+    if(data?.ok===false)throw new Error(data.message||'O envio não foi concluído.');
+    return data;
+  }
   async function sendDocument(){
     const file=$('mail-file')?.files?.[0];
     if(!file) throw new Error('Seleciona o documento.');
