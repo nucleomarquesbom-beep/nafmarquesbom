@@ -21,7 +21,7 @@
 
   function generateUuid() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return generateUuid();
+      return crypto.randomUUID();
     }
     if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
       const bytes = new Uint8Array(16);
