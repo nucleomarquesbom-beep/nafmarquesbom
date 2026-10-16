@@ -44,7 +44,7 @@ Deno.serve(async req=>{
   }
 
   const action=String(body.action||'');
-  const validEmail=(value:string)=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+  const validEmail=(value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   const toBase64=(bytes:Uint8Array)=>{
     let binary='';
     for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));
@@ -57,8 +57,8 @@ Deno.serve(async req=>{
     const payload:any={
       from:Deno.env.get('MAIL_FROM')||DEFAULT_FROM,
       to:[to],subject,
-      text:text+'\\n\\n'+signature,
-      html:`<p>${escapeHtml(text).replace(/\\n/g,'<br>')}</p>${htmlSignature}`
+      text:text+'\n\n'+signature,
+      html:`<p>${escapeHtml(text).replace(/\n/g,'<br>')}</p>${htmlSignature}`
     };
     if(attachment)payload.attachments=[attachment];
     const response=await fetch('https://api.resend.com/emails',{
@@ -94,7 +94,7 @@ Deno.serve(async req=>{
       if(!validEmail(email)||!rows.length){skipped++;continue;}
       const amount=rows.reduce((sum,q)=>sum+Number(q.valor||0),0);
       const periods=rows.map(q=>String(q.mes).padStart(2,'0')+'/'+q.ano).join(', ');
-      const message=template.replace(/\\{NOME\\}/gi,String(socio.nome||'sócio'))+`\\n\\nPeríodos em atraso: ${periods}.\\nValor em atraso registado: ${amount.toFixed(2)} €.`;
+      const message=template.replace(/\{NOME\}/gi,String(socio.nome||'sócio'))+`\n\nPeríodos em atraso: ${periods}.\\nValor em atraso registado: ${amount.toFixed(2)} €.`;
       try{await sendOne(email,subject,message);sent++;}
       catch(error){failures.push(`${socio.nome||email}: ${error instanceof Error?error.message:String(error)}`);}
     }
@@ -114,7 +114,7 @@ Deno.serve(async req=>{
     const attachment={filename:uploaded.name||'documento',content:toBase64(new Uint8Array(await uploaded.arrayBuffer()))};
     let sent=0;const failures:string[]=[];
     for(const socio of recipients){
-      try{await sendOne(String(socio.email).trim(),subject,message.replace(/\\{NOME\\}/gi,String(socio.nome||'sócio')),attachment);sent++;}
+      try{await sendOne(String(socio.email).trim(),subject,message.replace(/\{NOME\}/gi,String(socio.nome||'sócio')),attachment);sent++;}
       catch(error){failures.push(`${socio.email}: ${error instanceof Error?error.message:String(error)}`);}
     }
     return json({ok:failures.length===0,action,sent,failed:failures,message:`${sent} email(s) enviado(s); ${failures.length} falharam.`},failures.length?502:200);
@@ -125,8 +125,8 @@ Deno.serve(async req=>{
     if(!validEmail(email))return json({error:'O sócio não tem email válido.'},400);
     const subject=action==='pontos_adicionados'?'Pontos Fun&Learn adicionados':'Pontos Fun&Learn retirados';
     const details=action==='pontos_adicionados'
-      ?`Foram adicionados ${Number(body.pontos_adicionados||0)} ponto(s).\\nAtividade: ${body.atividade||'Fun&Learn'}\\nMotivo: ${body.descricao||'—'}`
-      :`Foram retirados ${Number(body.pontos_retirados||0)} ponto(s).\\nMotivo: ${body.motivo||'—'}`;
+      ?`Foram adicionados ${Number(body.pontos_adicionados||0)} ponto(s).\nAtividade: ${body.atividade||'Fun&Learn'}\nMotivo: ${body.descricao||'—'}`
+      :`Foram retirados ${Number(body.pontos_retirados||0)} ponto(s).\nMotivo: ${body.motivo||'—'}`;
     const id=await sendOne(email,subject,`Olá ${socio.nome||'sócio'},\\n\\n${details}`);
     return json({ok:true,id});
   }
