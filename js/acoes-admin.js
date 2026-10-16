@@ -187,6 +187,7 @@
             <button type="button" class="admin-small-btn" data-action-registrations="${esc(action.id)}">Ver inscritos</button>
             <button type="button" class="admin-small-btn" data-action-export="${esc(action.id)}">Exportar Excel</button>
             ${action.anulada ? '' : `<button type="button" class="admin-small-btn danger" data-action-annul="${esc(action.id)}">Anular ação</button>`}
+            <button type="button" class="admin-small-btn danger" data-action-delete="${esc(action.id)}">Eliminar ação</button>
           </div>
 
           <div id="acao-inscricoes-${esc(action.id)}" class="acao-inscricoes-wrap" hidden></div>
@@ -219,6 +220,10 @@
 
     root.querySelectorAll('[data-action-annul]').forEach(btn => {
       btn.onclick = () => annulAction(btn.dataset.actionAnnul);
+    });
+
+    root.querySelectorAll('[data-action-delete]').forEach(btn => {
+      btn.onclick = () => deleteAction(btn.dataset.actionDelete);
     });
   }
 
@@ -259,6 +264,44 @@
       if (error) throw error;
 
       showResult('Atividade anulada com sucesso. O histórico e as inscrições foram preservados.');
+      await loadActions();
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
+    }
+  }
+
+  async function deleteAction(id) {
+    try {
+      const action = state.actions.find(item => String(item.id) === String(id));
+      if (!action) return;
+
+      const { count, error: countError } = await state.sb
+        .from('acoes_inscricoes')
+        .select('id', { count: 'exact', head: true })
+        .eq('acao_id', id);
+      if (countError) throw countError;
+
+      if (Number(count || 0) > 0) {
+        showResult(
+          'Esta ação tem inscrições associadas. Para preservar o histórico e os comprovativos, não pode ser eliminada; utiliza «Anular ação».',
+          'error'
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Eliminar definitivamente a ação «${action.titulo}»?\\n\\nEsta operação não pode ser anulada. Só é permitido eliminar ações sem inscrições.`
+      );
+      if (!confirmed) return;
+
+      const { error } = await state.sb
+        .from('acoes')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+
+      if ($('acao-id')?.value === String(id)) resetForm();
+      showResult('Ação eliminada com sucesso.');
       await loadActions();
     } catch (error) {
       showResult(error.message || String(error), 'error');
