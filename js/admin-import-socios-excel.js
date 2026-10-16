@@ -74,7 +74,7 @@
     const h={};
     for(const k of Object.keys(aliases)) h[k]=findHeader(headers,aliases[k]);
 
-    for(const k of ['numero_socio','nome','email','modalidade','categoria'])
+    for(const k of ['numero_socio','nome','email','modalidade'])
       if(!h[k]) throw new Error(`Falta a coluna obrigatória: ${aliases[k][0]}.`);
 
     const seen=new Set(), errors=[];
@@ -93,7 +93,7 @@
       if(!/^\S+@\S+\.\S+$/.test(email)) return errors.push(`Linha ${line}: Email inválido.`);
       if(seen.has(String(n))) return errors.push(`Linha ${line}: Nº de Sócio ${n} repetido.`);
       if(!categorias[modalidade]) return errors.push(`Linha ${line}: Modalidade "${modalidade}" inválida.`);
-      if(!categorias[modalidade].some(c=>norm(c)===norm(categoria)))
+      if(categoria && !categorias[modalidade].some(c=>norm(c)===norm(categoria)))
         return errors.push(`Linha ${line}: Categoria "${categoria}" inválida para ${modalidade}.`);
 
       const nascimento=h.data_nascimento ? datePT(r[h.data_nascimento]) : null;
@@ -108,13 +108,13 @@
         nif:text('nif'),data_nascimento:nascimento,naturalidade:text('naturalidade'),
         cartao_cidadao:text('cartao_cidadao'),profissao:text('profissao'),
         morada:text('morada'),localidade:text('localidade'),codigo_postal:text('codigo_postal'),
-        modalidade,categoria,associacao_futebol:text('associacao_futebol')
+        modalidade,categoria:categoria || null,associacao_futebol:text('associacao_futebol')
       });
     });
 
     $('admin-excel-socios-summary').textContent=`${data.length} linhas · ${rows.length} válidas · ${errors.length} erros`;
     $('admin-excel-socios-preview').innerHTML=[
-      ...rows.slice(0,100).map(r=>`<div class="admin-excel-preview-row"><strong>${r.numero_socio}</strong><span>${r.nome}</span><span>${r.email}</span><span>${r.modalidade} · ${r.categoria}</span></div>`),
+      ...rows.slice(0,100).map(r=>`<div class="admin-excel-preview-row"><strong>${r.numero_socio}</strong><span>${r.nome}</span><span>${r.email}</span><span>${r.modalidade} · ${r.categoria || 'Sem categoria'}</span></div>`),
       ...errors.slice(0,50).map(e=>`<div class="admin-excel-preview-row admin-excel-error"><strong>ERRO</strong><span>${e}</span></div>`)
     ].join('') || '<div class="admin-loading">Sem dados.</div>';
 

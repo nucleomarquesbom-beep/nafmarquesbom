@@ -187,6 +187,7 @@
             <button type="button" class="admin-small-btn" data-action-registrations="${esc(action.id)}">Ver inscritos</button>
             <button type="button" class="admin-small-btn" data-action-export="${esc(action.id)}">Exportar Excel</button>
             ${action.anulada ? '' : `<button type="button" class="admin-small-btn danger" data-action-annul="${esc(action.id)}">Anular ação</button>`}
+            <button type="button" class="admin-small-btn danger" data-action-delete="${esc(action.id)}">Eliminar ação</button>
           </div>
 
           <div id="acao-inscricoes-${esc(action.id)}" class="acao-inscricoes-wrap" hidden></div>
@@ -219,6 +220,10 @@
 
     root.querySelectorAll('[data-action-annul]').forEach(btn => {
       btn.onclick = () => annulAction(btn.dataset.actionAnnul);
+    });
+
+    root.querySelectorAll('[data-action-delete]').forEach(btn => {
+      btn.onclick = () => deleteAction(btn.dataset.actionDelete);
     });
   }
 
@@ -259,6 +264,61 @@
       if (error) throw error;
 
       showResult('Atividade anulada com sucesso. O histórico e as inscrições foram preservados.');
+      await loadActions();
+    } catch (error) {
+      showResult(error.message || String(error), 'error');
+    }
+  }
+
+  async function deleteAction(id) {
+    try {
+      const action = state.actions.find(item => String(item.id) === String(id));
+      if (!action) return;
+
+      const { data: registrations, error: registrationsError } = await state.sb
+        .from('acoes_inscricoes')
+        .select('id,comprovativo_path')
+        .eq('acao_id', id);
+      if (registrationsError) throw registrationsError;
+
+      const registrationCount = registrations?.length || 0;
+      const confirmation = window.confirm(
+        `Eliminar definitivamente a ação «${action.titulo}»?\\n\\n` +
+        (registrationCount
+          ? `A ação tem ${registrationCount} inscrição(ões). A eliminação apagará também essas inscrições e os comprovativos associados.`
+          : 'Esta ação não tem inscrições associadas.') +
+        '\\n\\nEsta operação é permanente e não pode ser anulada. Para preservar o histórico, escolhe «Anular ação».'
+      );
+      if (!confirmation) return;
+
+      const proofPaths = [...new Set((registrations || [])
+        .map(row => row.comprovativo_path)
+        .filter(path => typeof path === 'string' && path.trim()))];
+
+      if (proofPaths.length) {
+        const { error: storageError } = await state.sb
+          .storage
+          .from('comprovativos-acoes')
+          .remove(proofPaths);
+        if (storageError) throw new Error(`Não foi possível eliminar os comprovativos: ${storageError.message}`);
+      }
+
+      if (registrationCount) {
+        const { error: registrationDeleteError } = await state.sb
+          .from('acoes_inscricoes')
+          .delete()
+          .eq('acao_id', id);
+        if (registrationDeleteError) throw registrationDeleteError;
+      }
+
+      const { error } = await state.sb
+        .from('acoes')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+
+      if ($('acao-id')?.value === String(id)) resetForm();
+      showResult('Ação eliminada com sucesso.');
       await loadActions();
     } catch (error) {
       showResult(error.message || String(error), 'error');

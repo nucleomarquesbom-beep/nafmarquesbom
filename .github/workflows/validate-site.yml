@@ -1,0 +1,46 @@
+name: Validate site assets
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, fix/responsive-and-db]
+
+jobs:
+  syntax-and-mobile-navigation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check js/admin.js
+          node --check js/acoes-admin.js
+          node --check js/admin-import-socios-excel.js
+          node --check js/mobile-nav.js
+          node --check js/socio.js
+      - name: Check mobile navigation is linked on pages with site navigation
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync } from 'node:fs';
+          import { join } from 'node:path';
+          const pages = readdirSync('.').filter(file => file.endsWith('.html'));
+          const failures = [];
+          const standaloneApps = new Set(['socio-app.html']);
+          for (const page of pages) {
+            if (standaloneApps.has(page)) continue;
+            const html = readFileSync(join('.', page), 'utf8');
+            if (!/<header[\s>]/i.test(html) || !/<nav[\s>]/i.test(html)) continue;
+            if (!html.includes('js/mobile-nav.js')) failures.push(`${page}: missing js/mobile-nav.js`);
+            if (!html.includes('css/mobile-overrides.css')) failures.push(`${page}: missing css/mobile-overrides.css`);
+          }
+          if (failures.length) {
+            console.error(failures.join('\n'));
+            process.exit(1);
+          }
+          console.log('Mobile navigation and responsive stylesheet are linked on every page with a site header.');
+          NODE
