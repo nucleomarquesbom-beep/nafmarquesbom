@@ -35,18 +35,25 @@
       button.textContent = "A criar…";
       show("A criar a conta e a preparar o convite…", "success");
 
-      if (!window.supabaseClient) {
+      // Reutiliza o cliente partilhado pela página para evitar sessões GoTrue duplicadas.
+      let supabaseClient = window.__NAF_SUPABASE || window.supabaseClient;
+      if (!supabaseClient) {
         if (!window.supabase?.createClient) throw new Error("Biblioteca Supabase não carregada.");
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Configuração Supabase incompleta.");
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true }
+        });
       }
+      window.__NAF_SUPABASE = supabaseClient;
+      window.supabaseClient = supabaseClient;
 
       const { data: { session }, error: sessionError } =
-        await window.supabaseClient.auth.getSession();
+        await supabaseClient.auth.getSession();
 
       if (sessionError) throw sessionError;
       if (!session) throw new Error("A sessão de administrador expirou. Volta a iniciar sessão.");
 
-      const { data, error } = await window.supabaseClient.functions.invoke("criar-socio", {
+      const { data, error } = await supabaseClient.functions.invoke("criar-socio", {
         body: {
           nome,
           numero_socio: numero,
