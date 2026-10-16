@@ -252,8 +252,24 @@
         activation_token: token
       }
     });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
+    if (error) {
+      // Supabase FunctionsHttpError guarda o corpo JSON na Response em error.context.
+      let detail = "";
+      try {
+        const context = error.context;
+        if (context && typeof context.clone === "function") {
+          const body = await context.clone().json();
+          detail = [body?.error, body?.stage, body?.provider_errors?.join("; ")].filter(Boolean).join(" — ");
+        }
+      } catch (_) {
+        // Mantém a mensagem original se a resposta não for JSON.
+      }
+      throw new Error(detail || error.message || "Não foi possível enviar a notificação.");
+    }
+    if (data?.error) throw new Error([data.error, data.stage, data.provider_errors?.join("; ")].filter(Boolean).join(" — "));
+    if (data?.ok === false || Number(data?.total_falhados || 0) > 0) {
+      throw new Error(data.error || `O fornecedor recusou ${data.total_falhados} email(s).`);
+    }
     return data;
   }
 
