@@ -275,24 +275,41 @@
       const action = state.actions.find(item => String(item.id) === String(id));
       if (!action) return;
 
-      const { count, error: countError } = await state.sb
+      const { data: registrations, error: registrationsError } = await state.sb
         .from('acoes_inscricoes')
-        .select('id', { count: 'exact', head: true })
+        .select('id,comprovativo_path')
         .eq('acao_id', id);
-      if (countError) throw countError;
+      if (registrationsError) throw registrationsError;
 
-      if (Number(count || 0) > 0) {
-        showResult(
-          'Esta ação tem inscrições associadas. Para preservar o histórico e os comprovativos, não pode ser eliminada; utiliza «Anular ação».',
-          'error'
-        );
-        return;
+      const registrationCount = registrations?.length || 0;
+      const confirmation = window.confirm(
+        `Eliminar definitivamente a ação «${action.titulo}»?\\n\\n` +
+        (registrationCount
+          ? `A ação tem ${registrationCount} inscrição(ões). A eliminação apagará também essas inscrições e os comprovativos associados.`
+          : 'Esta ação não tem inscrições associadas.') +
+        '\\n\\nEsta operação é permanente e não pode ser anulada. Para preservar o histórico, escolhe «Anular ação».'
+      );
+      if (!confirmation) return;
+
+      const proofPaths = [...new Set((registrations || [])
+        .map(row => row.comprovativo_path)
+        .filter(path => typeof path === 'string' && path.trim()))];
+
+      if (proofPaths.length) {
+        const { error: storageError } = await state.sb
+          .storage
+          .from('comprovativos-acoes')
+          .remove(proofPaths);
+        if (storageError) throw new Error(`Não foi possível eliminar os comprovativos: ${storageError.message}`);
       }
 
-      const confirmed = window.confirm(
-        `Eliminar definitivamente a ação «${action.titulo}»?\\n\\nEsta operação não pode ser anulada. Só é permitido eliminar ações sem inscrições.`
-      );
-      if (!confirmed) return;
+      if (registrationCount) {
+        const { error: registrationDeleteError } = await state.sb
+          .from('acoes_inscricoes')
+          .delete()
+          .eq('acao_id', id);
+        if (registrationDeleteError) throw registrationDeleteError;
+      }
 
       const { error } = await state.sb
         .from('acoes')
