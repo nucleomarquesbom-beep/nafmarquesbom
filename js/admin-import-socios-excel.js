@@ -108,7 +108,7 @@
         nif:text('nif'),data_nascimento:nascimento,naturalidade:text('naturalidade'),
         cartao_cidadao:text('cartao_cidadao'),profissao:text('profissao'),
         morada:text('morada'),localidade:text('localidade'),codigo_postal:text('codigo_postal'),
-        modalidade,categoria,associacao_futebol:text('associacao_futebol')
+        modalidade,categoria:categoria || null,associacao_futebol:text('associacao_futebol')
       });
     });
 
