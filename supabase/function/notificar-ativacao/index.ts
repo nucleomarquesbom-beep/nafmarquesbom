@@ -152,7 +152,6 @@ stage = "notification-record";
         } catch (error) {
           providerError = error instanceof Error ? error.message : String(error);
         }
-        }
         if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
       }
       if (delivered) sent++;
