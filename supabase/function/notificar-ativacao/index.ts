@@ -120,9 +120,9 @@ stage = "notification-record";
     const failures: string[] = [];
     for (const socio of socios || []) {
       const email = String(socio.email || "").trim();
-      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) continue;
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
       const personalized = text.replace("{NOME}", String(socio.nome || "sócio"));
-      const htmlBody = `<!doctype html><html lang="pt-PT"><body style="font-family:Arial,sans-serif"><div style="max-width:620px;margin:30px auto;border:1px solid #e5dfe8;border-radius:18px;overflow:hidden"><div style="background:#5b2a72;color:#fff;padding:22px;font-size:22px;font-weight:700">Núcleo Marques Bom</div><div style="padding:28px;line-height:1.65">${escapeHtml(personalized).replace(/\\n/g, "<br>")}</div></div></body></html>`;
+      const htmlBody = `<!doctype html><html lang="pt-PT"><body style="font-family:Arial,sans-serif"><div style="max-width:620px;margin:30px auto;border:1px solid #e5dfe8;border-radius:18px;overflow:hidden"><div style="background:#5b2a72;color:#fff;padding:22px;font-size:22px;font-weight:700">Núcleo Marques Bom</div><div style="padding:28px;line-height:1.65">${escapeHtml(personalized).replace(/\n/g, "<br>")}</div></div></body></html>`;
       const { error: queueError } = await admin.from("email_outbox").insert({
         to_email: email,
         from_email: from,
