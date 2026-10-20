@@ -31,7 +31,6 @@ Deno.serve(async req => {
     const from = (Deno.env.get("email_smtp_from") || smtpUser).trim();
 
     if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
-    if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
     if (!from || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((from.match(/<([^<>]+)>/)?.[1] || from).trim())) {
       return json({ error: "Remetente SMTP inválido. Verifica email_smtp_from/email_smtp_user nos secrets do Supabase." }, 500);
     }
