@@ -31,12 +31,9 @@ Deno.serve(async req => {
     const from = (Deno.env.get("email_smtp_from") || smtpUser).trim();
 
     if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
-if (!resend) return json({ error: "Falta configurar o secret RESEND_API_KEY no Supabase." }, 500);
-    if (!from) return json({ error: "Falta configurar MAIL_FROM com um remetente de domínio verificado no Resend." }, 500);
-    const fromMatch = from.match(/<([^<>]+)>/);
-    const fromAddress = (fromMatch?.[1] || from).trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress)) {
-      return json({ error: "MAIL_FROM não contém um endereço válido." }, 500);
+    if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
+    if (!from || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((from.match(/<([^<>]+)>/)?.[1] || from).trim())) {
+      return json({ error: "Remetente SMTP inválido. Verifica email_smtp_from/email_smtp_user nos secrets do Supabase." }, 500);
     }
 
 stage = "authentication";
@@ -157,38 +154,6 @@ stage = "notification-record";
       return json({ ok: false, em_fila: queued, total_falhados: failed, error: "Alguns emails não puderam ser colocados na fila SMTP.", details: failures.slice(0, 3) }, 502);
     }
     return json({ ok: true, em_fila: queued, message: "Notificações adicionadas à fila de email SMTP do Supabase." });
-  } catch (error) {
-          providerError = error instanceof Error ? error.message : String(error);
-        }
-        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
-      }
-      if (delivered) sent++;
-      else {
-        failures.push(providerError);
-        console.error("[notificar-ativacao] Falha no envio", { providerError });
-      }
-    }
-
-    stage = "update-notification-record";
-    const failed = failures.length;
-    const { error: updateError } = await admin.from("notificacoes_ativacao").update({
-      estado: failed ? (sent ? "parcial" : "falhado") : "enviado",
-      total_enviados: sent,
-      total_falhados: failed,
-      enviado_em: new Date().toISOString()
-    }).eq("id", notification.id);
-    if (updateError) throw new Error(`Emails processados, mas não foi possível atualizar o registo: ${updateError.message}`);
-
-    if (failed) {
-      return json({
-        ok: false,
-        total_enviados: sent,
-        total_falhados: failed,
-        error: `${failed} email(s) não foram aceites pelo fornecedor. Verifica MAIL_FROM e o domínio verificado no Resend.`,
-        provider_errors: [...new Set(failures)].slice(0, 3)
-      }, 502);
-    }
-    return json({ ok: true, total_enviados: sent, total_falhados: 0 });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[notificar-ativacao] Erro", { stage, message });
