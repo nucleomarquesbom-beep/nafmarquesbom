@@ -27,8 +27,8 @@ Deno.serve(async req => {
     const url = Deno.env.get("SUPABASE_URL") || "";
     const anon = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SECRET_KEY") || "";
-    const resend = Deno.env.get("RESEND_API_KEY") || "";
-const from = (Deno.env.get("MAIL_FROM") || "").trim();
+    const smtpUser = Deno.env.get("email_smtp_user") || "nucleomarquesbom@gmail.com";
+    const from = (Deno.env.get("email_smtp_from") || smtpUser).trim();
 
     if (!url || !anon || !service) return json({ error: "Configuração Supabase incompleta." }, 500);
 if (!resend) return json({ error: "Falta configurar o secret RESEND_API_KEY no Supabase." }, 500);
@@ -119,37 +119,45 @@ stage = "notification-record";
       .single();
     if (insertError) throw insertError;
 
-    stage = "send-emails";
-    let sent = 0;
+    stage = "queue-emails";
+    let queued = 0;
     const failures: string[] = [];
     for (const socio of socios || []) {
       const email = String(socio.email || "").trim();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) continue;
       const personalized = text.replace("{NOME}", String(socio.nome || "sócio"));
-      const payload = {
-        from,
-        to: [email],
+      const htmlBody = `<!doctype html><html lang="pt-PT"><body style="font-family:Arial,sans-serif"><div style="max-width:620px;margin:30px auto;border:1px solid #e5dfe8;border-radius:18px;overflow:hidden"><div style="background:#5b2a72;color:#fff;padding:22px;font-size:22px;font-weight:700">Núcleo Marques Bom</div><div style="padding:28px;line-height:1.65">${escapeHtml(personalized).replace(/\\n/g, "<br>")}</div></div></body></html>`;
+      const { error: queueError } = await admin.from("email_outbox").insert({
+        to_email: email,
+        from_email: from,
         subject,
-        text: personalized,
-        html: `<p>${escapeHtml(personalized).replace(/\n/g, "<br>")}</p>`
-      };
-      let delivered = false;
-      let providerError = "Erro de envio desconhecido";
-      for (let attempt = 0; attempt < 4; attempt++) {
-        try {
-          const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${resend}`, "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          const result = await response.json().catch(() => ({}));
-          if (response.ok) {
-            delivered = true;
-            break;
-          }
-          providerError = `Resend ${response.status}: ${String(result?.message || result?.error || "falha do fornecedor")}`;
-          if (response.status !== 429 && response.status < 500) break;
-        } catch (error) {
+        text_body: personalized,
+        html_body: htmlBody,
+        status: "pending",
+        attempts: 0,
+        available_at: new Date().toISOString(),
+        source: "notificar-ativacao",
+        metadata: { tipo, recurso_id: recursoId, activation_token: token }
+      });
+      if (queueError) failures.push(`${email}: ${queueError.message}`);
+      else queued++;
+    }
+
+    stage = "update-notification-record";
+    const failed = failures.length;
+    const { error: updateError } = await admin.from("notificacoes_ativacao").update({
+      estado: failed ? (queued ? "parcial_em_fila" : "falhado") : "em_fila",
+      total_enviados: 0,
+      total_falhados: failed,
+      enviado_em: null
+    }).eq("id", notification.id);
+    if (updateError) throw new Error(`Emails colocados em fila, mas não foi possível atualizar o registo: ${updateError.message}`);
+
+    if (failed) {
+      return json({ ok: false, em_fila: queued, total_falhados: failed, error: "Alguns emails não puderam ser colocados na fila SMTP.", details: failures.slice(0, 3) }, 502);
+    }
+    return json({ ok: true, em_fila: queued, message: "Notificações adicionadas à fila de email SMTP do Supabase." });
+  } catch (error) {
           providerError = error instanceof Error ? error.message : String(error);
         }
         if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
