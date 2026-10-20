@@ -251,8 +251,14 @@
       msg('Inscrição realizada com sucesso.');
       await load();
     } catch (e) {
-      console.error('[AÇÕES SÓCIO]', e);
-      msg(e.message || String(e), 'erro');
+      console.error('[AÇÕES SÓCIO] Falha na inscrição', {
+        message: e?.message || String(e),
+        code: e?.code || null,
+        details: e?.details || null,
+        hint: e?.hint || null,
+        status: e?.status || null
+      });
+      msg(e?.message || 'Não foi possível concluir a inscrição. Consulte a consola para ver o detalhe.', 'erro');
     } finally {
       button.disabled = false;
     }
