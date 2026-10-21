@@ -65,20 +65,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
       "";
 
-    const resend = Deno.env.get("RESEND_API_KEY") || "";
-    const from =
-      Deno.env.get("MAIL_FROM") ||
-      "Núcleo Marques Bom <nucleomarquesbom@gmail.com>";
+    const smtpUser = Deno.env.get("email_smtp_user") || "nucleomarquesbom@gmail.com";
+    const from = Deno.env.get("email_smtp_from") || smtpUser;
 
     if (!url || !secret) {
       return json({ error: "Configuração Supabase incompleta." }, 500);
     }
 
-    if (!resend) {
-      return json({
-        error: "RESEND_API_KEY não está configurada no Supabase."
-      }, 500);
-    }
 
     const admin = createClient(url, secret, {
       auth: { persistSession: false, autoRefreshToken: false }
@@ -123,18 +116,9 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resend}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from,
-          to: [socio.email],
-          subject: "🎉 Parabéns! — Núcleo Marques Bom",
-          text:
-`Olá ${socio.nome},
+      const subject = "🎉 Parabéns! — Núcleo Marques Bom";
+      const textBody =
+`Olá ${socio.nome || "sócio"},
 
 Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não podia deixar passar em branco.
 
@@ -142,22 +126,26 @@ Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não pod
 
 Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.
 
-${signatureText()}`,
-          html:
-            `<p>Olá ${escapeHtml(socio.nome || "sócio")}.</p>` +
-            `<p>Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não podia deixar passar em branco.</p>` +
-            `<p>🎂 Muitos parabéns pelo seu aniversário!</p>` +
-            `<p>Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.</p>` +
-            signatureHtml()
-        })
-      });
-
-      if (!response.ok) {
-        failures.push({
-          socio_id: socio.id,
-          email: socio.email,
-          status: response.status
+${signatureText()}`;
+      const htmlBody =
+        `<!doctype html><html lang="pt-PT"><body style="margin:0;background:#f5f2f7;font-family:Arial,sans-serif;color:#30243a"><div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid #e5dfe8;border-radius:18px;overflow:hidden"><div style="background:#5b2a72;color:#fff;padding:24px 28px;font-size:22px;font-weight:700">Núcleo Marques Bom</div><div style="padding:28px;line-height:1.7"><p>Olá ${escapeHtml(socio.nome || "sócio")}.</p><p>Hoje é um dia especial e o Núcleo de Árbitros de Futebol Marques Bom não podia deixar passar em branco.</p><p style="font-size:20px">🎂 Muitos parabéns pelo seu aniversário!</p><p>Desejamos-lhe um excelente dia, muita saúde, felicidade e muitos sucessos, dentro e fora dos campos.</p>${signatureHtml()}</div></div></body></html>`;
+      const { error: queueError } = await admin
+        .from("email_outbox")
+        .insert({
+          to_email: socio.email,
+          from_email: from,
+          subject,
+          text_body: textBody,
+          html_body: htmlBody,
+          status: "pending",
+          attempts: 0,
+          available_at: new Date().toISOString(),
+          source: "aniversarios",
+          metadata: { tipo: "aniversario", socio_id: socio.id, ano: date.year }
         });
+
+      if (queueError) {
+        failures.push({ socio_id: socio.id, email: socio.email, error: queueError.message });
         continue;
       }
 
