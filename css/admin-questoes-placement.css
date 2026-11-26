@@ -1,3 +1,0 @@
-/* Questões usa exatamente o mesmo sistema de abas do admin.css. */
-#admin-app > .admin-tab-panel { display: none; }
-#admin-app > .admin-tab-panel.active { display: block; }
