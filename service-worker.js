@@ -1,4 +1,4 @@
-const CACHE_NAME='naf-socio-pwa-v2';
+const CACHE_NAME='naf-socio-pwa-v3';
 const STATIC_ASSETS=['./socio-app.html','./css/socio-app.css','./manifest.webmanifest','./icons/icon-192.svg','./icons/icon-512.svg','./imagens/logo.png'];
 
 self.addEventListener('install',event=>{
@@ -16,6 +16,15 @@ self.addEventListener('fetch',event=>{
   const dynamic=['/js/socio-app.js','/js/supabase-config.js','/service-worker.js'];
   if(dynamic.some(path=>url.pathname.endsWith(path))){
     event.respondWith(fetch(req,{cache:'no-store'}).catch(()=>caches.match(req)));
+    return;
+  }
+
+  const isAppHtml=url.pathname.endsWith('/socio-app.html')||url.pathname.endsWith('socio-app.html');
+  if(isAppHtml){
+    event.respondWith(fetch(req,{cache:'no-store'}).then(response=>{
+      if(response.ok&&response.type==='basic') caches.open(CACHE_NAME).then(cache=>cache.put(req,response.clone()));
+      return response;
+    }).catch(()=>caches.match(req)));
     return;
   }
 
