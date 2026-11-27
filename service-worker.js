@@ -13,7 +13,7 @@ self.addEventListener('fetch',event=>{
   const url=new URL(req.url);
   if(url.origin!==self.location.origin)return;
 
-  const dynamic=['/js/socio-app.js','/js/supabase-config.js','/service-worker.js'];
+  const dynamic=['/js/socio-app.js','/js/supabase-client.js','/js/supabase-config.js','/service-worker.js'];
   if(dynamic.some(path=>url.pathname.endsWith(path))){
     event.respondWith(fetch(req,{cache:'no-store'}).catch(()=>caches.match(req)));
     return;
