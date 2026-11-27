@@ -1,8 +1,6 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
-
-const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+import { supabase } from './supabase-client.js';
 const state={user:null,socio:null,drEdicao:null};
+let deferredInstallPrompt=null;
 
 const $=id=>document.getElementById(id);
 const $$=sel=>[...document.querySelectorAll(sel)];
@@ -140,7 +138,10 @@ async function restoreSession(){
   const current=await getSession();if(!current?.user)return;
   state.user=current.user;await validateSocioAccess();
   renderProfile();await Promise.all([loadFunSummary(),detectDr()]);showScreen('home');
- }catch(e){console.error('Sessão:',e);await supabase.auth.signOut();}
+ }catch(e){
+  console.error('Sessão:',e);
+  showLoginMessage(e.message||'Não foi possível validar a sessão. Tenta novamente dentro de momentos.','error');
+ }
 }
 async function logout(){await supabase.auth.signOut();location.reload();}
 function openExistingDr(){location.href='./socio.html#dr-arbitro';}
